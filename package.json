@@ -1,0 +1,5 @@
+{
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-musl": "^4.43.0"
+  }
+}
