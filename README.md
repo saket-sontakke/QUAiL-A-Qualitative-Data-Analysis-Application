@@ -6,7 +6,7 @@
 - Implementation of a **subset of requirements** during each iteration  
 - Iterative enhancement continues until all requirements are met
 
-![Screenshot 2025-06-16 154715](https://github.com/user-attachments/assets/d985e746-ed07-406f-80b5-c0cd6ef38225)
+![Screenshot 2025-06-19 154651](https://github.com/user-attachments/assets/d593a518-2e99-4485-b7c0-7bc7befa2eda)
 
 ---
 
