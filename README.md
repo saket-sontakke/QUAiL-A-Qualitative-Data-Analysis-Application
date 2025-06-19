@@ -6,6 +6,8 @@
 - Implementation of a **subset of requirements** during each iteration  
 - Iterative enhancement continues until all requirements are met
 
+![Screenshot 2025-06-16 154715](https://github.com/user-attachments/assets/d985e746-ed07-406f-80b5-c0cd6ef38225)
+
 ---
 
 ### Iteration Plan and Limitations
