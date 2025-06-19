@@ -1,9 +1,12 @@
-# ETQDA
+# ETQDA - A Qualitative Data Analysis Application
 
-## Iterative Model
-  •	No need to define complete SRS (Software Requirements Specification)
-  •	Implementation of a subset of requirement during each iteration
-  •	Iterative enhancement till requirements are met
+## Iterative Model Overview
+
+- No need to define a complete SRS (Software Requirements Specification) upfront  
+- Implementation of a **subset of requirements** during each iteration  
+- Iterative enhancement continues until all requirements are met
+
+---
 
 ### Iteration Plan and Limitations
 
