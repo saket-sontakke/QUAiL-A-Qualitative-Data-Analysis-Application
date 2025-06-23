@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import PrivateRoute from './pages/PrivateRoute';
 import Home from './pages/Home'
 
 const App = () => {
@@ -17,7 +18,10 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/home" element={<Home />} />
+
+        {/* Protected routes */}
+        <Route path="/home" element={<PrivateRoute> <Home /> </PrivateRoute>} />
+        
       </Routes>
     </BrowserRouter>
   );
