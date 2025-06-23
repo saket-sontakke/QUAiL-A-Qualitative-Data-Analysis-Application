@@ -17,6 +17,7 @@ services:
       - MONGO_URI=mongodb://host.docker.internal:27017/QDA_DB 
     volumes:
       - ./backend:/app
+      - /app/node_modules
     depends_on:
       - mongo
 

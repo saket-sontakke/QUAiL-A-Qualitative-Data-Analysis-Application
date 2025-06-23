@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import Navbar from './Navbar';
+import Navbar from './Navbar.jsx';
 
 const Home = () => {
   const [projects, setProjects] = useState([]);
