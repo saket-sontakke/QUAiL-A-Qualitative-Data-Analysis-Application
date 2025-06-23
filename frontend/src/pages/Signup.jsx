@@ -36,7 +36,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center px-4 transition-colors duration-500">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-[#F05623]/30">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md transition-all duration-500 hover:scale-[1.015]">
         <h2 className="text-3xl font-extrabold mb-6 text-center text-[#1D3C87] dark:text-[#F05623] tracking-wide">
           Create Account
         </h2>
