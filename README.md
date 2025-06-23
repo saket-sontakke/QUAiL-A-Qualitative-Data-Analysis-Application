@@ -16,6 +16,5 @@
 |:---------------:|-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|
 | #1            | • GitHub repository for version control <br> • Setting up MongoDB, Express.js, React, Node.js (MERN) infrastructure  <br> • Login, Signup and Reset password functionality <br> • Docker Containerization | • Lacks Business Logic <br> • Very primitive development |
 | #2            | •	Home Page (Create, Open, Update, Delete Projects) <br> •	Data Importation (Limit to textual data) <br> •	Document Browser (view-only) | • Core Coding functionality missing <br> •	No document manipulation possible <br> • Majorly a view-only interface |
-| #3            | •	Document System (Viewing, Grouping, Copy, Paste, Move, Delete) <br> •	Document Browser (toolbar) <br> •	Code System (Manual Coding)
-                                                                                                | *(To be updated)*                                      |
+| #3            | •	Document System (Viewing, Grouping, Copy, Paste, Move, Delete) <br> •	Document Browser (toolbar) <br> •	Code System (Manual Coding)| *(To be updated)*|
 
