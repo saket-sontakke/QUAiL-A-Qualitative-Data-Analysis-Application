@@ -3,6 +3,7 @@ import multer from 'multer';
 import mammoth from 'mammoth';
 import fs from 'fs';
 import path from 'path';
+import ExcelJS from 'exceljs';
 
 import Project from '../models/Project.js';
 import { requireAuth } from '../controllers/projectController.js';
@@ -541,5 +542,150 @@ router.delete('/:projectId/highlight/:highlightId', requireAuth, async (req, res
     res.status(500).json({ error: 'Failed to delete inline highlight', details: err.message });
   }
   });
+
+
+// Utility: Ensure valid ARGB from hex color
+function safeARGB(hexColor) {
+  if (!hexColor || typeof hexColor !== 'string' || !/^#?[0-9A-Fa-f]{6}$/.test(hexColor)) {
+    return 'CCCCCC'; // fallback gray
+  }
+  return hexColor.replace('#', '').toUpperCase();
+}
+
+router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const userId = req.userId;
+
+  try {
+    // const project = await Project.findOne({ _id: projectId, owner: userId })
+    //   .populate('codedSegments.codeDefinition')
+    //   .lean();
+    const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found or unauthorized' });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Coded Segments');
+
+    // Define headers
+    worksheet.columns = [
+      { header: 'File Name', key: 'fileName', width: 30 },
+      { header: 'Code Definition', key: 'codeName', width: 25 },
+      { header: 'Code Description', key: 'codeDescription', width: 40 },
+      { header: 'Coded Segment Text', key: 'text', width: 60 },
+      { header: 'Frequency', key: 'frequency', width: 15 },
+    ];
+
+    // Group segments by fileName first
+    const groupedByFile = {};
+    project.codedSegments.forEach(segment => {
+      const fileName = segment.fileName || 'Unknown File';
+      if (!groupedByFile[fileName]) groupedByFile[fileName] = [];
+      groupedByFile[fileName].push(segment);
+    });
+
+    let currentRow = 2; // Start from row 2 (after header row)
+
+    for (const [fileName, segments] of Object.entries(groupedByFile)) {
+      // Group segments by code definition
+      const groupedByCode = {};
+      segments.forEach(segment => {
+        const defId = segment.codeDefinition?._id?.toString() || 'undefined';
+        if (!groupedByCode[defId]) {
+          groupedByCode[defId] = {
+            definition: segment.codeDefinition,
+            segments: [],
+          };
+        }
+        groupedByCode[defId].segments.push(segment);
+      });
+
+      const fileStartRow = currentRow;
+
+      for (const { definition, segments } of Object.values(groupedByCode)) {
+        const codeColor = safeARGB(definition?.color);
+
+        // Add Code Definition row
+        const defRow = worksheet.addRow({
+          fileName: '', // will be merged later
+          codeName: definition?.name || 'Unknown Code',
+          codeDescription: definition?.description || 'No description',
+          text: '',
+          frequency: segments.length,
+        });
+
+        defRow.eachCell((cell, colNumber) => {
+          if (colNumber === 1 || colNumber === 2) {
+            // File Name and Code Name columns
+            cell.font = { bold: true };
+          }
+          if (colNumber !== 1) {
+            // Apply color fill to all except File Name
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: codeColor },
+            };
+          }
+        });
+
+        currentRow++;
+
+        // Add each coded segment under this definition
+        for (const segment of segments) {
+          const segRow = worksheet.addRow({
+            fileName: '', // merged
+            codeName: '',
+            codeDescription: '',
+            text: segment.text || '',
+            frequency: '',
+          });
+
+          segRow.getCell('text').fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: codeColor },
+          };
+
+          currentRow++;
+        }
+
+        // Add spacing
+        worksheet.addRow({});
+        currentRow++;
+      }
+
+      const fileEndRow = currentRow - 1;
+
+      // Merge and write the file name in column A
+      if (fileEndRow >= fileStartRow) {
+        const cell = worksheet.getCell(`A${fileStartRow}`);
+        cell.value = fileName;
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
+      }
+    }
+
+    // Set response headers
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${project.name}_coded_segments.xlsx"`
+    );
+
+    // Stream workbook to response
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    console.error('[EXPORT ERROR]', err);
+    res.status(500).json({ error: 'Failed to export coded segments', details: err.message });
+  }
+});
 
 export default router;

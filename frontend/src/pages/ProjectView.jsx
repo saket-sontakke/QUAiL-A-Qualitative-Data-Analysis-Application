@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTrashAlt, FaHighlighter, FaCaretDown, FaCaretRight, FaPlus, FaEdit, FaEraser, FaSearch, FaTimes, FaChevronUp, FaChevronDown } from 'react-icons/fa';
+import { FaTrashAlt, FaHighlighter, FaCaretDown, FaCaretRight, FaPlus, FaEdit, FaEraser, FaSearch, FaTimes, FaChevronUp, FaChevronDown, FaDownload } from 'react-icons/fa';
 import { FaAnglesLeft, FaAnglesRight } from "react-icons/fa6";
 import { MdCode } from "react-icons/md";
 import Navbar from './Navbar.jsx';
@@ -126,6 +126,7 @@ const ProjectView = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProject(res.data);
+      setProjectName(res.data.name);
 
       const currentSelectedFile = res.data.importedFiles.find(f => f._id === selectedFileId);
 
@@ -698,6 +699,58 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
+  // NEW: handleExportToExcel function - Add this block
+  const handleExportToExcel = async () => {
+    if (!selectedFileId) {
+    setError('Please select a file to export its coded segments.');
+    setShowConfirmModal(true);
+    setConfirmModalData({
+      title: 'Export Error',
+      message: 'Please select a file to export its coded segments.',
+      onConfirm: () => setShowConfirmModal(false),
+      showCancelButton: false
+    });
+    return; // Stop execution if no file is selected
+  }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `http://localhost:5000/api/projects/${projectId}/export-coded-segments`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob', // Important for downloading files
+        }
+      );
+
+      // Create a blob from the response data
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a link element, set its attributes, and simulate a click
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${projectName}_coded_segments.xlsx`); // Set the file name
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up by revoking the object URL
+      window.URL.revokeObjectURL(url);
+      link.remove();
+
+      setError(''); // Clear any previous error
+    } catch (err) {
+      console.error('Error exporting coded segments:', err);
+      setError(err.response?.data?.error || 'Failed to export coded segments to Excel. Please try again.');
+      setShowConfirmModal(true);
+      setConfirmModalData({
+        title: 'Export Failed',
+        message: err.response?.data?.error || 'Failed to export coded segments to Excel. Please try again.',
+        onConfirm: () => setShowConfirmModal(false),
+        showCancelButton: false
+      });
+    }
+  };
+
   const groupedCodedSegments = useMemo(() => {
     const groups = {};
     codedSegments.forEach(segment => {
@@ -1070,12 +1123,22 @@ return (
 
                 <div className="mb-6">
                   <div
-                    className="flex justify-between items-center mb-2 cursor-pointer"
-                    onClick={() => setShowCodedSegments(!showCodedSegments)}
-                  >
-                    <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623]">Coded Segments</h4>
-                    {showCodedSegments ? <FaCaretDown /> : <FaCaretRight />}
-                  </div>
+                className="flex justify-between items-center mb-2 cursor-pointer"
+                onClick={() => setShowCodedSegments(!showCodedSegments)}
+              >
+                <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3"> {/* Added flex and gap-2 here */}
+                  Coded Segments
+                  <FaDownload
+                    onClick={(e) => { // IMPORTANT: Stop propagation so clicking icon doesn't collapse/expand the section
+                      e.stopPropagation();
+                      handleExportToExcel(); // This function must be defined in your component
+                    }}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer text-base"
+                    title="Export Coded Segments" // Tooltip on hover
+                  />
+                </h4>
+                {showCodedSegments ? <FaCaretDown /> : <FaCaretRight />}
+              </div>
                   <AnimatePresence>
                     {showCodedSegments && (
                       <motion.ul
