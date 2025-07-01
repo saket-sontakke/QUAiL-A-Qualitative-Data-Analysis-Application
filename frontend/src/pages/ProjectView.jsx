@@ -2,13 +2,15 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTrashAlt, FaHighlighter, FaCaretDown, FaCaretRight, FaPlus, FaEdit, FaEraser, FaSearch, FaTimes, FaChevronUp, FaChevronDown, FaDownload } from 'react-icons/fa';
+import { FaTrashAlt, FaHighlighter, FaCaretDown, FaCaretRight, FaPlus, FaEdit, FaEraser, FaSearch, FaTimes, FaChevronUp, FaChevronDown, FaStickyNote} from 'react-icons/fa';
 import { FaAnglesLeft, FaAnglesRight } from "react-icons/fa6";
-import { MdCode } from "react-icons/md";
+import { MdCode, MdCodeOff } from "react-icons/md";
+import { CgImport, CgExport } from "react-icons/cg";
 import Navbar from './Navbar.jsx';
 import ConfirmationModal from './ConfirmationModal.jsx';
 import DefineCodeModal from './DefineCodeModal.jsx';
 import AssignCodeModal from './AssignCodeModal.jsx';
+import MemoModal from './MemoModal.jsx'; 
 
 const ProjectView = () => {
   const { id: projectId } = useParams();
@@ -21,11 +23,18 @@ const ProjectView = () => {
   const [codedSegments, setCodedSegments] = useState([]);
   const [inlineHighlights, setInlineHighlights] = useState([]);
   const [codeDefinitions, setCodeDefinitions] = useState([]);
+  const leftPanelRef = useRef(null); // for scrolling left panel
+  // NEW STATE: For memos
+  const [memos, setMemos] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const [selectedHighlightColor, setSelectedHighlightColor] = useState('#FFFF00');
+  const [selectedHighlightColor, setSelectedHighlightColor] = useState('#00FF00');
   const [showHighlightColorDropdown, setShowHighlightColorDropdown] = useState(false);
+
+  // NEW STATE: For Code Coloring Toggle
+  const [showCodeColors, setShowCodeColors] = useState(true); // Default to MdCode (colored)
+  const [showCodeDropdown, setShowCodeDropdown] = useState(false); // For the new MdCode dropdown
 
   const highlightColors = [
     { name: 'Yellow', value: '#FFFF00', cssClass: 'bg-yellow-300' },
@@ -46,6 +55,16 @@ const ProjectView = () => {
     endIndex: -1,
   });
 
+  // NEW STATE: For Memo Modal
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [memoToEdit, setMemoToEdit] = useState(null);
+  const [currentMemoSelectionInfo, setCurrentMemoSelectionInfo] = useState({
+    text: '',
+    startIndex: -1,
+    endIndex: -1,
+  });
+
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalData, setConfirmModalData] = useState({
     title: '',
@@ -57,11 +76,15 @@ const ProjectView = () => {
   const [activeTool, setActiveTool] = useState(null);
 
   const [expandedCodes, setExpandedCodes] = useState({});
+  // NEW STATE: For expanded memos (similar to codes)
+  const [expandedMemos, setExpandedMemos] = useState({});
 
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [showImportedFiles, setShowImportedFiles] = useState(true);
   const [showCodeDefinitions, setShowCodeDefinitions] = useState(true);
   const [showCodedSegments, setShowCodedSegments] = useState(true);
+  // NEW STATE: To show/hide memos in the left panel
+  const [showMemosPanel, setShowMemosPanel] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -72,10 +95,28 @@ const ProjectView = () => {
   const [viewerSearchMatches, setViewerSearchMatches] = useState([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
 
+  // NEW STATE: To track the currently active (highlighted) coded segment
+  const [activeCodedSegmentId, setActiveCodedSegmentId] = useState(null);
+  // NEW STATE: To track the currently active (highlighted) memo
+  const [activeMemoId, setActiveMemoId] = useState(null);
+
+
+  // NEW STATE: To explicitly trigger scrolling to a segment or memo
+  const [annotationToScrollToId, setAnnotationToScrollToId] = useState(null);
+
+
   const toggleCodeGroup = (codeName) => {
     setExpandedCodes(prev => ({
       ...prev,
       [codeName]: !prev[codeName]
+    }));
+  };
+
+  // NEW: Toggle memo group
+  const toggleMemoGroup = (memoId) => {
+    setExpandedMemos(prev => ({
+      ...prev,
+      [memoId]: !prev[memoId]
     }));
   };
 
@@ -93,16 +134,21 @@ const ProjectView = () => {
       const clickedInsideAssignCodeModal = event.target.closest('.assign-code-modal-content');
       const clickedInsideConfirmModal = event.target.closest('.confirmation-modal-content');
       const clickedInsideHighlightDropdown = event.target.closest('.color-dropdown-menu');
+      // NEW: For Code dropdown
+      const clickedInsideCodeDropdown = event.target.closest('.code-dropdown-menu');
+      // NEW: For Memo Modal
+      const clickedInsideMemoModal = event.target.closest('.memo-modal-content');
 
 
       const clickedOutsideToolbar = toolbarElement && !toolbarElement.contains(event.target);
       const clickedOutsideViewer = viewerElement && !viewerElement.contains(event.target);
 
-      if (clickedOutsideToolbar && !clickedInsideDefineCodeModal && !clickedInsideAssignCodeModal && !clickedInsideConfirmModal && !clickedInsideHighlightDropdown) {
+      if (clickedOutsideToolbar && !clickedInsideDefineCodeModal && !clickedInsideAssignCodeModal && !clickedInsideConfirmModal && !clickedInsideHighlightDropdown && !clickedInsideCodeDropdown && !clickedInsideMemoModal) {
         setShowHighlightColorDropdown(false);
+        setShowCodeDropdown(false); // NEW: Hide code dropdown
       }
 
-      if (clickedOutsideToolbar && clickedOutsideViewer && !clickedInsideDefineCodeModal && !clickedInsideAssignCodeModal && !clickedInsideConfirmModal) {
+      if (clickedOutsideToolbar && clickedOutsideViewer && !clickedInsideDefineCodeModal && !clickedInsideAssignCodeModal && !clickedInsideConfirmModal && !clickedInsideMemoModal) {
           setActiveTool(null);
       }
     };
@@ -119,6 +165,12 @@ const ProjectView = () => {
     }
   }, [isLeftPanelCollapsed]);
 
+  useEffect(() => {
+    if (leftPanelRef.current) {
+      leftPanelRef.current.scrollTop = 0;
+    }
+  }, [searchQuery]);
+
   const fetchProject = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -127,20 +179,24 @@ const ProjectView = () => {
       });
       setProject(res.data);
       setProjectName(res.data.name);
+      setCodeDefinitions(res.data.codeDefinitions || []);
+      // NEW: Load memos at project level
+      setMemos(res.data.memos || []);
+
 
       const currentSelectedFile = res.data.importedFiles.find(f => f._id === selectedFileId);
 
       if (currentSelectedFile) {
-        handleSelectFile(currentSelectedFile, res.data.codedSegments, res.data.inlineHighlights);
+        handleSelectFile(currentSelectedFile, res.data.codedSegments, res.data.inlineHighlights, res.data.memos);
       } else if (res.data.importedFiles.length > 0) {
-        handleSelectFile(res.data.importedFiles[0], res.data.codedSegments, res.data.inlineHighlights);
+        handleSelectFile(res.data.importedFiles[0], res.data.codedSegments, res.data.inlineHighlights, res.data.memos);
       } else {
         setSelectedContent('');
         setSelectedFileName('');
         setSelectedFileId(null);
         setCodedSegments([]);
         setInlineHighlights([]);
-        setCodeDefinitions([]);
+        setMemos([]); // NEW: Clear memos if no file selected
       }
 
     }
@@ -157,13 +213,6 @@ const ProjectView = () => {
 
   useEffect(() => {
     if (project && selectedFileId) {
-      const currentFile = project.importedFiles.find(f => f._id === selectedFileId);
-      if (currentFile) {
-        setCodeDefinitions(currentFile.codeDefinitions || []);
-      } else {
-        setCodeDefinitions([]);
-      }
-
       const segmentsForCurrentFile = project.codedSegments.filter(
         segment => segment.fileId === selectedFileId
       );
@@ -175,12 +224,39 @@ const ProjectView = () => {
       );
       highlightsForCurrentFile.sort((a, b) => a.startIndex - b.startIndex);
       setInlineHighlights(highlightsForCurrentFile);
+
+      // NEW: Filter memos for the current file
+      const memosForCurrentFile = project.memos.filter(
+        memo => memo.fileId === selectedFileId
+      );
+      memosForCurrentFile.sort((a, b) => a.startIndex - b.startIndex);
+      setMemos(memosForCurrentFile);
+
     } else {
-      setCodeDefinitions([]);
       setCodedSegments([]);
       setInlineHighlights([]);
+      setMemos([]); // NEW: Clear memos if no file selected
     }
   }, [project, selectedFileId]);
+
+  // NEW: Effect to scroll to a specific segment or memo when annotationToScrollToId changes
+  useEffect(() => {
+    if (annotationToScrollToId && viewerRef.current) {
+      // Prioritize coded segments, then memos
+      let element = viewerRef.current.querySelector(`[data-code-segment-id="${annotationToScrollToId}"]`);
+      if (!element) {
+        element = viewerRef.current.querySelector(`[data-memo-id="${annotationToScrollToId}"]`);
+      }
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        setAnnotationToScrollToId(null);
+      }
+    }
+  }, [annotationToScrollToId, viewerRef]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -200,7 +276,7 @@ const ProjectView = () => {
       setProject(res.data.project);
       const newlyImportedFile = res.data.project.importedFiles.at(-1);
       if (newlyImportedFile) {
-        handleSelectFile(newlyImportedFile, res.data.project.codedSegments, res.data.project.inlineHighlights);
+        handleSelectFile(newlyImportedFile, res.data.project.codedSegments, res.data.project.inlineHighlights, res.data.project.memos);
       }
     } catch (err) {
       setShowConfirmModal(true);
@@ -212,12 +288,10 @@ const ProjectView = () => {
     }
   };
 
-  const handleSelectFile = useCallback((file, allCodedSegments = project?.codedSegments, allInlineHighlights = project?.inlineHighlights) => {
+  const handleSelectFile = useCallback((file, allCodedSegments = project?.codedSegments, allInlineHighlights = project?.inlineHighlights, allMemos = project?.memos) => {
     setSelectedContent(file.content);
     setSelectedFileName(file.name);
     setSelectedFileId(file._id);
-
-    setCodeDefinitions(file.codeDefinitions || []);
 
     const filteredCodes = allCodedSegments?.filter(seg => seg.fileId === file._id) || [];
     filteredCodes.sort((a, b) => a.startIndex - b.startIndex);
@@ -227,9 +301,18 @@ const ProjectView = () => {
     filteredHighlights.sort((a, b) => a.startIndex - b.startIndex);
     setInlineHighlights(filteredHighlights);
 
+    // NEW: Filter memos for the selected file
+    const filteredMemos = allMemos?.filter(memo => memo.fileId === file._id) || [];
+    filteredMemos.sort((a, b) => a.startIndex - b.startIndex);
+    setMemos(filteredMemos);
+
+
     setViewerSearchQuery('');
     setViewerSearchMatches([]);
     setCurrentMatchIndex(-1);
+    setActiveCodedSegmentId(null);
+    setActiveMemoId(null); // NEW: Reset active memo when changing file
+
 
   }, [project]);
 
@@ -238,7 +321,8 @@ const ProjectView = () => {
 
     let allAnnotations = [
       ...(codedSegments.map(seg => ({ ...seg, type: 'code' }))),
-      ...(inlineHighlights.map(hl => ({ ...hl, type: 'highlight' })))
+      ...(inlineHighlights.map(hl => ({ ...hl, type: 'highlight' }))),
+      ...(memos.map(memo => ({ ...memo, type: 'memo' }))) // NEW: Add memos to annotations
     ];
 
     allAnnotations.sort((a, b) => a.startIndex - b.startIndex || a.endIndex - b.endIndex);
@@ -292,20 +376,64 @@ const ProjectView = () => {
         let backgroundColor = '';
         let titleText = '';
         let className = "relative group cursor-help rounded px-0.5";
+        let superscript = null; // Generalizing for code and memo
 
         if (annotation.type === 'code') {
           const codeDef = annotation.codeDefinition;
-          backgroundColor = (codeDef?.color || '#cccccc') + '66';
           titleText = `Code: ${codeDef?.name || 'Unknown'}\nDesc: ${codeDef?.description || 'No description'}\nType: Coded Segment`;
           className += " border-b-2 border-dotted border-gray-600 dark:border-gray-300";
+
+          const isSegmentActive = activeCodedSegmentId === annotation._id;
+          if (showCodeColors) {
+              backgroundColor = isSegmentActive ? '' : (codeDef?.color || '#cccccc') + '66';
+          } else {
+              backgroundColor = isSegmentActive ? (codeDef?.color || '#cccccc') + '66' : '';
+          }
+
+
+          superscript = (
+            <sup
+              className="ml-0.5 mr-0.5 px-1 py-0.5 rounded-full text-xs cursor-pointer select-none font-bold"
+              style={{ backgroundColor: codeDef?.color || '#cccccc', color: '#FFF' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveCodedSegmentId(prevId => prevId === annotation._id ? null : annotation._id);
+              }}
+              title={`Click to toggle display for code: ${codeDef?.name || 'Unknown'}`}
+            >
+                
+            </sup>
+          );
         } else if (annotation.type === 'highlight') {
           backgroundColor = annotation.color + '33';
           titleText = 'Type: Inline Highlight';
+        } else if (annotation.type === 'memo') { // NEW: Handle memo annotation type
+            titleText = `Memo: ${annotation.title || 'No Title'}\nContent: ${annotation.content || 'No content'}`;
+            // Memos do not highlight the text, so no backgroundColor here
+            const isMemoActive = activeMemoId === annotation._id;
+
+        superscript = (
+          <sup
+            className="ml-0.1 mr-0.1 cursor-pointer select-none align-super"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveMemoId(prevId => prevId === annotation._id ? null : annotation._id);
+              setMemoToEdit(annotation);
+              setShowMemoModal(true);
+            }}
+            title={`Click to view/edit memo: ${annotation.title || 'No Title'}`}
+          >
+            <FaStickyNote className="inline-block" style={{ fontSize: '0.9rem', color: '#FFE135' }} />
+          </sup>
+        );
+            // If the memo is active, add a temporary background
+            backgroundColor = '';
+
         } else if (annotation.type === 'search') {
           if (currentMatchIndex !== -1 && viewerSearchMatches[currentMatchIndex] &&
               annotation.startIndex === viewerSearchMatches[currentMatchIndex].startIndex &&
               annotation.endIndex === viewerSearchMatches[currentMatchIndex].endIndex) {
-              backgroundColor = '#FF5733'; 
+              backgroundColor = '#FF5733';
               className += " viewer-search-highlight-active";
           } else {
               backgroundColor = '#FFFF00';
@@ -323,7 +451,10 @@ const ProjectView = () => {
             data-start-index={annotation.startIndex}
             data-end-index={annotation.endIndex}
             data-annotation-type={annotation.type}
+            {...(annotation.type === 'code' && { 'data-code-segment-id': annotation._id })}
+            {...(annotation.type === 'memo' && { 'data-memo-id': annotation._id })} // NEW: Add data-memo-id
           >
+            {superscript} {/* Render general superscript */}
             {segmentContent}
           </span>
         );
@@ -336,7 +467,7 @@ const ProjectView = () => {
     }
 
     return result;
-  }, [selectedContent, codedSegments, inlineHighlights, viewerSearchQuery, viewerSearchMatches, currentMatchIndex]);
+  }, [selectedContent, codedSegments, inlineHighlights, memos, viewerSearchQuery, viewerSearchMatches, currentMatchIndex, activeCodedSegmentId, activeMemoId, showCodeColors]); // NEW: Add memos and activeMemoId to dependency array
 
   useEffect(() => {
     if (viewerSearchMatches.length > 0 && currentMatchIndex !== -1 && viewerRef.current) {
@@ -377,26 +508,23 @@ const ProjectView = () => {
 
   const getSelectionInfo = () => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || !selectedFileName) {
-      return null;
-    }
+    if (!selection || selection.rangeCount === 0 || !selectedFileName) return null;
 
     const range = selection.getRangeAt(0);
-    if (!viewerRef.current || !viewerRef.current.contains(selection.anchorNode)) {
-        return null;
-    }
+    if (!viewerRef.current || !viewerRef.current.contains(selection.anchorNode)) return null;
 
-    const preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(viewerRef.current);
-    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const fullText = selectedContent;
 
-    const startIndex = preCaretRange.toString().length;
     const selectedText = selection.toString();
+    if (!selectedText.trim()) return null;
+
+    // This is a simple indexOf, which might not be accurate for complex DOM structures.
+    // For production, consider using a more robust solution that accounts for DOM nodes.
+    const startIndex = fullText.indexOf(selectedText);
     const endIndex = startIndex + selectedText.length;
 
-    if (!selectedText.trim()) {
-      return null;
-    }
+    if (startIndex === -1) return null;
+
     return { text: selectedText, startIndex, endIndex };
   };
 
@@ -456,6 +584,43 @@ const ProjectView = () => {
     }
   };
 
+  // NEW: Handle Memo Selection Action
+  const handleMemoSelectionAction = () => {
+    const selectionInfo = getSelectionInfo();
+    if (!selectionInfo) {
+      // If no text is selected, allow creating a document-level memo
+      if (selectedFileId) {
+        setCurrentMemoSelectionInfo({ text: '', startIndex: -1, endIndex: -1 });
+        setMemoToEdit(null); // Ensure no previous memo is being edited
+        setShowMemoModal(true);
+      } else {
+        setError("Please select a document to create a memo.");
+        setShowConfirmModal(true);
+        setConfirmModalData({
+          title: 'Memo Error',
+          message: 'Please select a document to create a memo.',
+          onConfirm: () => setShowConfirmModal(false),
+        });
+      }
+      return;
+    }
+
+    if (!selectedFileId) {
+      setError("Please select a document to create a memo.");
+      setShowConfirmModal(true);
+      setConfirmModalData({
+        title: 'Memo Error',
+        message: 'Please select a document to create a memo.',
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      return;
+    }
+    setCurrentMemoSelectionInfo(selectionInfo);
+    setMemoToEdit(null); // Clear any pre-filled memo data
+    setShowMemoModal(true);
+  };
+
+
   const handleEraseSelectionAction = async () => {
     const selectionInfo = getSelectionInfo();
     if (!selectionInfo || !selectedFileId) {
@@ -511,6 +676,8 @@ const ProjectView = () => {
         handleHighlightSelectionAction();
     } else if (activeTool === 'erase') {
         handleEraseSelectionAction();
+    } else if (activeTool === 'memo') { // NEW: Trigger memo action on mouse up if memo tool is active
+        handleMemoSelectionAction();
     }
   };
 
@@ -566,26 +733,15 @@ const ProjectView = () => {
         setDefineModalBackendErrorRef.current('');
     }
 
-    if (!selectedFileId) {
-        setError("Please select a document before defining codes.");
-        setShowConfirmModal(true);
-        setConfirmModalData({
-            title: 'Define Code Error',
-            message: 'Please select a document to define a code.',
-            onConfirm: () => setShowConfirmModal(false),
-        });
-        return;
-    }
-
     try {
       const token = localStorage.getItem('token');
       if (_id) {
-        await axios.put(`http://localhost:5000/api/projects/${projectId}/files/${selectedFileId}/code-definitions/${_id}`,
+        await axios.put(`http://localhost:5000/api/projects/${projectId}/code-definitions/${_id}`,
           { name, description, color },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post(`http://localhost:5000/api/projects/${projectId}/files/${selectedFileId}/code-definitions`,
+        await axios.post(`http://localhost:5000/api/projects/${projectId}/code-definitions`,
           { name, description, color },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -617,11 +773,93 @@ const ProjectView = () => {
     }
   };
 
+  // NEW: handleSaveMemo function
+  const handleSaveMemo = async ({ title, content, _id }) => {
+    if (!selectedFileId) {
+      setError("Please select a document to save a memo.");
+      setShowConfirmModal(true);
+      setConfirmModalData({
+        title: 'Memo Error',
+        message: 'Please select a document to save a memo.',
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const memoData = {
+        title,
+        content,
+        fileId: selectedFileId,
+        fileName: selectedFileName,
+        text: memoToEdit?.text ?? currentMemoSelectionInfo.text ?? '',
+        startIndex: memoToEdit?.startIndex ?? currentMemoSelectionInfo.startIndex ?? -1,
+        endIndex: memoToEdit?.endIndex ?? currentMemoSelectionInfo.endIndex ?? -1,
+        author: localStorage.getItem('username'),
+        authorId: localStorage.getItem('userId'),
+      };
+
+      if (_id) {
+        await axios.put(
+          `http://localhost:5000/api/projects/${projectId}/memos/${_id}`,
+          memoData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axios.post(
+          `http://localhost:5000/api/projects/${projectId}/memos`,
+          memoData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      fetchProject();
+      setShowMemoModal(false);
+      setMemoToEdit(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save memo.');
+      setShowConfirmModal(true);
+      setConfirmModalData({
+        title: 'Save Memo Failed',
+        message: err.response?.data?.error || 'Failed to save memo.',
+        onConfirm: () => setShowConfirmModal(false),
+      });
+    } finally {
+      window.getSelection().removeAllRanges();
+    }
+  };
+
+
+  // NEW: handleDeleteMemo function
+  const handleDeleteMemo = (memoId, memoTitle) => {
+    setConfirmModalData({
+      title: 'Confirm Memo Deletion',
+      message: `Are you sure you want to delete the memo "${memoTitle}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`http://localhost:5000/api/projects/${projectId}/memos/${memoId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          fetchProject();
+          setShowConfirmModal(false);
+          setActiveMemoId(null); // Clear active memo if deleted
+        } catch (err) {
+          setError(err.response?.data?.error || 'Failed to delete memo');
+          setShowConfirmModal(false);
+        }
+      },
+    });
+    setShowConfirmModal(true);
+  };
+
 
   const handleDeleteFile = (fileId, fileName) => {
     setConfirmModalData({
       title: 'Confirm File Deletion',
-      message: `Are you sure you want to delete "${fileName}"? This action cannot be undone. All associated codes and highlights will also be deleted.`,
+      message: `Are you sure you want to delete "${fileName}"? This action cannot be undone. All associated codes, highlights, and memos will also be deleted.`,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
@@ -636,7 +874,7 @@ const ProjectView = () => {
             setSelectedFileId(null);
             setCodedSegments([]);
             setInlineHighlights([]);
-            setCodeDefinitions([]);
+            setMemos([]); // NEW: Clear memos on file delete
           }
         } catch (err) {
           setError(err.response?.data?.error || 'Failed to delete file');
@@ -648,23 +886,13 @@ const ProjectView = () => {
   };
 
   const handleDeleteCodeDefinition = (codeDefId, codeDefName) => {
-    if (!selectedFileId) {
-        setError("Cannot delete code definition. No document is currently selected.");
-        setShowConfirmModal(true);
-        setConfirmModalData({
-            title: 'Deletion Error',
-            message: 'Please select a document before deleting its code definitions.',
-            onConfirm: () => setShowConfirmModal(false),
-        });
-        return;
-    }
     setConfirmModalData({
       title: 'Confirm Code Deletion',
-      message: `Are you sure you want to delete the code definition "${codeDefName}" for this document? This will also remove all segments coded with it. This action cannot be undone.`,
+      message: `Are you sure you want to delete the code definition "${codeDefName}"? This will also remove all segments coded with it across all documents. This action cannot be undone.`,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:5000/api/projects/${projectId}/files/${selectedFileId}/code-definitions/${codeDefId}`, {
+          await axios.delete(`http://localhost:5000/api/projects/${projectId}/code-definitions/${codeDefId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           fetchProject();
@@ -699,7 +927,6 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  // NEW: handleExportToExcel function - Add this block
   const handleExportToExcel = async () => {
     if (!selectedFileId) {
     setError('Please select a file to export its coded segments.');
@@ -710,7 +937,7 @@ const ProjectView = () => {
       onConfirm: () => setShowConfirmModal(false),
       showCancelButton: false
     });
-    return; // Stop execution if no file is selected
+    return;
   }
     try {
       const token = localStorage.getItem('token');
@@ -718,26 +945,23 @@ const ProjectView = () => {
         `http://localhost:5000/api/projects/${projectId}/export-coded-segments`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob', // Important for downloading files
+          responseType: 'blob',
         }
       );
 
-      // Create a blob from the response data
       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
 
-      // Create a link element, set its attributes, and simulate a click
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${projectName}_coded_segments.xlsx`); // Set the file name
+      link.setAttribute('download', `${projectName}_coded_segments.xlsx`);
       document.body.appendChild(link);
       link.click();
 
-      // Clean up by revoking the object URL
       window.URL.revokeObjectURL(url);
       link.remove();
 
-      setError(''); // Clear any previous error
+      setError('');
     } catch (err) {
       console.error('Error exporting coded segments:', err);
       setError(err.response?.data?.error || 'Failed to export coded segments to Excel. Please try again.');
@@ -750,6 +974,53 @@ const ProjectView = () => {
       });
     }
   };
+
+  const handleExportMemos = async () => {
+  if (!selectedFileId) {
+    setError('Please select a file to export its memos.');
+    setShowConfirmModal(true);
+    setConfirmModalData({
+      title: 'Export Error',
+      message: 'Please select a file to export its memos.',
+      onConfirm: () => setShowConfirmModal(false),
+      showCancelButton: false,
+    });
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `http://localhost:5000/api/projects/${projectId}/export-memos`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      }
+    );
+
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${projectName}_memos.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    setError('');
+  } catch (err) {
+    console.error('Export memos failed:', err);
+    setError(err.response?.data?.error || 'Failed to export memos.');
+    setShowConfirmModal(true);
+    setConfirmModalData({
+      title: 'Export Failed',
+      message: err.response?.data?.error || 'Failed to export memos.',
+      onConfirm: () => setShowConfirmModal(false),
+    });
+  }
+};
 
   const groupedCodedSegments = useMemo(() => {
     const groups = {};
@@ -771,6 +1042,18 @@ const ProjectView = () => {
     }));
   }, [codedSegments]);
 
+  // NEW: Grouped memos for display in the sidebar
+  const groupedMemos = useMemo(() => {
+    // Memos don't have code definitions, so we'll group them by file or just list them.
+    // For simplicity, let's just list them and indicate if they are document-level or segment-level.
+    // If you want to group them by title or a custom category, you'd adjust this.
+    return memos.map(memo => ({
+      ...memo,
+      displayTitle: memo.title || (memo.text ? `Memo on "${memo.text.substring(0, 30)}..."` : 'Document Memo'),
+      isSegmentMemo: memo.startIndex !== -1 && memo.endIndex !== -1,
+    })).sort((a,b) => a.startIndex - b.startIndex);
+  }, [memos]);
+
 
   const renderViewerToolbar = () => (
     <div id="viewer-toolbar" className="flex justify-between items-center bg-white dark:bg-gray-800 p-2 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
@@ -785,21 +1068,18 @@ const ProjectView = () => {
                 placeholder="Search..."
                 value={viewerSearchQuery}
                 onChange={handleViewerSearchChange}
-                // Increased pr (padding-right) to make space for the elements inside
                 className="w-64 pl-8 pr-28 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:focus:ring-[#F05623] text-sm"
             />
             <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
             {viewerSearchQuery && (
-                <div className="absolute right-0 flex items-center h-full pr-4 gap-1"> {/* This div groups count, arrows, and clear */}
-                    {/* Match Count */}
+                <div className="absolute right-0 flex items-center h-full pr-4 gap-1">
                     <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                         {viewerSearchMatches.length > 0 ?
                          `${currentMatchIndex + 1}/${viewerSearchMatches.length}` :
                          '0/0'
                         }
                     </span>
-                    {/* Navigation Arrows */}
-                    <div className="flex"> {/* Removed ml-1 as gap on parent takes care of spacing */}
+                    <div className="flex">
                         <button
                             onClick={goToPrevMatch}
                             disabled={viewerSearchMatches.length === 0}
@@ -819,7 +1099,7 @@ const ProjectView = () => {
                     </div>
                     <button
                         onClick={handleClearViewerSearch}
-                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" /* Removed ml-1 */
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         title="Clear search"
                     >
                         <FaTimes />
@@ -828,26 +1108,112 @@ const ProjectView = () => {
             )}
         </div>
 
-        {/* Code Button */}
+        {/* Code Button with Dropdown */}
         <div className="relative flex rounded-md shadow-sm">
           <button
             onClick={() => {
               const nextActiveTool = activeTool === 'code' ? null : 'code';
               setActiveTool(nextActiveTool);
               setShowHighlightColorDropdown(false);
+              setShowCodeDropdown(false);
+              // Ensure memo modal is closed when switching to code tool
+              setShowMemoModal(false);
 
               if (nextActiveTool === 'code' && getSelectionInfo()) {
                 handleCodeSelectionAction();
               }
             }}
-            className={`px-3 py-2 rounded-md flex items-center transition-all duration-200 ${
+            className={`px-3 py-2 rounded-l-md flex items-center transition-all duration-200 ${
               activeTool === 'code' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
-            title="Code Selected Text"
+            title="Code Text"
           >
-            <MdCode className="text-lg" style={{ color: '#FFFFFF' }} />
+            {showCodeColors ? (
+              <MdCode className="text-lg" style={{ color: '#FFFFFF' }} />
+            ) : (
+              <MdCodeOff className="text-lg" style={{ color: '#FFFFFF' }} />
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setShowCodeDropdown(!showCodeDropdown);
+              if (!showCodeDropdown) {
+                setShowHighlightColorDropdown(false);
+                setShowAssignCodeModal(false);
+              }
+            }}
+            className="p-2 pl-1 rounded-r-md border-l border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+            title="Code Display Options"
+          >
+            <FaCaretDown className="text-gray-600 dark:text-gray-300" />
+          </button>
+          <AnimatePresence>
+            {showCodeDropdown && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute right-0 mt-12 w-32 bg-white dark:bg-gray-700 rounded-lg shadow-lg p-2 z-50 code-dropdown-menu"
+              >
+                <button
+                  onClick={() => {
+                    setShowCodeColors(true);
+                    setShowCodeDropdown(false);
+                    setActiveCodedSegmentId(null);
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs ${showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  title="Enable Colored Codes"
+                >
+                  <MdCode size={18} />
+                  <span className="truncate">Show Codes</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCodeColors(false);
+                    setShowCodeDropdown(false);
+                    setActiveCodedSegmentId(null);
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs ${!showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                  title="Disable Colored Codes"
+                >
+                  <MdCodeOff size={18} />
+                  <span className="truncate">Hide Codes</span>
+                </button>
+
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* NEW: Memo Tool Button */}
+        <div className="relative flex rounded-md shadow-sm">
+          <button
+            onClick={() => {
+              const nextActiveTool = activeTool === 'memo' ? null : 'memo';
+              setActiveTool(nextActiveTool);
+              setShowHighlightColorDropdown(false);
+              setShowAssignCodeModal(false);
+              setShowCodeDropdown(false);
+              setShowMemoModal(false); // Close modal if tool is toggled off
+
+              // Only open modal if text is selected
+              if (nextActiveTool === 'memo') {
+                const selection = getSelectionInfo();
+                if (selection) {
+                  handleMemoSelectionAction();
+                }
+              }
+            }}
+
+            className={`px-3 py-2 rounded-md flex items-center transition-all duration-200 ${
+              activeTool === 'memo' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+            title="Create/View Memos"
+          >
+            <FaStickyNote className="text-lg" style={{ color: '#FFE135' }} /> {/* Example color */}
           </button>
         </div>
+
 
         {/* Highlight Button with Dropdown */}
         <div className="relative flex rounded-md shadow-sm">
@@ -856,6 +1222,8 @@ const ProjectView = () => {
               const nextActiveTool = activeTool === 'highlight' ? null : 'highlight';
               setActiveTool(nextActiveTool);
               setShowAssignCodeModal(false);
+              setShowCodeDropdown(false);
+              setShowMemoModal(false); // Close memo modal
 
               if (nextActiveTool === 'highlight' && getSelectionInfo()) {
                 handleHighlightSelectionAction();
@@ -864,14 +1232,18 @@ const ProjectView = () => {
             className={`p-2 pr-1 rounded-l-md flex items-center transition-all duration-200 ${
               activeTool === 'highlight' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
-            title="Highlight Selected Text"
+            title="Highlight Text"
           >
             <FaHighlighter className="text-lg mr-1" style={{ color: selectedHighlightColor }} />
           </button>
           <button
             onClick={() => {
               setShowHighlightColorDropdown(!showHighlightColorDropdown);
-              if (!showHighlightColorDropdown) setShowAssignCodeModal(false);
+              if (!showHighlightColorDropdown) {
+                setShowAssignCodeModal(false);
+                setShowCodeDropdown(false);
+                setShowMemoModal(false); // Close memo modal
+              }
             }}
             className="p-2 pl-1 rounded-r-md border-l border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
             title="Select Highlight Color"
@@ -914,6 +1286,8 @@ const ProjectView = () => {
                 setActiveTool(activeTool === 'erase' ? null : 'erase');
                 setShowHighlightColorDropdown(false);
                 setShowAssignCodeModal(false);
+                setShowCodeDropdown(false);
+                setShowMemoModal(false); // Close memo modal
               }}
               className={`px-3 py-2 rounded-md flex items-center transition-all duration-200 ${
                 activeTool === 'erase' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -933,58 +1307,63 @@ const ProjectView = () => {
 return (
   <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white">
     <Navbar
-      onFileImport={(file, projectId) => handleFileChange({ target: { files: [file] }, projectId })}
       projectName={project?.name}
-      projectID={projectId} 
+      projectID={projectId}
     />
-    <div className="px-3 pt-20">
-      <div className="flex gap-3">
+    {/* Main content area, ensure it takes full height minus navbar */}
+    <div className="px-3 pt-20 h-[calc(100vh-theme(space.5))]"> {/* Added height for main content area */}
+      <div className="flex gap-3 h-full"> {/* Ensures this flex container takes full height */}
         <motion.div
           initial={{ width: '250px' }}
           animate={{ width: isLeftPanelCollapsed ? '48px' : '250px' }}
           transition={{ duration: 0.3 }}
-          className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden"
+          className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden flex flex-col h-full" // Added flex flex-col and h-full
           style={{ minWidth: isLeftPanelCollapsed ? '48px' : '250px' }}
         >
-          <button
-            onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-            className={`absolute top-4 p-2 rounded-full shadow-lg z-10
-                        text-gray-600 dark:text-gray-300
-                        hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200
-                        ${isLeftPanelCollapsed ? 'right-2' : 'right-4'}`}
-            title={isLeftPanelCollapsed ? "Expand Panel" : "Collapse Panel"}
-          >
-            {isLeftPanelCollapsed ? <FaAnglesRight /> : <FaAnglesLeft />}
-          </button>
+          {/* Fixed Header Section for Left Panel */}
+          <div className="flex-shrink-0 px-4 py-8 relative bg-white dark:bg-gray-800 z-20"> {/* Fixed header for search bar and button */}
+            <button
+              onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+              className={`absolute top-1/2 -translate-y-1/2 p-2 rounded-full shadow-lg z-10
+                          text-gray-600 dark:text-gray-300
+                          hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200
+                          ${isLeftPanelCollapsed ? 'right-2' : 'right-4'}`}
+              title={isLeftPanelCollapsed ? "Expand Panel" : "Collapse Panel"}
+            >
+              {isLeftPanelCollapsed ? <FaAnglesRight /> : <FaAnglesLeft />}
+            </button>
 
-          {!isLeftPanelCollapsed && (
-            <div className="absolute top-4 left-4 right-14 z-10 flex items-center">
-              <input
-                type="text"
-                ref={searchInputRef}
-                placeholder="Search Files..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:focus:ring-[#F05623] text-sm"
-              />
-              <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                  title="Clear search"
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
-          )}
+            {!isLeftPanelCollapsed && (
+              <div className="relative flex items-center pr-10"> {/* pr-10 for button space */}
+                <input
+                  type="text"
+                  ref={searchInputRef}
+                  placeholder="Search Files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:focus:ring-[#F05623] text-sm"
+                />
+                <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                    title="Clear search"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
+          {/* Scrollable Content Area for Left Panel */}
           <motion.div
+            ref={leftPanelRef}
             initial={{ opacity: 1 }}
             animate={{ opacity: isLeftPanelCollapsed ? 0 : 1 }}
             transition={{ duration: 0.2 }}
-            className="h-full pt-16 pb-4 px-4 overflow-y-auto"
+            className="flex-1 pb-4 px-4 overflow-y-auto"
           >
             {!isLeftPanelCollapsed && (
               <>
@@ -993,7 +1372,23 @@ return (
                     className="flex justify-between items-center mb-3 cursor-pointer"
                     onClick={() => setShowImportedFiles(!showImportedFiles)}
                   >
-                    <h3 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623]">Imported Files</h3>
+                    <h3 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3">
+                      Imported Files
+                      <label
+                        htmlFor="importFileSidebar"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer text-base"
+                        title="Import File"
+                      >
+                        <CgImport className="text-xl" />
+                        <input
+                          id="importFileSidebar"
+                          type="file"
+                          accept=".txt,.docx"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </h3>
                     {showImportedFiles ? <FaCaretDown /> : <FaCaretRight />}
                   </div>
                   <AnimatePresence>
@@ -1045,7 +1440,28 @@ return (
                     className="flex justify-between items-center mb-2 cursor-pointer"
                     onClick={() => setShowCodeDefinitions(!showCodeDefinitions)}
                   >
-                    <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623]">Code Definitions</h4>
+                    <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3">
+                      Code Definitions
+                      <FaPlus
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!selectedFileId) {
+                            setError("Please select a document before defining codes.");
+                            setShowConfirmModal(true);
+                            setConfirmModalData({
+                                title: 'Define Code Error',
+                                message: 'Please select a document to define a code.',
+                                onConfirm: () => setShowConfirmModal(false),
+                            });
+                            return;
+                          }
+                          setCodeDefinitionToEdit(null);
+                          setShowDefineCodeModal(true);
+                        }}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer text-base"
+                        title="Define New Code"
+                      />
+                      </h4>
                     {showCodeDefinitions ? <FaCaretDown /> : <FaCaretRight />}
                   </div>
                   <AnimatePresence>
@@ -1092,30 +1508,9 @@ return (
                               </li>
                             ))
                           ) : (
-                            <li className="text-xs text-gray-500">No codes defined for this document yet.</li>
+                            <li className="text-xs text-gray-500">No codes defined yet for this project.</li>
                           )}
                         </ul>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!selectedFileId) {
-                              setError("Please select a document before defining codes.");
-                              setShowConfirmModal(true);
-                              setConfirmModalData({
-                                  title: 'Define Code Error',
-                                  message: 'Please select a document to define a code.',
-                                  onConfirm: () => setShowConfirmModal(false),
-                              });
-                              return;
-                            }
-                            setCodeDefinitionToEdit(null);
-                            setShowDefineCodeModal(true);
-                          }}
-                          className="w-full px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm flex items-center justify-center"
-                          title="Define New Code"
-                        >
-                          <FaPlus className="mr-1" /> Add New Code
-                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1126,15 +1521,15 @@ return (
                 className="flex justify-between items-center mb-2 cursor-pointer"
                 onClick={() => setShowCodedSegments(!showCodedSegments)}
               >
-                <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3"> {/* Added flex and gap-2 here */}
+                <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3">
                   Coded Segments
-                  <FaDownload
-                    onClick={(e) => { // IMPORTANT: Stop propagation so clicking icon doesn't collapse/expand the section
+                  <CgExport
+                    onClick={(e) => {
                       e.stopPropagation();
-                      handleExportToExcel(); // This function must be defined in your component
+                      handleExportToExcel();
                     }}
                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer text-base"
-                    title="Export Coded Segments" // Tooltip on hover
+                    title="Export Coded Segments"
                   />
                 </h4>
                 {showCodedSegments ? <FaCaretDown /> : <FaCaretRight />}
@@ -1180,7 +1575,11 @@ return (
                                     {group.segments.map((seg) => (
                                       <li
                                         key={seg._id}
-                                        className="p-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white flex justify-between items-center group"
+                                        className="p-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white flex justify-between items-center group cursor-pointer"
+                                        onClick={() => {
+                                          setActiveCodedSegmentId(seg._id);
+                                          setAnnotationToScrollToId(seg._id);
+                                        }}
                                       >
                                         <span className="truncate">{`"${seg.text.substring(0, Math.min(seg.text.length, 40))}..."`}</span>
                                         <button
@@ -1207,16 +1606,106 @@ return (
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* NEW: Memos Section */}
+                <div className="mb-6">
+                    <div
+                    className="flex justify-between items-center mb-2 cursor-pointer"
+                    onClick={() => setShowMemosPanel(!showMemosPanel)}
+                  >
+                    <h4 className="text-lg font-semibold text-[#1D3C87] dark:text-[#F05623] flex items-center gap-3">
+                      Memos
+                      <CgExport
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent dropdown toggle
+                          if (!selectedFileId) {
+                            setError("Please select a document to export its memos.");
+                            setShowConfirmModal(true);
+                            setConfirmModalData({
+                              title: 'Export Error',
+                              message: 'Please select a document to export its memos.',
+                              onConfirm: () => setShowConfirmModal(false),
+                              showCancelButton: false,
+                            });
+                            return;
+                          }
+                          handleExportMemos(); // Export function
+                        }}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 cursor-pointer text-base"
+                        title="Export Memos"
+                      />
+                    </h4>
+                    {showMemosPanel ? <FaCaretDown /> : <FaCaretRight />}
+                  </div>
+                  <AnimatePresence>
+                    {showMemosPanel && (
+                      <motion.ul
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 p-2 rounded"
+                      >
+                        {groupedMemos.length > 0 ? (
+                          groupedMemos.map((memo) => (
+                            <li
+                              key={memo._id}
+                              className="p-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white flex justify-between items-center group cursor-pointer"
+                              onClick={() => {
+                                setActiveMemoId(memo._id);
+                                setAnnotationToScrollToId(memo._id);
+                                setMemoToEdit(memo); // Set memo to edit when clicked
+                                setShowMemoModal(true); // Open memo modal
+                              }}
+                            >
+                              <span className="truncate font-medium">
+                                {memo.displayTitle}
+                                {memo.isSegmentMemo && <span className="ml-1 text-gray-500"></span>}
+                              </span>
+                              <div className="flex gap-1 items-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMemoToEdit(memo);
+                                    setShowMemoModal(true);
+                                  }}
+                                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full opacity-50 group-hover:opacity-100 transition-opacity"
+                                  title="Edit Memo"
+                                >
+                                  <FaEdit size={12}/>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMemo(memo._id, memo.title || 'this memo');
+                                  }}
+                                  className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-600 p-1 rounded-full opacity-50 group-hover:opacity-100 transition-opacity"
+                                  title="Delete Memo"
+                                >
+                                  <FaTrashAlt size={10} />
+                                </button>
+                              </div>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-xs text-gray-500">No memos yet for this file.</li>
+                        )}
+                      </motion.ul>
+                    )}
+                  </AnimatePresence>
+                </div>
+
               </>
             )}
           </motion.div>
         </motion.div>
 
-        <div className={`flex flex-col rounded-xl shadow-md overflow-hidden ${isLeftPanelCollapsed ? 'flex-1' : 'w-4/5'}`}>
+        {/* Right Panel (Document Viewer) */}
+        <div className={`flex flex-col rounded-xl shadow-md overflow-hidden ${isLeftPanelCollapsed ? 'flex-1' : 'flex-1'}`}>
           {renderViewerToolbar()}
           <div
             ref={viewerRef}
-            className="bg-white dark:bg-gray-800 p-6 overflow-y-auto max-h-[75vh]"
+            className="bg-white dark:bg-gray-800 p-6 overflow-y-auto flex-1"
             onMouseUp={handleViewerMouseUp}
           >
             <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 select-text">
@@ -1254,6 +1743,19 @@ return (
         setCodeDefinitionToEdit(null);
         setShowAssignCodeModal(false);
       }}
+    />
+    {/* NEW: MemoModal */}
+    <MemoModal
+      show={showMemoModal}
+      onClose={() => {
+        setShowMemoModal(false);
+        setMemoToEdit(null); // Clear memo being edited on close
+        window.getSelection().removeAllRanges(); // Clear selection when modal closes
+      }}
+      onSave={handleSaveMemo}
+      initialMemo={memoToEdit}
+      selectionInfo={currentMemoSelectionInfo}
+      onDelete={handleDeleteMemo}
     />
     <ConfirmationModal
       show={showConfirmModal}

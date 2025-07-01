@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUserCircle, FaFolderOpen, FaFolderPlus } from 'react-icons/fa';
-import { BiImport } from 'react-icons/bi';
 
-const Navbar = ({ onFileImport, projectName, projectID }) => {
+const Navbar = ({ projectName, projectID }) => {
   const [showProfile, setShowProfile] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -42,14 +41,6 @@ const Navbar = ({ onFileImport, projectName, projectID }) => {
     navigate('/');
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    // console.log('File selected in Navbar:', file);
-    if (file && onFileImport) {
-      onFileImport(file, projectID);
-    }
-  };
-
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1D3C87] dark:bg-gray-900 shadow-lg px-6 py-3 flex justify-between items-center">
       <div className="flex items-center space-x-4">
@@ -77,20 +68,6 @@ const Navbar = ({ onFileImport, projectName, projectID }) => {
               >
                 <FaFolderOpen className="text-xl" />
               </Link>
-              <label
-                htmlFor="importFileNavbar"
-                className="cursor-pointer text-white hover:text-[#F05623] transition-colors duration-200"
-                title="Import File"
-              >
-                <BiImport className="text-xl" />
-                <input
-                  type="file"
-                  accept=".txt,.docx"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="importFileNavbar"
-                />
-              </label>
             </div>
           </>
         )}
