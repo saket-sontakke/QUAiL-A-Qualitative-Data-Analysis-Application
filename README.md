@@ -18,4 +18,5 @@
 | #2            | •	Home Page (Create, Open, Update, Delete Projects) <br> •	Data Importation (Limit to textual data) <br> •	Document Viewer (view-only) | • Core Coding functionality missing <br> •	No document manipulation possible <br> • Majorly a view-only interface |
 | #3            | •	Code System (Manual Coding) <br> •	Left Panel (Imported Files, Code Definitions, Code Segments) <br> •	Document Viewer Toolbar (Coder, Highlighter, Eraser, Search bar) <br> | •	No memos, Export Functionalities or visualizations <br> •	Lacks AI enabled features |
 | #4            | •	Memos (Create, Edit, Delete) <br> •	Export Code Segments/Memos <br>  •	UI Updates | •	No visualizations <br> •	Lacks AI enabled features |
+| #5            | *(To be Updated)* | *(To be Updated)* |
 
