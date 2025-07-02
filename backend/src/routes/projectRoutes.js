@@ -43,6 +43,24 @@ router.post('/create', requireAuth, async (req, res) => {
   }
 });
 
+// -- UPDATE PROJECT --
+router.put('/:id', requireAuth, async (req, res) => {
+  const { name, data } = req.body; // Include other fields you want to update
+  try {
+    const project = await Project.findOneAndUpdate(
+      { _id: req.params.id, owner: req.userId },
+      { $set: { name, data } }, // Update the 'name' and 'data' fields
+      { new: true, runValidators: true } // Return the updated document and run schema validators
+    );
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found or unauthorized' });
+    }
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: 'Project update failed', details: err.message });
+  }
+});
+
 // -- GET MY PROJECTS --
 router.get('/my-projects', requireAuth, async (req, res) => {
   try {
