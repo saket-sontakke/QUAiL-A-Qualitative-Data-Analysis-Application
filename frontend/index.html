@@ -5,9 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/et.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ETQDA</title>
+
+    <!-- Theme setup to prevent flash -->
+    <script>
+      const stored = localStorage.getItem('theme');
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const useDark = stored === 'dark' || (!stored && systemDark);
+      document.documentElement.classList.toggle('dark', useDark);
+    </script>
+
+    <!-- Vite HMR client (enabled automatically in dev) -->
+    <script type="module" src="/@vite/client"></script>
+    <!-- React Fast Refresh preamble -->
+    <script type="module">
+      import RefreshRuntime from '/@react-refresh';
+      RefreshRuntime.injectIntoGlobalHook(window);
+      window.$RefreshReg$ = () => {};
+      window.$RefreshSig$ = () => type => type;
+      window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
   </head>
-  <body>
+  <body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
     <div id="root"></div>
+
+    <!-- Main script for your React app -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

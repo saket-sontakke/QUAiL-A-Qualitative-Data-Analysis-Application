@@ -1,28 +1,42 @@
-import React, { useState } from 'react';
+/**
+ * @file ResetPassword.jsx
+ * @description This component renders a form for users to reset their password
+ * using a token from their email. It validates the new password, communicates
+ * with the backend, and redirects the user upon success.
+ */
+
+import { useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
+  // State for the new password fields and feedback messages.
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  /**
+   * Handles the form submission to set a new password.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
 
+    // Basic client-side validation for matching passwords.
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/auth/reset-password/${token}`, { password });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/reset-password/${token}`, { password });
       setMessage(res.data.message || 'Password reset successful');
+      // Redirect to login page after a short delay to allow the user to read the message.
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       setError(err.response?.data?.error || 'Reset failed');

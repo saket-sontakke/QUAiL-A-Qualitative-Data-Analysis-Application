@@ -11,7 +11,13 @@ import mongoose from 'mongoose';
 
 const router = express.Router();
 
-// -- MIDDLEWARE --
+// --- MIDDLEWARE SETUP ---
+
+/**
+ * @description Multer disk storage configuration.
+ * - destination: Ensures the 'uploads/' directory exists and sets it as the destination for uploaded files.
+ * - filename: Creates a unique filename for each uploaded file by prepending the current timestamp.
+ */
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = 'uploads/';
@@ -22,6 +28,12 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
+
+/**
+ * @description Multer upload instance with file filtering.
+ * - storage: Uses the defined disk storage configuration.
+ * - fileFilter: Restricts file uploads to '.txt' and '.docx' extensions.
+ */
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
@@ -31,7 +43,15 @@ const upload = multer({
   },
 });
 
-// -- CREATE PROJECT --
+// --- PROJECT CRUD ROUTES ---
+
+/**
+ * @route   POST /api/projects/create
+ * @desc    Create a new project.
+ * @access  Private
+ * @body    { name: String, data: any }
+ * @returns {Object} The newly created project document.
+ */
 router.post('/create', requireAuth, async (req, res) => {
   const { name, data } = req.body;
   try {
@@ -43,7 +63,37 @@ router.post('/create', requireAuth, async (req, res) => {
   }
 });
 
-// -- GET MY PROJECTS --
+/**
+ * @route   PUT /api/projects/:id
+ * @desc    Update an existing project.
+ * @access  Private
+ * @param   {String} id - The ID of the project to update.
+ * @body    { name: String, data: any }
+ * @returns {Object} The updated project document.
+ */
+router.put('/:id', requireAuth, async (req, res) => {
+  const { name, data } = req.body;
+  try {
+    const project = await Project.findOneAndUpdate(
+      { _id: req.params.id, owner: req.userId },
+      { $set: { name, data } },
+      { new: true, runValidators: true }
+    );
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found or unauthorized' });
+    }
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: 'Project update failed', details: err.message });
+  }
+});
+
+/**
+ * @route   GET /api/projects/my-projects
+ * @desc    Get all projects owned by the authenticated user.
+ * @access  Private
+ * @returns {Array<Object>} An array of project documents.
+ */
 router.get('/my-projects', requireAuth, async (req, res) => {
   try {
     const projects = await Project.find({ owner: req.userId }).sort({ createdAt: -1 });
@@ -53,10 +103,15 @@ router.get('/my-projects', requireAuth, async (req, res) => {
   }
 });
 
-// -- GET PROJECT BY ID --
+/**
+ * @route   GET /api/projects/:id
+ * @desc    Get a single project by its ID.
+ * @access  Private
+ * @param   {String} id - The ID of the project to retrieve.
+ * @returns {Object} The project document.
+ */
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    // Ensure memos are included in the fetched project data
     const project = await Project.findOne({ _id: req.params.id, owner: req.userId }).lean();
     if (!project) return res.status(404).json({ error: 'Project not found' });
     res.json(project);
@@ -65,7 +120,13 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// -- DELETE PROJECT --
+/**
+ * @route   DELETE /api/projects/:id
+ * @desc    Delete a project by its ID.
+ * @access  Private
+ * @param   {String} id - The ID of the project to delete.
+ * @returns {Object} A confirmation message.
+ */
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const result = await Project.findOneAndDelete({ _id: req.params.id, owner: req.userId });
@@ -76,23 +137,53 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// -- GLOBAL CODE DEFINITIONS --
+// --- CODE DEFINITION ROUTES ---
+
+/**
+ * @route   POST /api/projects/:projectId/code-definitions
+ * @desc    Create a new code definition within a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @body    { name: String, description: String, color: String }
+ * @returns {Object} The updated project document with the new code definition.
+ */
 router.post('/:projectId/code-definitions', requireAuth, async (req, res) => {
   const { name, description, color } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ message: 'Code definition name is required.' });
+  }
+
   try {
     const project = await Project.findOne({ _id: req.params.projectId, owner: req.userId });
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
     if (project.codeDefinitions.some(cd => cd.name === name)) {
       return res.status(400).json({ error: 'Code definition already exists' });
     }
+
     project.codeDefinitions.push({ name, description, color, owner: req.userId });
-    await project.save();
-    res.status(201).json({ codeDefinition: project.codeDefinitions.at(-1) });
+
+    const updatedProject = await project.save();
+
+    res.status(201).json(updatedProject);
+
   } catch (err) {
     res.status(500).json({ error: 'Create failed', details: err.message });
   }
 });
 
+/**
+ * @route   PUT /api/projects/:projectId/code-definitions/:codeDefId
+ * @desc    Update a code definition within a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} codeDefId - The ID of the code definition to update.
+ * @body    { name: String, description: String, color: String }
+ * @returns {Object} The updated code definition.
+ */
 router.put('/:projectId/code-definitions/:codeDefId', requireAuth, async (req, res) => {
   const { name, description, color } = req.body;
   try {
@@ -107,6 +198,14 @@ router.put('/:projectId/code-definitions/:codeDefId', requireAuth, async (req, r
   }
 });
 
+/**
+ * @route   DELETE /api/projects/:projectId/code-definitions/:codeDefId
+ * @desc    Delete a code definition and all associated coded segments.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} codeDefId - The ID of the code definition to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
 router.delete('/:projectId/code-definitions/:codeDefId', requireAuth, async (req, res) => {
   try {
     const project = await Project.findOneAndUpdate(
@@ -126,8 +225,17 @@ router.delete('/:projectId/code-definitions/:codeDefId', requireAuth, async (req
   }
 });
 
-// -- IMPORT FILE --
-router.post('/import/:id', requireAuth, upload.single('file'), async (req, res) => {
+// --- FILE MANAGEMENT ROUTES ---
+
+/**
+ * @route   POST /api/projects/import/:id
+ * @desc    Import a file (.txt or .docx) into a project.
+ * @access  Private
+ * @param   {String} id - The ID of the project.
+ * @form    { file: File }
+ * @returns {Object} The updated project document with the imported file.
+ */
+router.post('/import/:id', upload.single('file'), requireAuth,  async (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: 'No file uploaded' });
   try {
@@ -148,10 +256,18 @@ router.post('/import/:id', requireAuth, upload.single('file'), async (req, res) 
   }
 });
 
-// -- DELETE FILE --
+/**
+ * @route   DELETE /api/projects/:projectId/files/:fileId
+ * @desc    Delete a file and its associated data (coded segments, highlights, memos) from a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} fileId - The ID of the file to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
 router.delete('/:projectId/files/:fileId', requireAuth, async (req, res) => {
   try {
     const { projectId, fileId } = req.params;
+
     const project = await Project.findOneAndUpdate(
       { _id: projectId, owner: req.userId },
       {
@@ -159,22 +275,42 @@ router.delete('/:projectId/files/:fileId', requireAuth, async (req, res) => {
           importedFiles: { _id: fileId },
           codedSegments: { fileId },
           inlineHighlights: { fileId },
-          memos: { fileId } // NEW: Also delete memos associated with the file
+          memos: { fileId },
         },
       },
       { new: true }
     );
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found or you do not have permission' });
+    }
+
     res.json({ message: 'File and related data deleted', project });
+
   } catch (err) {
     res.status(500).json({ error: 'Delete failed', details: err.message });
   }
 });
 
-// -- CODE SEGMENTS --
+// --- CODED SEGMENT ROUTES ---
+
+/**
+ * @route   POST /api/projects/:projectId/code
+ * @desc    Create a new coded segment in a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @body    { fileId: String, fileName: String, text: String, codeDefinitionId: String, startIndex: Number, endIndex: Number }
+ * @returns {Object} The updated project document.
+ */
 router.post('/:projectId/code', requireAuth, async (req, res) => {
   const { fileId, fileName, text, codeDefinitionId, startIndex, endIndex } = req.body;
   try {
     const project = await Project.findOne({ _id: req.params.projectId, owner: req.userId });
+
+    if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+    }
+
     const codeDef = project?.codeDefinitions.id(codeDefinitionId);
     if (!codeDef) return res.status(400).json({ error: 'Code definition not found' });
     project.codedSegments.push({
@@ -197,6 +333,14 @@ router.post('/:projectId/code', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * @route   DELETE /api/projects/:projectId/code/:codeId
+ * @desc    Delete a coded segment from a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} codeId - The ID of the coded segment to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
 router.delete('/:projectId/code/:codeId', requireAuth, async (req, res) => {
   try {
     const project = await Project.findOneAndUpdate(
@@ -210,7 +354,16 @@ router.delete('/:projectId/code/:codeId', requireAuth, async (req, res) => {
   }
 });
 
-// -- HIGHLIGHTS --
+// --- HIGHLIGHT ROUTES ---
+
+/**
+ * @route   POST /api/projects/:projectId/highlight
+ * @desc    Create a new highlight in a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @body    { fileId: String, fileName: String, text: String, color: String, startIndex: Number, endIndex: Number }
+ * @returns {Object} The updated project document.
+ */
 router.post('/:projectId/highlight', requireAuth, async (req, res) => {
   const { fileId, fileName, text, color, startIndex, endIndex } = req.body;
   try {
@@ -225,6 +378,14 @@ router.post('/:projectId/highlight', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * @route   DELETE /api/projects/:projectId/highlight/:highlightId
+ * @desc    Delete a highlight from a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} highlightId - The ID of the highlight to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
 router.delete('/:projectId/highlight/:highlightId', requireAuth, async (req, res) => {
   try {
     const project = await Project.findOneAndUpdate(
@@ -238,11 +399,68 @@ router.delete('/:projectId/highlight/:highlightId', requireAuth, async (req, res
   }
 });
 
-// -- MEMOS (NEW ROUTES) --
+/**
+ * @route   POST /api/projects/:projectId/highlight/delete-bulk
+ * @desc    Delete multiple highlights from a project in bulk.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @body    { ids: Array<String> } - An array of highlight IDs to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
+router.post('/:projectId/highlight/delete-bulk', requireAuth, async (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids)) {
+    return res.status(400).json({ error: 'Invalid request: "ids" array is required.' });
+  }
+  
+  try {
+    const project = await Project.findOneAndUpdate(
+      { _id: req.params.projectId, owner: req.userId },
+      { $pull: { inlineHighlights: { _id: { $in: ids } } } },
+      { new: true }
+    );
+    
+    if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+    }
 
-// Add this PUT route for updating memos
+    res.json({ message: `${ids.length} highlights deleted`, project });
+  } catch (err) {
+    res.status(500).json({ error: 'Bulk delete failed', details: err.message });
+  }
+});
+
+// --- MEMO ROUTES ---
+
+/**
+ * @route   PUT /api/projects/:projectId/memos/:memoId
+ * @desc    Update a memo in a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} memoId - The ID of the memo to update.
+ * @body    { title: String, content: String, text: String, startIndex: Number, endIndex: Number }
+ * @returns {Object} A confirmation message and the updated memo.
+ */
+// router.put('/:projectId/memos/:memoId', requireAuth, async (req, res) => {
+//   const { title, content, text, startIndex, endIndex } = req.body;
+//   try {
+//     const project = await Project.findOne({ _id: req.params.projectId, owner: req.userId });
+//     if (!project) return res.status(404).json({ error: 'Project not found' });
+
+//     const memo = project.memos.id(req.params.memoId);
+//     if (!memo) return res.status(404).json({ error: 'Memo not found' });
+
+//     memo.set({ title, content, text, startIndex, endIndex, updatedAt: new Date() });
+
+//     await project.save();
+//     res.json({ message: 'Memo updated', memo });
+//   } catch (err) {
+//     console.error('Update memo error:', err);
+//     res.status(500).json({ error: 'Update memo failed', details: err.message });
+//   }
+// });
 router.put('/:projectId/memos/:memoId', requireAuth, async (req, res) => {
-  const { title, content, text, startIndex, endIndex } = req.body; // Include other fields as needed for update
+  const { title, content, text, startIndex, endIndex } = req.body;
   try {
     const project = await Project.findOne({ _id: req.params.projectId, owner: req.userId });
     if (!project) return res.status(404).json({ error: 'Project not found' });
@@ -250,18 +468,27 @@ router.put('/:projectId/memos/:memoId', requireAuth, async (req, res) => {
     const memo = project.memos.id(req.params.memoId);
     if (!memo) return res.status(404).json({ error: 'Memo not found' });
 
-    // Update memo fields
-    memo.set({ title, content, text, startIndex, endIndex, updatedAt: new Date() }); // Add updatedAt if your schema supports it
+    memo.set({ title, content, text, startIndex, endIndex, updatedAt: new Date() });
 
-    await project.save();
-    res.json({ message: 'Memo updated', memo });
+    // Save the entire project document
+    const updatedProject = await project.save();
+    
+    // Return the updated project object
+    res.json({ message: 'Memo updated', project: updatedProject });
   } catch (err) {
     console.error('Update memo error:', err);
     res.status(500).json({ error: 'Update memo failed', details: err.message });
   }
 });
 
-
+/**
+ * @route   POST /api/projects/:projectId/memos
+ * @desc    Create a new memo in a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @body    { fileId: String, fileName: String, text: String, title: String, content: String, startIndex: Number, endIndex: Number }
+ * @returns {Object} The newly created memo and the updated project document.
+ */
 router.post('/:projectId/memos', requireAuth, async (req, res) => {
   const { fileId, fileName, text, title, content, startIndex, endIndex } = req.body;
   try {
@@ -287,12 +514,19 @@ router.post('/:projectId/memos', requireAuth, async (req, res) => {
     await project.save();
     res.status(201).json({ memo: project.memos.at(-1), project });
   } catch (err) {
-    console.error('Add memo error:', err); // Add this line to see full error in backend logs
+    console.error('Add memo error:', err);
     res.status(500).json({ error: 'Add memo failed', details: err.message });
   }
 });
 
-
+/**
+ * @route   DELETE /api/projects/:projectId/memos/:memoId
+ * @desc    Delete a memo from a project.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @param   {String} memoId - The ID of the memo to delete.
+ * @returns {Object} A confirmation message and the updated project document.
+ */
 router.delete('/:projectId/memos/:memoId', requireAuth, async (req, res) => {
   try {
     const project = await Project.findOneAndUpdate(
@@ -307,7 +541,13 @@ router.delete('/:projectId/memos/:memoId', requireAuth, async (req, res) => {
   }
 });
 
-// Utility: Ensure valid ARGB from hex color
+// --- EXPORT ROUTES ---
+
+/**
+ * @description Utility function to ensure a valid ARGB hex color string.
+ * @param {String} hexColor - The hex color string (e.g., '#RRGGBB').
+ * @returns {String} A valid ARGB hex string (without '#'). Returns 'CCCCCC' as a fallback.
+ */
 function safeARGB(hexColor) {
   if (!hexColor || typeof hexColor !== 'string' || !/^#?[0-9A-Fa-f]{6}$/.test(hexColor)) {
     return 'CCCCCC'; // fallback gray
@@ -315,6 +555,13 @@ function safeARGB(hexColor) {
   return hexColor.replace('#', '').toUpperCase();
 }
 
+/**
+ * @route   GET /api/projects/:projectId/export-coded-segments
+ * @desc    Export a project's coded segments to an Excel file.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @returns {File} An .xlsx file containing the coded segments.
+ */
 router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) => {
   const { projectId } = req.params;
   const userId = req.userId;
@@ -329,7 +576,6 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Coded Segments');
 
-    // Define headers
     worksheet.columns = [
       { header: 'File Name', key: 'fileName', width: 30 },
       { header: 'Code Definition', key: 'codeName', width: 25 },
@@ -338,13 +584,11 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
       { header: 'Frequency', key: 'frequency', width: 15 },
     ];
 
-    // Set header row alignment to center
     worksheet.getRow(1).eachCell(cell => {
       cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       cell.font = { bold: true };
     });
 
-    // Set alignment rules for content rows
     worksheet.columns.forEach(col => {
       if (['codeDescription', 'text'].includes(col.key)) {
         col.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
@@ -354,9 +598,8 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
     });
 
     let totalFrequency = 0;
-    let currentRow = 2; // Start after header row
+    let currentRow = 2;
 
-    // Group segments by file
     const groupedByFile = {};
     project.codedSegments.forEach(segment => {
       const fileName = segment.fileName || 'Unknown File';
@@ -438,7 +681,6 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
       }
     }
 
-    // Add TOTAL row under "Coded Segment Text"
     const totalRow = worksheet.addRow({
       fileName: '',
       codeName: '',
@@ -452,7 +694,6 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
     totalRow.getCell('text').font = { bold: true };
     totalRow.getCell('frequency').font = { bold: true };
 
-    // Set response headers
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -471,7 +712,13 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
   }
 });
 
-
+/**
+ * @route   GET /api/projects/:projectId/export-memos
+ * @desc    Export a project's memos to an Excel file.
+ * @access  Private
+ * @param   {String} projectId - The ID of the project.
+ * @returns {File} An .xlsx file containing the memos.
+ */
 router.get('/:projectId/export-memos', requireAuth, async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);

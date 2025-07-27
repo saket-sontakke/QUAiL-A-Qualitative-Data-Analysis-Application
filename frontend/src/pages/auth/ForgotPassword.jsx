@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
+/**
+ * @file ForgotPassword.jsx
+ * @description This component provides a form for users to request a password reset link.
+ * It handles user input, communicates with the backend API, and displays
+ * success or error messages to the user.
+ */
+
+import { useState } from 'react';
 import axios from 'axios';
 
 const ForgotPassword = () => {
+  // State for managing the user's email and feedback messages.
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  /**
+   * Handles the form submission to request a password reset link.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setError('');
+
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/forgot-password`, { email });
       setMessage(res.data.message || 'Check your email for reset link.');
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong');
@@ -23,6 +36,7 @@ const ForgotPassword = () => {
       <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md transform transition duration-500 hover:scale-[1.015]">
         <h2 className="text-2xl font-bold mb-6 text-center text-[#1D3C87] dark:text-[#F05623]">Forgot Password</h2>
 
+        {/* Display feedback messages to the user */}
         {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
         {message && <p className="text-sm text-green-500 mb-4">{message}</p>}
 

@@ -1,8 +1,13 @@
-// src/components/ConfirmationModal.jsx
-import React from 'react';
+/**
+ * @file ConfirmationModal.jsx
+ * @description A reusable modal component for prompting the user to confirm an action.
+ * It is used for operations like deletion or other critical changes.
+ */
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ConfirmationModal = ({ show, onClose, onConfirm, title, message }) => {
+  // Do not render the component if the 'show' prop is false.
   if (!show) return null;
 
   return (
@@ -12,13 +17,13 @@ const ConfirmationModal = ({ show, onClose, onConfirm, title, message }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         >
           <motion.div
             initial={{ scale: 0.8, y: -20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: -20 }}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm text-center transform scale-100"
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm text-center"
           >
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
               {title}

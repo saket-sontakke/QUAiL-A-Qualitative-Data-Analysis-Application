@@ -1,26 +1,42 @@
-import React, { useState } from 'react';
+/**
+ * @file Login.jsx
+ * @description This component renders the user login page. It includes a form for
+ * email and password, handles form submission, authenticates with the backend,
+ * and manages user session by storing credentials in localStorage.
+ */
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
   const navigate = useNavigate();
+  // State for form data, submission errors, and loading status.
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Updates the form data state as the user types.
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The input change event.
+   */
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  /**
+   * Handles the login form submission.
+   * On success, it stores the auth token and user data, then navigates to the home page.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, formData);
       localStorage.setItem('token', res.data.token);
-      // Store user data
-      localStorage.setItem('user', JSON.stringify(res.data.user)); // <--- ADD THIS LINE
+      localStorage.setItem('user', JSON.stringify(res.data.user));
       navigate('/home');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');

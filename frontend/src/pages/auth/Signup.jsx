@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+/**
+ * @file Signup.jsx
+ * @description This component renders the user registration page. It includes a
+ * form for name, email, and password, handles form submission, creates a new
+ * user via the backend, and manages the user session.
+ */
+
+import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Signup = () => {
   const navigate = useNavigate();
+  // State for form data, submission errors, and loading status.
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -12,6 +20,10 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Updates the form data state as the user types.
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The input change event.
+   */
   const handleChange = (e) => {
     setFormData(prev => ({
       ...prev,
@@ -19,12 +31,17 @@ const Signup = () => {
     }));
   };
 
+  /**
+   * Handles the registration form submission.
+   * On success, it stores the new user's auth token and navigates to the login page.
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', formData);
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, formData);
       localStorage.setItem('token', res.data.token);
       navigate('/');
     } catch (err) {
@@ -93,17 +110,17 @@ const Signup = () => {
             type="submit"
             disabled={loading}
             className="w-full py-2 px-4 
-                       bg-[#F05623] 
-                       hover:bg-[#d74918] 
-                       text-white font-semibold 
-                       rounded-xl 
-                       shadow-md 
-                       transition-all duration-300 
-                       transform hover:scale-105 hover:shadow-lg 
-                       focus:outline-none focus:ring-2 focus:ring-[#F05623] focus:ring-offset-2 
-                       dark:bg-[#F05623] 
-                       dark:hover:bg-[#d74918] 
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+                      bg-[#F05623] 
+                      hover:bg-[#d74918] 
+                      text-white font-semibold 
+                      rounded-xl 
+                      shadow-md 
+                      transition-all duration-300 
+                      transform hover:scale-105 hover:shadow-lg 
+                      focus:outline-none focus:ring-2 focus:ring-[#F05623] focus:ring-offset-2 
+                      dark:bg-[#F05623] 
+                      dark:hover:bg-[#d74918] 
+                      disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing up...' : 'Sign Up'}
           </button>
