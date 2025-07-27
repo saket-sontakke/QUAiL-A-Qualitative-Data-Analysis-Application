@@ -10,13 +10,13 @@
 
 ---
 
-### Iteration Plan 
+### Iteration Plan  
 
-| Iteration No. | Iteration Plan                                                                                                               | Limitations of the Iteration                           |
-|:---------------:|-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------|
-| #1            | • GitHub repository for version control <br> • Setting up MongoDB, Express.js, React, Node.js (MERN) infrastructure  <br> • Login, Signup and Reset password functionality <br> • Docker Containerization | • Lacks Business Logic <br> • Very primitive development |
-| #2            | •	Home Page (Create, Open, Update, Delete Projects) <br> •	Data Importation (Limit to textual data) <br> •	Document Viewer (view-only) | • Core Coding functionality missing <br> •	No document manipulation possible <br> • Majorly a view-only interface |
-| #3            | •	Code System (Manual Coding) <br> •	Left Panel (Imported Files, Code Definitions, Code Segments) <br> •	Document Viewer Toolbar (Coder, Highlighter, Eraser, Search bar) <br> | •	No memos, Export Functionalities or visualizations <br> •	Lacks AI enabled features |
-| #4            | •	Memos (Create, Edit, Delete) <br> •	Export Code Segments/Memos <br>  •	UI Updates | •	No visualizations <br> •	Lacks AI enabled features |
-| #5            | *(To be Updated)* | *(To be Updated)* |
-
+| Iteration No. | Iteration Plan                                                                                                                                           | Limitations of the Iteration                                           |
+|:-------------:|---------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| #1            | • GitHub repository for version control <br> • Setting up MongoDB, Express.js, React, Node.js (MERN) infrastructure <br> • Login, Signup and Reset password functionality <br> • Docker Containerization | • Lacks Business Logic <br> • Very primitive development              |
+| #2            | • Home Page (Create, Open, Update, Delete Projects) <br> • Data Importation (Limit to textual data) <br> • Document Viewer (view-only)                   | • Core Coding functionality missing <br> • No document manipulation possible <br> • Majorly a view-only interface |
+| #3            | • Code System (Manual Coding) <br> • Left Panel (Imported Files, Code Definitions, Code Segments) <br> • Document Viewer Toolbar (Coder, Highlighter, Eraser, Search bar) | • No memos, Export Functionalities or visualizations <br> • Lacks AI enabled features |
+| #4            | • Memos (Create, Edit, Delete) <br> • Export Code Segments/Memos <br> • UI Updates                                 | • No visualizations <br> • Lacks AI enabled features                   |
+| #5            | • Major Refactoring of code for maintainability and SOC <br> • Coded Segments Overview Table <br> • Visualizations <br> • Theme Toggle <br> • Frontend and Backend Testing | • Lacks Audio input support <br> • AI Enabled Features <br> • Static Document Viewer |
+| #6            | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Editable Document Viewer                           | *To be updated*                                                        |
