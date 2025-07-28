@@ -6,7 +6,7 @@
 - Implementation of a **subset of requirements** during each iteration  
 - Iterative enhancement continues until all requirements are met
 
-![Screenshot 2025-06-19 154651](https://github.com/user-attachments/assets/d593a518-2e99-4485-b7c0-7bc7befa2eda)
+<img width="3444" height="596" alt="SDLC (1)" src="https://github.com/user-attachments/assets/e190f929-db18-4247-89f3-28bb4dad53d5" />
 
 ---
 
