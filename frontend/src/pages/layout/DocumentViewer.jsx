@@ -304,7 +304,7 @@ const DocumentViewer = ({
      * (codes, highlights, memos, search results) to ensure correct styling and interactivity.
      */
     const renderContent = () => {
-        if (!selectedContent) {
+        if (typeof selectedContent !== 'string' || selectedContent.length === 0) {
             return 'Select a document to view its contents.';
         }
 
