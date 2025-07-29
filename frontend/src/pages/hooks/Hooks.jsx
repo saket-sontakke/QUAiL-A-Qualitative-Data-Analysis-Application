@@ -403,27 +403,20 @@ export default function useProjectViewHooks() {
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`, {
+          await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
           setShowConfirmModal(false);
 
-          const updatedProject = response.data; 
-          setProject(updatedProject); 
-
-          const remainingFiles = updatedProject.importedFiles;
           if (selectedFileId === fileId) {
-            if (remainingFiles && remainingFiles.length > 0) {
-              setSelectedFileId(remainingFiles[0]._id);
-              setSelectedFileName(remainingFiles[0].name);
-              setSelectedContent(remainingFiles[0].content);
-            } else {
-              setSelectedFileId(null);
-              setSelectedFileName('');
-              setSelectedContent('');
-            }
+            setSelectedFileId(null);
+            setSelectedFileName('');
+            setSelectedContent('');
           }
+          
+          fetchProject();
+
         } catch (err) {
           setError(err.response?.data?.error || 'Failed to delete file');
           setShowConfirmModal(false);
@@ -891,7 +884,7 @@ export default function useProjectViewHooks() {
             project.memos
         );
       }
-    } else if (project && project.importedFiles.length > 0 && !selectedFileId) {
+    } else if (project && project.importedFiles?.length > 0 && !selectedFileId) {
         handleSelectFile(
             project.importedFiles[0],
             project.codedSegments,
@@ -974,4 +967,3 @@ export default function useProjectViewHooks() {
     groupedCodedSegments, groupedMemos,
   };
 }
-
