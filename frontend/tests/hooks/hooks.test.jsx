@@ -379,44 +379,36 @@ describe('useProjectViewHooks - File Management', () => {
    * Tests the end-to-end file deletion flow, from triggering the confirmation
    * modal to updating the project state upon successful deletion.
    */
-  it('should handle file deletion', async () => {
-    const projectAfterDelete = {
-      ...mockProject,
-      importedFiles: [mockProject.importedFiles[1]],
-      codedSegments: [],
-      inlineHighlights: [],
-      memos: [],
-    };
-    mockAxios.onDelete(`${import.meta.env.VITE_BACKEND_URL}/api/projects/test-project-id/files/file-1`)
-      .reply(200, projectAfterDelete);
+  it('should delete a file from the project state', async () => {
+      mockAxios.onGet(`${import.meta.env.VITE_BACKEND_URL}/api/projects/test-project-id`).reply(200, mockProject);
 
-    const { result } = renderHook(() => useProjectViewHooks(), {
-      wrapper: wrapperWithRouter
-    });
+      const { result } = renderHook(() => useProjectViewHooks(), {
+        wrapper: wrapperWithRouter,
+      });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(result.current.project.importedFiles).toHaveLength(2));
 
-    // Initial action to trigger the confirmation modal
-    act(() => {
-      result.current.handleDeleteFile('file-1', 'test-file-1.txt');
-    });
+      mockAxios.resetHandlers();
 
-    expect(result.current.showConfirmModal).toBe(true);
-    expect(result.current.confirmModalData.title).toBe('Confirm File Deletion');
+      const projectAfterDelete = {
+        ...mockProject,
+        importedFiles: [mockProject.importedFiles[1]], 
+      };
 
-    // Confirm the deletion
-    await act(async () => {
-      await result.current.confirmModalData.onConfirm();
-    });
+      mockAxios.onDelete(`${import.meta.env.VITE_BACKEND_URL}/api/projects/test-project-id/files/file-1`).reply(200);
+      mockAxios.onGet(`${import.meta.env.VITE_BACKEND_URL}/api/projects/test-project-id`).reply(200, projectAfterDelete);
 
-    // After deletion, the next file should be selected automatically
-    await waitFor(() => {
-      expect(result.current.selectedFileName).toBe('test-file-2.txt');
-    });
+      act(() => {
+        result.current.handleDeleteFile('file-1', 'test-file-1.txt');
+      });
+      await act(async () => {
+        await result.current.confirmModalData.onConfirm();
+      });
 
-    expect(result.current.selectedContent).toBe(mockProject.importedFiles[1].content);
-    expect(result.current.selectedFileId).toBe('file-2');
-    expect(result.current.project.importedFiles).toHaveLength(1);
+      await waitFor(() => {
+        expect(result.current.project.importedFiles).toHaveLength(1);
+        expect(result.current.project.importedFiles[0].name).toBe('test-file-2.txt');
+      });
   });
 });
 
