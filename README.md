@@ -25,7 +25,7 @@
 ---
 # Screenshots
 
-## Landing page
+* ## Landing page
 <img width="1890" height="1013" alt="Landing page" src="https://github.com/user-attachments/assets/54fd11f8-61e8-4ddc-909d-fc0cc6b1259b" />
 
 ## Projects
