@@ -22,6 +22,7 @@
 | #6            | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Editable Document Viewer                           | *To be updated*                                                        |
 
 
+---
 # Screenshots
 
 <img width="1890" height="1013" alt="image" src="https://github.com/user-attachments/assets/54fd11f8-61e8-4ddc-909d-fc0cc6b1259b" />
