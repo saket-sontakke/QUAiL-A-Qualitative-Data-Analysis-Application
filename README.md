@@ -21,8 +21,10 @@
 | #5 | • Major Refactoring of code for Maintainability and Separation of Concerns (SOC) <br> • Coded Segments Overview Table <br> • Visualizations <br> • Theme Toggle <br> • Automated Frontend and Backend Testing | • Lacks Audio file support <br> • No statistical tests for quantitative validation <br> • No advanced codebook management <br> • No Landing page |
 | #6 | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Integrated statistical tests <br> • Dynamic codebook <br> • Attractive Landing page | To be updated |
 
-
 ---
+
+https://github.com/user-attachments/assets/75ef0210-3f14-433a-8dc2-af63d122a493
+
 # Screenshots
 
 ## Landing page
