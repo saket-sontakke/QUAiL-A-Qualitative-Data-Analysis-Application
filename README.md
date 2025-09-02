@@ -20,3 +20,8 @@
 | #4            | • Memos (Create, Edit, Delete) <br> • Export Code Segments/Memos <br> • UI Updates                                 | • No visualizations <br> • Lacks AI enabled features                   |
 | #5            | • Major Refactoring of code for Maintainability and Separation of Concerns (SOC) <br> • Coded Segments Overview Table <br> • Visualizations <br> • Theme Toggle <br> • Automated Frontend and Backend Testing | • Lacks Audio input support <br> • No AI Enabled Features <br> • Static Document Viewer |
 | #6            | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Editable Document Viewer                           | *To be updated*                                                        |
+
+
+### Screenshots
+
+<img width="1890" height="1013" alt="image" src="https://github.com/user-attachments/assets/54fd11f8-61e8-4ddc-909d-fc0cc6b1259b" />
