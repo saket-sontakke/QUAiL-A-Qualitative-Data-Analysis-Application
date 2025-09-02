@@ -1,4 +1,4 @@
-# ETQDA - A Qualitative Data Analysis Application
+# QUAiL - A Qualitative Data Analysis Application
 
 ## Iterative Model Overview
 
