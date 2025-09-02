@@ -23,12 +23,10 @@
 
 ---
 
-https://github.com/user-attachments/assets/75ef0210-3f14-433a-8dc2-af63d122a493
-
 # Screenshots
 
 ## Landing page
-<img width="1890" height="1013" alt="Landing page" src="https://github.com/user-attachments/assets/54fd11f8-61e8-4ddc-909d-fc0cc6b1259b" />
+https://github.com/user-attachments/assets/6a0c76ab-b028-4ea2-acdc-a5d915714393
 <img width="1893" height="930" alt="image" src="https://github.com/user-attachments/assets/85e81453-b9f7-4b72-8e19-640e4a276595" />
 
 ## Projects
