@@ -27,6 +27,7 @@
 
 ## Landing page
 <img width="1890" height="1013" alt="Landing page" src="https://github.com/user-attachments/assets/54fd11f8-61e8-4ddc-909d-fc0cc6b1259b" />
+<img width="1893" height="930" alt="image" src="https://github.com/user-attachments/assets/85e81453-b9f7-4b72-8e19-640e4a276595" />
 
 ## Projects
 <img width="1920" height="1200" alt="Projects" src="https://github.com/user-attachments/assets/289dea64-1386-4ed0-81f0-aed0ed47fe01" />
