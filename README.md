@@ -19,7 +19,7 @@
 | #3 | • Code System (Manual Coding) <br> • Left Panel (Imported Files, Code Definitions, Code Segments) <br> • Document Viewer Toolbar (Coder, Highlighter, Eraser, Search bar) | • No memos, Export Functionalities or visualizations <br> • Lacks Audio file support |
 | #4 | • Memos (Create, Edit, Delete) <br> • Export Code Segments/Memos <br> • UI Updates | • No visualizations <br> • Lacks Audio file support |
 | #5 | • Major Refactoring of code for Maintainability and Separation of Concerns (SOC) <br> • Coded Segments Overview Table <br> • Visualizations <br> • Theme Toggle <br> • Automated Frontend and Backend Testing | • Lacks Audio file support <br> • No statistical tests for quantitative validation <br> • No advanced codebook management <br> • No Landing page |
-| #6 | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Integrated statistical tests <br> • Dynamic codebook <br> • Attractive Landing page | To be updated |
+| #6 | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Integrated statistical tests <br> • Dynamic codebook <br> • Attractive Landing page | • Lacks an interactive Code Matrix • (*To be updated*) |
 
 ---
 
