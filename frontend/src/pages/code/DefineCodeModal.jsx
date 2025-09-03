@@ -1,63 +1,61 @@
-/**
- * @file DefineCodeModal.jsx
- * @description A modal component for creating a new code definition or editing an
- * existing one. It includes fields for name, description, and color selection,
- * and handles both client-side and server-side validation.
- */
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ColorPicker from '../components/ColorPicker';
 
-// A predefined color palette for quick selection.
-const STANDARD_COLORS = [
-  { name: 'Red', hex: '#E57373' },
-  { name: 'Blue', hex: '#64B5F6' },
-  { name: 'Green', hex: '#81C784' },
-  { name: 'Yellow', hex: '#FFD54F' },
-  { name: 'Purple', hex: '#BA68C8' },
-  { name: 'Brown', hex: '#A1887F' },
-];
-
-const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendError }) => {
-  // State for form fields and error handling.
+/**
+ * A modal component for creating a new code definition or editing an existing one.
+ * It provides a form for the code's name, description, and color, and includes
+ * client-side validation to prevent empty names and duplicate color usage.
+ *
+ * @param {object} props - The component props.
+ * @param {boolean} props.show - Determines if the modal is visible.
+ * @param {Function} props.onClose - The function to call when the modal should be closed.
+ * @param {Function} props.onSave - The callback function to execute with the new/updated code data upon submission.
+ * @param {object} [props.initialCode=null] - The code definition object to pre-populate the form for editing. If null, the modal is in "create" mode.
+ * @param {Function} [props.onBackendError] - An optional callback to pass the `setBackendError` function to the parent component.
+ * @param {Array<object>} [props.codeDefinitions=[]] - An array of all existing code definitions, used to validate against duplicate colors.
+ * @returns {JSX.Element|null} The rendered modal component or null if `show` is false.
+ */
+const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendError, codeDefinitions = [] }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState(STANDARD_COLORS[0].hex);
-  const [isCustomColorSelected, setIsCustomColorSelected] = useState(false);
+  const [color, setColor] = useState('#E57373');
   const [error, setError] = useState('');
   const [backendError, setBackendError] = useState('');
 
   /**
-   * Populates the form when editing an existing code or resets it for a new one.
-   * This effect runs when the modal is shown or the code to edit changes.
+   * Memoized list of colors already in use by other code definitions.
+   * This prevents selecting a color that would create a duplicate.
+   */
+  const usedColors = useMemo(() => {
+    return codeDefinitions
+      .filter(def => def._id !== initialCode?._id)
+      .map(def => def.color);
+  }, [codeDefinitions, initialCode]);
+
+  /**
+   * Effect to initialize or reset the form's state when the modal is opened
+   * or the `initialCode` prop changes.
    */
   useEffect(() => {
-    if (initialCode) {
-      setName(initialCode.name || '');
-      setDescription(initialCode.description || '');
-      // Determine if the initial color is from the standard palette or custom.
-      const foundStandardColor = STANDARD_COLORS.find(std => std.hex === initialCode.color);
-      if (foundStandardColor) {
-        setColor(foundStandardColor.hex);
-        setIsCustomColorSelected(false);
+    if (show) {
+      if (initialCode) {
+        setName(initialCode.name || '');
+        setDescription(initialCode.description || '');
+        setColor(initialCode.color || '#E57373');
       } else {
-        setColor(initialCode.color || STANDARD_COLORS[0].hex);
-        setIsCustomColorSelected(true);
+        setName('');
+        setDescription('');
+        setColor('#E57373');
       }
-    } else {
-      // Reset form to default values for creating a new code.
-      setName('');
-      setDescription('');
-      setColor(STANDARD_COLORS[0].hex);
-      setIsCustomColorSelected(false);
+      setError('');
+      setBackendError('');
     }
-    setError('');
-    setBackendError('');
   }, [initialCode, show]);
 
   /**
-   * Exposes the `setBackendError` function to the parent component. This allows
-   * the parent to pass down API errors to be displayed in this modal.
+   * Effect to pass the `setBackendError` state setter to a parent component
+   * if the `onBackendError` prop is provided.
    */
   useEffect(() => {
     if (onBackendError) {
@@ -66,7 +64,8 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
   }, [onBackendError]);
 
   /**
-   * Handles form submission, performs validation, and calls the onSave callback.
+   * Handles the form submission. It performs validation checks for the code name
+   * and color, then calls the `onSave` prop with the form data.
    * @param {React.FormEvent<HTMLFormElement>} e - The form submission event.
    */
   const handleSubmit = (e) => {
@@ -79,26 +78,21 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
       return;
     }
 
+    if (usedColors.includes(color)) {
+      setError('This color is already in use by another code.');
+      return;
+    }
+
     onSave({ name, description, color, _id: initialCode?._id });
   };
 
   /**
-   * Updates the color state when a standard color is selected.
-   * @param {string} selectedColorHex - The hex code of the selected color.
+   * Closes the modal if the user clicks on the backdrop overlay.
+   * @param {React.MouseEvent<HTMLDivElement>} e - The mouse click event.
    */
-  const handleColorSelect = (selectedColorHex) => {
-    setColor(selectedColorHex);
-    setIsCustomColorSelected(false);
-  };
-
-  /**
-   * Activates the custom color picker.
-   */
-  const handleCustomColorClick = () => {
-    setIsCustomColorSelected(true);
-    const isCurrentColorStandard = STANDARD_COLORS.some(std => std.hex === color);
-    if (isCurrentColorStandard) {
-      setColor('#FFA500'); // Set a default custom color.
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
     }
   };
 
@@ -111,23 +105,23 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={onClose}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={handleBackdropClick}
         >
           <motion.div
             initial={{ scale: 0.9, y: 50 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 50 }}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md"
+            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-2xl font-bold mb-6 text-center text-[#1D3C87] dark:text-[#F05623]">
+            <h2 className="mb-6 text-center text-2xl font-bold text-cyan-900 dark:text-[#F05623]">
               {initialCode ? 'Edit Code Definition' : 'Define New Code'}
             </h2>
-            {error && <p className="text-sm text-red-500 mb-4 text-center">{error}</p>}
+            {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="codeName" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label htmlFor="codeName" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Code Name:
                 </label>
                 <input
@@ -135,15 +129,15 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
                   id="codeName"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F05623]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#F05623] dark:border-gray-600 dark:bg-gray-700"
                   required
                 />
                 {backendError && (
-                  <p className="text-sm text-red-500 mt-1">{backendError}</p>
+                  <p className="mt-1 text-sm text-red-500">{backendError}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="codeDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label htmlFor="codeDescription" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Description (Optional):
                 </label>
                 <textarea
@@ -151,59 +145,30 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F05623]"
+                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#F05623] dark:border-gray-600 dark:bg-gray-700"
                 ></textarea>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Color:
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {STANDARD_COLORS.map((stdColor) => (
-                    <button
-                      key={stdColor.hex}
-                      type="button"
-                      className={`w-8 h-8 rounded-full border-2 ${color === stdColor.hex && !isCustomColorSelected
-                          ? 'border-blue-500 ring-2 ring-blue-500'
-                          : 'border-gray-300 dark:border-gray-600'
-                        }`}
-                      style={{ backgroundColor: stdColor.hex }}
-                      onClick={() => handleColorSelect(stdColor.hex)}
-                      title={stdColor.name}
-                    ></button>
-                  ))}
-                  <button
-                    type="button"
-                    className={`px-3 py-1 rounded-md text-sm font-medium border ${isCustomColorSelected
-                        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                        : 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                      }`}
-                    onClick={handleCustomColorClick}
-                  >
-                    Custom
-                  </button>
-                </div>
-                {isCustomColorSelected && (
-                  <input
-                    type="color"
-                    id="codeCustomColor"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-full h-10 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer mt-2"
-                  />
-                )}
+                <ColorPicker
+                  color={color}
+                  onChange={setColor}
+                  usedColors={usedColors}
+                />
               </div>
-              <div className="flex justify-end gap-4 mt-6">
+              <div className="flex justify-end gap-4 pt-4">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 dark:text-gray-900 rounded-lg transition"
+                  className="rounded-lg bg-gray-300 px-5 py-2 text-gray-800 transition hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                  className="rounded-lg bg-green-600 px-5 py-2 text-white transition hover:bg-green-700"
                 >
                   {initialCode ? 'Update Code' : 'Save Code'}
                 </button>

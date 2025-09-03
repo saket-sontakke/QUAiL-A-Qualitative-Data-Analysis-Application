@@ -1,450 +1,549 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    FaSearch,
-    FaChevronUp,
-    FaChevronDown,
-    FaTimes,
-    FaCaretDown,
-    FaHighlighter,
-    FaEraser,
-    FaStickyNote
-} from 'react-icons/fa';
-import { MdCode, MdCodeOff } from 'react-icons/md';
+import React, { useState, useRef } from 'react';
+import CustomTooltip from '../components/CustomTooltip.jsx';
+import { FaStickyNote, FaTrashAlt } from 'react-icons/fa';
+import { RiStickyNoteAddFill } from "react-icons/ri";
+import { MdOutlineSwapHoriz } from "react-icons/md";
+import DocumentToolbar from './DocumentToolbar.jsx';
 
 /**
- * @constant highlightColors
- * @description Defines the available colors for the highlight tool, including their display name, hex value, and corresponding CSS class.
- */
-const highlightColors = [
-    { name: 'Yellow', value: '#FFFF00', cssClass: 'bg-yellow-300' },
-    { name: 'Green', value: '#00FF00', cssClass: 'bg-green-300' },
-    { name: 'Blue', value: '#ADD8E6', cssClass: 'bg-blue-300' },
-    { name: 'Pink', value: '#FFC0CB', cssClass: 'bg-pink-300' },
-];
-
-/**
- * @component DocumentViewer
- * @description A component for displaying and interacting with document content,
- * including features like searching, highlighting, coding, and adding memos.
+ * The primary component for displaying and interacting with document content.
+ * It features a sophisticated rendering engine that overlays multiple layers of
+ * annotations (codes, highlights, memos, search results) onto the text. It can
+ * switch between a rich view mode and a plain text editing mode, and is
+ * designed to handle both standard text and structured interview transcripts.
+ *
+ * @param {object} props - The component props.
+ * @param {boolean} props.isLeftPanelCollapsed - Flag indicating if the main side panel is collapsed.
+ * @param {string|null} props.activeTool - The currently active tool in the toolbar.
+ * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveTool - Function to set the active tool.
+ * @param {boolean} props.showCodeColors - State indicating if coded segments should be colored.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowCodeColors - Function to toggle code color visibility.
+ * @param {boolean} props.showCodeDropdown - State controlling the visibility of the code tool's dropdown.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowCodeDropdown - Function to toggle the code dropdown.
+ * @param {boolean} props.showHighlightColorDropdown - State controlling the visibility of the highlight color picker.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowHighlightColorDropdown - Function to toggle the highlight color picker.
+ * @param {string} props.selectedHighlightColor - The currently selected color for highlighting.
+ * @param {React.Dispatch<React.SetStateAction<string>>} props.setSelectedHighlightColor - Function to set the highlight color.
+ * @param {number} props.fontSize - The current font size of the document text.
+ * @param {React.Dispatch<React.SetStateAction<number>>} props.setFontSize - Function to set the font size.
+ * @param {number} props.lineHeight - The current line height of the document text.
+ * @param {React.Dispatch<React.SetStateAction<number>>} props.setLineHeight - Function to set the line height.
+ * @param {boolean} props.showLineHeightDropdown - State controlling the visibility of the line height dropdown.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowLineHeightDropdown - Function to toggle the line height dropdown.
+ * @param {React.RefObject<HTMLInputElement>} props.viewerSearchInputRef - Ref for the search input field.
+ * @param {string} props.viewerSearchQuery - The current search query.
+ * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.handleViewerSearchChange - Handler for search input changes.
+ * @param {Array<object>} props.viewerSearchMatches - Array of current search matches.
+ * @param {number} props.currentMatchIndex - The index of the active search match.
+ * @param {() => void} props.goToPrevMatch - Function to navigate to the previous search match.
+ * @param {() => void} props.goToNextMatch - Function to navigate to the next search match.
+ * @param {() => void} props.handleClearViewerSearch - Function to clear the search.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingToolbar - Function to toggle the selection toolbar.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowMemoModal - Function to toggle the memo modal.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingAssignCode - Function to toggle the code assignment popover.
+ * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingMemoInput - Function to toggle the memo input popover.
+ * @param {string} props.selectedContent - The raw string content of the document to be displayed.
+ * @param {Array<object>} props.codedSegments - Array of all coded segment objects for the document.
+ * @param {Array<object>} props.inlineHighlights - Array of all highlight objects for the document.
+ * @param {Array<object>} props.memos - Array of all memo objects for the document.
+ * @param {string|null} props.activeCodedSegmentId - The ID of the currently active (clicked) coded segment.
+ * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveCodedSegmentId - Function to set the active coded segment.
+ * @param {(segmentId: string, segmentName: string) => void} props.handleDeleteCodedSegment - Function to handle the deletion of a coded segment.
+ * @param {string|null} props.activeMemoId - The ID of the currently active memo.
+ * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveMemoId - Function to set the active memo.
+ * @param {React.Dispatch<React.SetStateAction<object|null>>} props.setMemoToEdit - Function to set the memo object that will be edited.
+ * @param {(e: React.MouseEvent, segment: object) => void} props.handleReassignCodeClick - Function to initiate the code reassignment process.
+ * @param {React.RefObject<HTMLDivElement>} props.viewerRef - Ref attached to the main viewer container.
+ * @param {() => void} props.handleViewerMouseUp - Mouse up event handler on the viewer to process text selections.
+ * @param {boolean} props.isEditing - Flag indicating if the viewer is in text-editing mode.
+ * @param {string} props.content - The content being edited in the textarea.
+ * @param {(e: React.ChangeEvent<HTMLTextAreaElement>) => void} props.onContentChange - Handler for changes to the textarea content.
+ * @param {() => void} props.onUndo - Callback for the undo action.
+ * @param {() => void} props.onRedo - Callback for the redo action.
+ * @param {boolean} props.canUndo - Flag indicating if an undo action is available.
+ * @param {boolean} props.canRedo - Flag indicating if a redo action is available.
+ * @param {boolean} props.showCodeTooltip - Preference state for showing the code tooltip on hover.
+ * @returns {JSX.Element} The rendered Document Viewer component.
+ * @param {boolean} props.hasAudio - Flag indicating if the current document has an associated audio file.
+ * @param {(seconds: number) => void} props.onTimestampClick - Callback function to seek audio when a timestamped line is clicked.
+ * @param {boolean} props.showCodeTooltip - Preference state for showing the code tooltip on hover.
+ * @returns {JSX.Element} The rendered Document Viewer component.
  */
 const DocumentViewer = ({
-    // State and Handlers for the Component
-    isLeftPanelCollapsed,
-    activeTool,
-    setActiveTool,
-    showCodeColors,
-    setShowCodeColors,
-    showCodeDropdown,
-    setShowCodeDropdown,
-    showHighlightColorDropdown,
-    setShowHighlightColorDropdown,
-    selectedHighlightColor,
-    setSelectedHighlightColor,
-
-    // Viewer Search Functionality
-    viewerSearchInputRef,
-    viewerSearchQuery,
-    handleViewerSearchChange,
-    viewerSearchMatches,
-    currentMatchIndex,
-    goToPrevMatch,
-    goToNextMatch,
-    handleClearViewerSearch,
-
-    // Floating Toolbars and Modals
-    setShowFloatingToolbar,
-    setShowMemoModal,
-    setShowFloatingAssignCode,
-    setShowFloatingMemoInput,
-
-    // Document Content and Annotations
-    selectedContent,
-    codedSegments,
-    inlineHighlights,
-    memos,
-    
-    // Active Item States
-    activeCodedSegmentId,
-    setActiveCodedSegmentId,
-    activeMemoId,
-    setActiveMemoId,
-    setMemoToEdit,
-
-    // DOM Refs and Event Handlers
-    viewerRef,
-    handleViewerMouseUp,
+  isLeftPanelCollapsed,
+  activeTool,
+  setActiveTool,
+  showCodeColors,
+  setShowCodeColors,
+  showCodeDropdown,
+  setShowCodeDropdown,
+  showHighlightColorDropdown,
+  setShowHighlightColorDropdown,
+  selectedHighlightColor,
+  setSelectedHighlightColor,
+  fontSize,
+  setFontSize,
+  lineHeight,
+  setLineHeight,
+  showLineHeightDropdown,
+  setShowLineHeightDropdown,
+  viewerSearchInputRef,
+  viewerSearchQuery,
+  handleViewerSearchChange,
+  viewerSearchMatches,
+  currentMatchIndex,
+  goToPrevMatch,
+  goToNextMatch,
+  handleClearViewerSearch,
+  setShowFloatingToolbar,
+  setShowMemoModal,
+  setShowFloatingAssignCode,
+  setShowFloatingMemoInput,
+  selectedContent,
+  codedSegments,
+  inlineHighlights,
+  memos,
+  activeCodedSegmentId,
+  setActiveCodedSegmentId,
+  handleDeleteCodedSegment,
+  activeMemoId,
+  setActiveMemoId,
+  setMemoToEdit,
+  handleReassignCodeClick,
+  viewerRef,
+  handleViewerMouseUp,
+  isEditing,
+  content,
+  onContentChange,
+  handleCreateMemoForSegment,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  showCodeTooltip,
+  hasAudio,
+  onTimestampClick,
+  textareaRef,
 }) => {
+  const [hoveredCodeId, setHoveredCodeId] = useState(null);
+  const hoverTimeoutRef = useRef(null);
+  const [tooltipData, setTooltipData] = useState({ visible: false, codes: [] });
 
-    /**
-     * @function renderViewerToolbar
-     * @description Renders the main toolbar for the document viewer, including search,
-     * code, memo, highlight, and erase tools.
-     */
-    const renderViewerToolbar = () => (
-        <div id="viewer-toolbar" className="flex justify-between items-center bg-white dark:bg-gray-800 p-2 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-md font-semibold text-[#1D3C87] dark:text-[#F05623] ml-4">Document Viewer</h3>
-            
-            <div className="flex gap-2 items-center">
-                {/* Search Bar for Viewer */}
-                <div className="relative flex items-center">
-                    <input
-                        type="text"
-                        ref={viewerSearchInputRef}
-                        placeholder="Search..."
-                        value={viewerSearchQuery}
-                        onChange={handleViewerSearchChange}
-                        className="w-64 pl-8 pr-28 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:focus:ring-[#F05623] text-sm"
-                    />
-                    <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
-                    {viewerSearchQuery && (
-                        <div className="absolute right-0 flex items-center h-full pr-4 gap-1">
-                            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                {viewerSearchMatches.length > 0 ? `${currentMatchIndex + 1}/${viewerSearchMatches.length}` : '0/0'}
-                            </span>
-                            <div className="flex">
-                                <button
-                                    onClick={goToPrevMatch}
-                                    disabled={viewerSearchMatches.length === 0}
-                                    className={`p-1 rounded-sm text-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 ${viewerSearchMatches.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    title="Previous"
-                                >
-                                    <FaChevronUp size={12} />
-                                </button>
-                                <button
-                                    onClick={goToNextMatch}
-                                    disabled={viewerSearchMatches.length === 0}
-                                    className={`p-1 rounded-sm text-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 ${viewerSearchMatches.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    title="Next"
-                                >
-                                    <FaChevronDown size={12} />
-                                </button>
-                            </div>
-                            <button onClick={handleClearViewerSearch} className="p-1 text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300" title="Clear">
-                                <FaTimes />
-                            </button>
-                        </div>
-                    )}
-                </div>
+  const transcriptLineRegex = /^(\[.+?\]\s+Speaker\s+[A-Z]:)/;
 
-                {/* Code Tool Button with Display Options Dropdown */}
-                <div className="relative flex rounded-md shadow-sm">
-                    <button
-                        onClick={() => {
-                            setActiveTool(prev => (prev === 'code' ? null : 'code'));
-                            setShowFloatingToolbar(false);
-                            setShowHighlightColorDropdown(false);
-                            setShowCodeDropdown(false);
-                            setShowMemoModal(false);
-                            setShowFloatingAssignCode(false);
-                            setShowFloatingMemoInput(false);
-                        }}
-                        className={`px-3 py-2 rounded-l-md flex items-center transition-all duration-200 ${activeTool === 'code' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                        title="Code Text"
-                    >
-                        {showCodeColors ? (
-                            <MdCode className="text-lg text-gray-800 dark:text-white" />
-                        ) : (
-                            <MdCodeOff className="text-lg text-gray-800 dark:text-white" />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => {
-                            setShowCodeDropdown(prev => {
-                                const next = !prev;
-                                if (next) setShowHighlightColorDropdown(false);
-                                return next;
-                            });
-                        }}
-                        className="p-2 pl-1 rounded-r-md border-l border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                        title="Code Display Options"
-                    >
-                        <FaCaretDown className="text-gray-600 dark:text-gray-300" />
-                    </button>
-                    <AnimatePresence>
-                        {showCodeDropdown && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute right-0 mt-12 w-32 bg-white dark:bg-gray-700 rounded-lg shadow-lg p-2 z-50 code-dropdown-menu"
-                            >
-                                <button
-                                    onClick={() => {
-                                        setShowCodeColors(true);
-                                        setShowCodeDropdown(false);
-                                        setActiveCodedSegmentId(null);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs ${showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                                    title="Enable Colored Codes"
-                                >
-                                    <MdCode size={18} />
-                                    <span className="truncate">Show Codes</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowCodeColors(false);
-                                        setShowCodeDropdown(false);
-                                        setActiveCodedSegmentId(null);
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs ${!showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`}
-                                    title="Disable Colored Codes"
-                                >
-                                    <MdCodeOff size={18} />
-                                    <span className="truncate">Hide Codes</span>
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+  const handleCodeMouseEnter = (codes) => {
+    if (!showCodeTooltip) return;
+    if (codes && codes.length > 0) {
+      setTooltipData({ visible: true, codes: codes });
+    }
+  };
 
-                {/* Memo Tool Button */}
-                <div className="relative flex rounded-md shadow-sm">
-                    <button
-                        onClick={() => {
-                            setActiveTool(prev => (prev === 'memo' ? null : 'memo'));
-                            setShowFloatingToolbar(false);
-                            setShowHighlightColorDropdown(false);
-                            setShowCodeDropdown(false);
-                            setShowMemoModal(false);
-                            setShowFloatingAssignCode(false);
-                            setShowFloatingMemoInput(false);
-                        }}
-                        className={`px-3 py-2 rounded-md flex items-center transition-all duration-200 ${activeTool === 'memo' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                        title="Create/View Memos"
-                    >
-                        <FaStickyNote className="text-lg text-yellow-600 dark:text-yellow-300" />
-                    </button>
-                </div>
+  const handleCodeMouseLeave = () => {
+    setTooltipData({ visible: false, codes: [] });
+  };
 
-                {/* Highlight Tool Button with Color Picker Dropdown */}
-                <div className="relative flex rounded-md shadow-sm">
-                    <button
-                        onClick={() => {
-                            setActiveTool(prev => (prev === 'highlight' ? null : 'highlight'));
-                            setShowFloatingToolbar(false);
-                            setShowCodeDropdown(false);
-                            setShowMemoModal(false);
-                            setShowFloatingAssignCode(false);
-                            setShowFloatingMemoInput(false);
-                        }}
-                        className={`p-2 pr-1 rounded-l-md flex items-center transition-all duration-200 ${activeTool === 'highlight' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                        title="Highlight Text"
-                    >
-                        <FaHighlighter className="text-lg mr-1" style={{ color: selectedHighlightColor }} />
-                    </button>
-                    <button
-                        onClick={() => {
-                            setShowHighlightColorDropdown(prev => {
-                                const next = !prev;
-                                if (next) {
-                                    setShowCodeDropdown(false);
-                                    setShowMemoModal(false);
-                                }
-                                return next;
-                            });
-                        }}
-                        className="p-2 pl-1 rounded-r-md border-l border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                        title="Select Highlight Color"
-                    >
-                        <FaCaretDown className="text-gray-600 dark:text-gray-300" />
-                    </button>
-                    <AnimatePresence>
-                        {showHighlightColorDropdown && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute right-0 mt-12 w-32 bg-white dark:bg-gray-700 rounded-lg shadow-lg p-2 z-50 color-dropdown-menu"
-                            >
-                                <div className="grid grid-cols-4 gap-2">
-                                    {highlightColors.map((colorOption) => (
-                                        <button
-                                            key={colorOption.name}
-                                            onClick={() => {
-                                                setSelectedHighlightColor(colorOption.value);
-                                                setShowHighlightColorDropdown(false);
-                                            }}
-                                            className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ease-in-out ${colorOption.cssClass} ${selectedHighlightColor === colorOption.value ? 'border-gray-800 dark:border-white' : 'border-transparent'}`}
-                                            title={colorOption.name}
-                                        ></button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-                
-                {/* Erase Tool Button */}
-                <div className="relative flex rounded-md shadow-sm">
-                    <button
-                        onClick={() => {
-                            setActiveTool(prev => (prev === 'erase' ? null : 'erase'));
-                            setShowFloatingToolbar(false);
-                            setShowHighlightColorDropdown(false);
-                            setShowCodeDropdown(false);
-                            setShowMemoModal(false);
-                            setShowFloatingAssignCode(false);
-                            setShowFloatingMemoInput(false);
-                        }}
-                        className={`px-3 py-2 rounded-md flex items-center transition-all duration-200 ${activeTool === 'erase' ? 'bg-gray-300 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                        title="Erase Highlights"
-                    >
-                        <FaEraser className="text-lg text-gray-800 dark:text-white" />
-                    </button>
-                </div>
-
-            </div>
-        </div>
+  /**
+   * The core rendering engine for the document. It takes a text fragment and an
+   * array of all annotations, then breaks the text into the smallest possible
+   * sub-fragments based on annotation boundaries. Each sub-fragment is then
+   * wrapped in styled `<span>` elements corresponding to the annotations that
+   * cover it, effectively layering codes, highlights, and search results.
+   * @param {string} text - The text content of the fragment to render.
+   * @param {number} fragmentStartOffset - The starting character offset of this fragment within the entire document.
+   * @param {Array<object>} allAnnotations - A combined array of all annotation types (codes, highlights, etc.).
+   * @returns {Array<JSX.Element>} An array of React fragments and styled spans representing the annotated text.
+   */
+  const renderAnnotatedFragment = (text, fragmentStartOffset, allAnnotations) => {
+    const fragmentEndOffset = fragmentStartOffset + text.length;
+    const relevantAnnotations = allAnnotations.filter(ann =>
+      Math.max(ann.startIndex, fragmentStartOffset) < Math.min(ann.endIndex, fragmentEndOffset)
     );
 
-    /**
-     * @function renderContent
-     * @description Renders the document content by fragmenting it based on overlapping annotations
-     * (codes, highlights, memos, search results) to ensure correct styling and interactivity.
-     */
-    const renderContent = () => {
-        if (!selectedContent) {
-            return 'Select a document to view its contents.';
+    const boundaryPoints = new Set([0, text.length]);
+    relevantAnnotations.forEach(ann => {
+      boundaryPoints.add(Math.max(0, ann.startIndex - fragmentStartOffset));
+      boundaryPoints.add(Math.min(text.length, ann.endIndex - fragmentStartOffset));
+    });
+
+    const sortedPoints = Array.from(boundaryPoints).sort((a, b) => a - b);
+    const subFragments = [];
+
+    for (let i = 0; i < sortedPoints.length - 1; i++) {
+      const start = sortedPoints[i];
+      const end = sortedPoints[i + 1];
+      if (start < end) {
+        subFragments.push({
+          text: text.substring(start, end),
+          globalStart: fragmentStartOffset + start,
+        });
+      }
+    }
+
+    return subFragments.map((subFrag, index) => {
+      const { text, globalStart } = subFrag;
+      const globalEnd = globalStart + text.length;
+
+      const coveringAnnotations = relevantAnnotations.filter(ann =>
+        ann.startIndex <= globalStart && ann.endIndex >= globalEnd
+      );
+      const startingAnnotations = relevantAnnotations.filter(ann => ann.startIndex === globalStart);
+
+      const style = {};
+      const classNames = [];
+
+      const codeAnns = coveringAnnotations.filter(a => a.type === 'code');
+      const highlightAnn = coveringAnnotations.find(a => a.type === 'highlight');
+      const searchAnn = coveringAnnotations.find(a => a.type === 'search');
+
+      let stylingCodeAnn = null;
+      if (codeAnns.length > 0) {
+        codeAnns.sort((a, b) => (a.endIndex - a.startIndex) - (b.endIndex - b.startIndex));
+        stylingCodeAnn = codeAnns[0];
+      }
+
+      if (stylingCodeAnn) {
+        const innerColor = stylingCodeAnn.codeDefinition?.color || '#ccc';
+        style.borderBottom = `1.3px dashed ${innerColor}`;
+
+        const codesToDisplay = codeAnns.filter(ann =>
+          (showCodeColors && activeCodedSegmentId !== ann._id) ||
+          (!showCodeColors && activeCodedSegmentId === ann._id)
+        );
+
+        if (codesToDisplay.length === 1) {
+          style.backgroundColor = (codesToDisplay[0].codeDefinition?.color || '#ccc') + '4D';
+        } else if (codesToDisplay.length > 1) {
+          const stripeHeight = 100 / codesToDisplay.length;
+          const colorStops = codesToDisplay.map((ann, index) => {
+            const color = ann.codeDefinition?.color || '#ccc';
+            const start = index * stripeHeight;
+            const end = (index + 1) * stripeHeight;
+            return `${color}4D ${start.toFixed(2)}%, ${color}4D ${end.toFixed(2)}%`;
+          }).join(', ');
+          style.background = `linear-gradient(to bottom, ${colorStops})`;
         }
 
-        // 1. Combine all annotations (codes, highlights, memos, search) into a single list.
-        const allAnnotations = [
-            ...codedSegments.map(s => ({ ...s, type: 'code' })),
-            ...inlineHighlights.map(h => ({ ...h, type: 'highlight' })),
-            ...memos.map(m => ({ ...m, type: 'memo' })),
-            ...viewerSearchMatches.map(m => ({ ...m, type: 'search' }))
-        ];
+        classNames.push("relative cursor-help rounded px-0.5", "border-solid border-opacity-60");
+      }
 
-        // 2. Collect all unique start/end points to define fragment boundaries.
-        const boundaryPoints = new Set([0, selectedContent.length]);
-        allAnnotations.forEach(ann => {
-            if (typeof ann.startIndex === 'number') boundaryPoints.add(ann.startIndex);
-            if (typeof ann.endIndex === 'number') boundaryPoints.add(ann.endIndex);
-        });
-        
-        // 3. Create a list of discrete, non-overlapping fragments based on boundary points.
-        const sortedPoints = Array.from(boundaryPoints).sort((a, b) => a - b);
-        const fragments = [];
-        for (let i = 0; i < sortedPoints.length - 1; i++) {
-            const start = sortedPoints[i];
-            const end = sortedPoints[i + 1];
-            if (start < end) { // Ensure fragments are valid and have length.
-                fragments.push({
-                    start,
-                    end,
-                    text: selectedContent.substring(start, end),
-                });
-            }
-        }
-        
-        // 4. Render each fragment, decorating it with all applicable annotations.
-        return fragments.map(frag => {
-            const { start, end, text } = frag;
-            
-            // Find all annotations that cover this fragment.
-            const coveringAnnotations = allAnnotations.filter(
-                ann => ann.startIndex <= start && ann.endIndex >= end
-            );
-            
-            // Find annotations that begin at this fragment's start to place markers (e.g., memo icons).
-            const startingAnnotations = allAnnotations.filter(ann => ann.startIndex === start);
+      if (highlightAnn) style.backgroundColor = highlightAnn.color + '33';
 
-            // Apply styles with a specific precedence: Search > Highlight > Code.
-            const style = {};
-            const classNames = [];
-            
-            const codeAnn = coveringAnnotations.find(a => a.type === 'code');
-            const highlightAnn = coveringAnnotations.find(a => a.type === 'highlight');
-            const searchAnn = coveringAnnotations.find(a => a.type === 'search');
-            
-            // Apply code styling.
-            if (codeAnn) {
-                const isActive = activeCodedSegmentId === codeAnn._id;
-                let bg = '';
-                if (showCodeColors) {
-                    bg = isActive ? '' : (codeAnn.codeDefinition?.color || '#ccc') + '66';
-                } else {
-                    bg = isActive ? (codeAnn.codeDefinition?.color || '#ccc') + '66' : '';
-                }
-                if (bg) style.backgroundColor = bg;
-                classNames.push("relative group cursor-help rounded px-0.5");
-            }
+      if (searchAnn) {
+        const isCurrentMatch = currentMatchIndex !== -1 && viewerSearchMatches[currentMatchIndex]?.startIndex === searchAnn.startIndex;
+        style.backgroundColor = isCurrentMatch ? '#FF5733' : '#FFFF00';
+        classNames.push(isCurrentMatch ? "viewer-search-highlight-active" : "viewer-search-highlight", "rounded", "px-0.5", "py-1");
+      }
 
-            // Apply highlight styling (overwrites code background).
-            if (highlightAnn) {
-                style.backgroundColor = highlightAnn.color + '33';
-            }
+      let renderedText = text;
+      if (Object.keys(style).length > 0 || classNames.length > 0) {
+        renderedText = (
+          <span
+            style={style}
+            className={classNames.join(' ')}
+            onMouseEnter={() => handleCodeMouseEnter(codeAnns)}
+            onMouseLeave={handleCodeMouseLeave}
+          >
+            {text}
+          </span>
+        );
+      }
 
-            // Apply search styling (overwrites both code and highlight backgrounds).
-            if (searchAnn) {
-                const isCurrentMatch = currentMatchIndex !== -1 && viewerSearchMatches[currentMatchIndex]?.startIndex === searchAnn.startIndex;
-                style.backgroundColor = isCurrentMatch ? '#FF5733' : '#FFFF00';
-                classNames.push(isCurrentMatch ? "viewer-search-highlight-active" : "viewer-search-highlight", "rounded", "px-0.5", "py-1");
-            }
-
-            let renderedText = text;
-            if (Object.keys(style).length > 0 || classNames.length > 0) {
-                renderedText = (
-                    <span style={style} className={classNames.join(' ')}>
-                        {text}
-                    </span>
-                );
-            }
-            
-            // Prepend `sup` markers for memos and codes that start at this fragment.
-            const markers = startingAnnotations.map(ann => {
-                if (ann.type === 'code') {
-                    return (
-                        <sup key={`sup-code-${ann._id}`}
-                            data-code-segment-id={ann._id}
-                            onClick={e => { e.stopPropagation(); setActiveCodedSegmentId(prev => prev === ann._id ? null : ann._id); }}
-                            className="ml-0.5 mr-0.5 px-1 py-0.5 rounded-full text-xs font-bold select-none cursor-pointer"
-                            style={{ backgroundColor: ann.codeDefinition?.color || '#ccc', color: '#FFF' }}
-                            title={`Code: ${ann.codeDefinition?.name}`}
-                        />
-                    );
-                }
-                if (ann.type === 'memo' && ann.startIndex !== -1 && ann.endIndex !== -1) {
-                    return (
-                        <sup key={`sup-memo-${ann._id}`}
-                            data-memo-id={ann._id}
-                            onClick={e => { e.stopPropagation(); setActiveMemoId(prev => prev === ann._id ? null : ann._id); setMemoToEdit(ann); setShowMemoModal(true); }}
-                            className="ml-0.1 mr-0.1 cursor-pointer select-none align-super"
-                            title={`Memo: ${ann.title || 'No Title'}`}
-                        >
-                            <FaStickyNote className="inline-block" style={{ fontSize: '0.9rem', color: '#FFE135' }} />
-                        </sup>
-                    );
-                }
-                return null;
-            }).filter(Boolean);
-
-            // Return the markers followed by the styled text fragment.
-            return (
-                <React.Fragment key={`${start}-${end}`}>
-                    {markers}
-                    {renderedText}
-                </React.Fragment>
-            );
-        });
-    };
-
-    // Main component render method.
-    return (
-        <div className={`flex flex-col rounded-xl shadow-md overflow-hidden flex-1`}>
-            {renderViewerToolbar()}
-            <div 
-                ref={viewerRef} 
-                onMouseUp={handleViewerMouseUp}
-                className="bg-white dark:bg-gray-800 p-6 overflow-y-auto flex-1"
+      const markers = startingAnnotations.map(ann => {
+        if (ann.type === 'code') {
+          return (
+            <sup
+              key={`sup-code-${ann._id}`}
+              data-code-segment-id={ann._id}
+              onClick={e => {
+                e.stopPropagation();
+                setActiveCodedSegmentId(prev => prev === ann._id ? null : ann._id);
+              }}
+              onMouseEnter={() => {
+                clearTimeout(hoverTimeoutRef.current);
+                setHoveredCodeId(ann._id);
+              }}
+              onMouseLeave={() => {
+                hoverTimeoutRef.current = setTimeout(() => {
+                  setHoveredCodeId(prev => (prev === ann._id ? null : prev));
+                }, 100);
+              }}
+              className="relative ml-0.5 mr-0.5 cursor-pointer select-none rounded-full px-1 py-0.5 text-xs font-bold"
+              style={{ backgroundColor: ann.codeDefinition?.color || '#ccc', color: '#FFF' }}
+              title={`Code: ${ann.codeDefinition?.name}`}
             >
-                <pre className="whitespace-pre-wrap text-sm text-black dark:text-gray-200 select-text">
-                    {renderContent()}
-                </pre>
-            </div>
+              <div
+                onMouseEnter={() => { clearTimeout(hoverTimeoutRef.current); }}
+                onMouseLeave={() => { hoverTimeoutRef.current = setTimeout(() => { setHoveredCodeId(prev => (prev === ann._id ? null : prev)); }, 100); }}
+                className={`absolute bottom-full left-1/2 mb-0.5 flex -translate-x-1/2 transform items-center whitespace-nowrap transition-opacity z-10 ${hoveredCodeId === ann._id ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReassignCodeClick(e, ann);
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded-l bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  title={`Change Code - "${ann.codeDefinition?.name || 'Unnamed'}"`}
+                >
+                  <MdOutlineSwapHoriz size={17} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateMemoForSegment(ann);
+                  }}
+                  className="flex h-6 w-6 items-center justify-center bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  title={`Add Memo to "${ann.codeDefinition?.name || 'Unnamed'}"`}
+                >
+                  <RiStickyNoteAddFill size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCodedSegment(ann._id, ann.codeDefinition?.name || 'this segment');
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded-r bg-gray-100 text-red-400 transition-colors hover:bg-gray-200 hover:text-red-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  title="Delete Code Segment"
+                >
+                  <FaTrashAlt size={10} />
+                </button>
+              </div>
+            </sup>
+          );
+        }
+        if (ann.type === 'memo' && ann.startIndex !== -1 && ann.endIndex !== -1) {
+          return (
+            <sup
+              key={`sup-memo-${ann._id}`}
+              data-memo-id={ann._id}
+              onClick={e => {
+                e.stopPropagation();
+                setActiveMemoId(prev => prev === ann._id ? null : ann._id);
+                setMemoToEdit(ann);
+                setShowMemoModal(true);
+              }}
+              className="ml-0.1 mr-0.1 cursor-pointer select-none align-super"
+              title={`Memo: ${ann.title || 'No Title'}`}
+            >
+              <FaStickyNote
+                className="inline-block"
+                style={{ fontSize: '0.9rem', color: '#FFE135' }}
+              />
+            </sup>
+          );
+        }
+        return null;
+      }).filter(Boolean);
+
+      return (
+        <React.Fragment key={`${globalStart}-${index}`}>
+          {markers}
+          {renderedText}
+        </React.Fragment>
+      );
+    });
+  };
+
+  /**
+   * Parses a timestamp string (e.g., "[00:12:34]") into total seconds.
+   * @param {string} timestampStr - The timestamp string from the document.
+   * @returns {number|null} The total time in seconds, or null if invalid.
+   */
+  const parseTimestamp = (timestampStr) => {
+    if (!timestampStr) return null;
+    // This regex handles formats like [HH:MM:SS]
+    const match = timestampStr.match(/(\d{2}):(\d{2}):(\d{2})/);
+    if (!match) return null;
+
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const seconds = parseInt(match[3], 10);
+    
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return null;
+
+    return hours * 3600 + minutes * 60 + seconds;
+  };
+
+  /**
+   * The main content renderer. It determines if the document is a transcript
+   * and applies a special block-based layout for speaker turns, or renders it
+   * as a single block for standard text.
+   * @returns {JSX.Element|Array<JSX.Element>} The fully rendered document content.
+   */
+  const renderContent = () => {
+    if (typeof selectedContent !== 'string' || selectedContent.length === 0) {
+      return <div className="text-gray-500">Select a document to view its contents.</div>;
+    }
+
+    const allAnnotations = [
+      ...codedSegments.map(s => ({ ...s, type: 'code' })),
+      ...inlineHighlights.map(h => ({ ...h, type: 'highlight' })),
+      ...memos.map(m => ({ ...m, type: 'memo' })),
+      ...viewerSearchMatches.map(m => ({ ...m, type: 'search' }))
+    ];
+
+    const blocks = selectedContent.split(/(?=\[[^\]]+\]\s+Speaker\s+[A-Z]:)/g).filter(block => block.trim() !== '');
+    const isTranscript = blocks.length > 0 && blocks.every(block => block.match(transcriptLineRegex));
+
+    if (!isTranscript) {
+      return (
+        <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }} className="selectable-dialogue text-justify">
+          {renderAnnotatedFragment(selectedContent, 0, allAnnotations)}
         </div>
-    );
+      );
+    }
+
+    let charOffset = 0;
+    return blocks.map((block, index) => {
+      const blockStartOffset = selectedContent.indexOf(block, charOffset);
+      charOffset = blockStartOffset + block.length;
+      const match = block.match(transcriptLineRegex);
+
+      if (!match) {
+        return (
+          <p key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }} className="selectable-dialogue">
+            {renderAnnotatedFragment(block, blockStartOffset, allAnnotations)}
+          </p>
+        );
+      }
+
+      const header = match[1];
+      const dialogue = block.substring(header.length);
+      const headerOffset = blockStartOffset;
+      const dialogueOffset = blockStartOffset + header.length;
+      
+      const handleBlockClick = (e) => {
+        // Check for Ctrl key or Command key on Mac
+        if (!e.ctrlKey && !e.metaKey) return;
+        
+        e.preventDefault();
+        if (!hasAudio || !onTimestampClick) return;
+        const timeInSeconds = parseTimestamp(header);
+        if (timeInSeconds !== null) {
+          onTimestampClick(timeInSeconds);
+        }
+      };
+
+      return (
+        <div 
+          key={index}
+          className="mb-4"
+          onClick={handleBlockClick}
+        >
+          <div className="select-none font-semibold text-cyan-900 dark:text-gray-400">
+            {renderAnnotatedFragment(header, headerOffset, allAnnotations)}
+          </div>
+          <div
+            className="selectable-dialogue pl-8 text-justify text-gray-700 dark:text-gray-200"
+            style={{ whiteSpace: 'pre-wrap' }}
+          >
+            {renderAnnotatedFragment(dialogue, dialogueOffset, allAnnotations)}
+          </div>
+        </div>
+      );
+    });
+  };
+
+  /**
+   * Handles Ctrl+Click (or ⌘+Click) in the textarea during edit mode to seek audio.
+   * @param {React.MouseEvent<HTMLTextAreaElement>} e - The mouse click event.
+   */
+  const handleTextareaClick = (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    
+    e.preventDefault();
+    if (!hasAudio || !onTimestampClick) return;
+
+    const textarea = e.currentTarget;
+    const cursorPosition = textarea.selectionStart;
+    const text = textarea.value;
+
+    const lineStartIndex = text.lastIndexOf('\n', cursorPosition - 1) + 1;
+    let lineEndIndex = text.indexOf('\n', cursorPosition);
+    if (lineEndIndex === -1) {
+      lineEndIndex = text.length;
+    }
+
+    const currentLine = text.substring(lineStartIndex, lineEndIndex);
+    const match = currentLine.match(transcriptLineRegex);
+
+    if (match) {
+      const header = match[1];
+      const timeInSeconds = parseTimestamp(header);
+      if (timeInSeconds !== null) {
+        onTimestampClick(timeInSeconds);
+      }
+    }
+  };
+
+  return (
+    <div className={`flex flex-1 flex-col overflow-hidden rounded-xl shadow-md`}>
+      <CustomTooltip
+        visible={tooltipData.visible}
+        codes={tooltipData.codes}
+      />
+      <DocumentToolbar
+        isEditing={isEditing}
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        showCodeColors={showCodeColors}
+        setShowCodeColors={setShowCodeColors}
+        showCodeDropdown={showCodeDropdown}
+        setShowCodeDropdown={setShowCodeDropdown}
+        showHighlightColorDropdown={showHighlightColorDropdown}
+        setShowHighlightColorDropdown={setShowHighlightColorDropdown}
+        selectedHighlightColor={selectedHighlightColor}
+        setSelectedHighlightColor={setSelectedHighlightColor}
+        setActiveCodedSegmentId={setActiveCodedSegmentId}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        lineHeight={lineHeight}
+        setLineHeight={setLineHeight}
+        showLineHeightDropdown={showLineHeightDropdown}
+        setShowLineHeightDropdown={setShowLineHeightDropdown}
+        viewerSearchInputRef={viewerSearchInputRef}
+        viewerSearchQuery={viewerSearchQuery}
+        handleViewerSearchChange={handleViewerSearchChange}
+        viewerSearchMatches={viewerSearchMatches}
+        currentMatchIndex={currentMatchIndex}
+        goToPrevMatch={goToPrevMatch}
+        goToNextMatch={goToNextMatch}
+        handleClearViewerSearch={handleClearViewerSearch}
+        setShowFloatingToolbar={setShowFloatingToolbar}
+        setShowMemoModal={setShowMemoModal}
+        setShowFloatingAssignCode={setShowFloatingAssignCode}
+        setShowFloatingMemoInput={setShowFloatingMemoInput}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
+      <div
+        ref={viewerRef}
+        onMouseUp={handleViewerMouseUp}
+        className="flex-1 overflow-y-auto bg-white p-6 pt-7 custom-scrollbar dark:bg-gray-800"
+      >
+        {isEditing ? (
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={onContentChange}
+            onClick={handleTextareaClick}
+            className="h-full w-full resize-none bg-transparent p-0 m-0 text-black focus:outline-none custom-scrollbar dark:text-gray-200"
+            style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
+            placeholder="You can edit the document here..."
+            title={hasAudio ? "Ctrl+Click (or ⌘+Click) on a line to seek audio" : ""}
+          />
+        ) : (
+          <div
+            className="text-black dark:text-gray-200"
+            style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
+          >
+            {renderContent()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default DocumentViewer;

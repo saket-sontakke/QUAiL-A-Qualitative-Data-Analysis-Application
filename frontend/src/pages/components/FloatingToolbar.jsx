@@ -1,16 +1,22 @@
-/**
- * @file FloatingToolbar.jsx
- * @description A floating toolbar that appears next to a user's text selection,
- * offering actions like coding, highlighting, or creating a memo. It is positioned
- * dynamically on the screen based on the selection coordinates.
- */
-
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaStickyNote, FaHighlighter } from 'react-icons/fa';
 import { MdCode } from "react-icons/md";
 
+/**
+ * Renders a compact, floating toolbar that appears at a specified coordinate.
+ * It provides users with contextual actions for a text selection, such as
+ * coding, adding a memo, or highlighting.
+ *
+ * @param {object} props - The component props.
+ * @param {number} props.x - The horizontal (left) position for the toolbar in pixels.
+ * @param {number} props.y - The vertical (top) position for the toolbar in pixels.
+ * @param {() => void} props.onCode - The callback function to execute when the "Code" button is clicked.
+ * @param {() => void} props.onMemo - The callback function to execute when the "Add Memo" button is clicked.
+ * @param {() => void} props.onHighlight - The callback function to execute when the "Highlight" button is clicked.
+ * @param {() => void} props.onCancel - The callback function to execute when the toolbar is closed.
+ * @returns {JSX.Element} The rendered floating toolbar component.
+ */
 const FloatingToolbar = ({ x, y, onCode, onMemo, onHighlight, onCancel }) => {
-  // Dynamically positions the component based on the provided x and y coordinates.
   const style = {
     left: `${x}px`,
     top: `${y}px`,
@@ -23,38 +29,38 @@ const FloatingToolbar = ({ x, y, onCode, onMemo, onHighlight, onCancel }) => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
-        className="floating-toolbar bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-white p-2 rounded-lg shadow-lg flex items-center space-x-2 z-50"
+        className="floating-toolbar z-50 flex items-center space-x-1 rounded-lg border-[1.5px] border-gray-200 bg-white p-0.5 text-gray-800 shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:text-white"
         style={style}
-        onClick={(e) => e.stopPropagation()} // Prevents clicks on the toolbar from dismissing it.
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Action buttons for coding, memoing, and highlighting */}
         <button
           onClick={onCode}
           title='Code Selected Text'
-          className="px-3 py-1 bg-white hover:bg-gray-100 text-gray-800 dark:bg-[#1D3C87] dark:hover:bg-[#F05623] dark:text-white rounded-md text-sm flex items-center gap-1 transition"
+          className="rounded-md px-2 py-1 text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
         >
-          <MdCode />
+          <MdCode size={16} />
         </button>
         <button
           onClick={onMemo}
           title='Add Memo'
-          className="px-3 py-1 bg-white hover:bg-gray-100 text-gray-800 dark:bg-[#1D3C87] dark:hover:bg-[#F05623] dark:text-white rounded-md text-sm flex items-center gap-1 transition"
+          className="rounded-md px-2 py-1 text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
         >
-          <FaStickyNote />
+          <FaStickyNote size={14} />
         </button>
         <button
           onClick={onHighlight}
           title='Highlight Selected Text'
-          className="px-3 py-1 bg-white hover:bg-gray-100 text-gray-800 dark:bg-[#1D3C87] dark:hover:bg-[#F05623] dark:text-white rounded-md text-sm flex items-center gap-1 transition"
+          className="rounded-md px-2 py-1 text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
         >
-          <FaHighlighter />
+          <FaHighlighter size={14} />
         </button>
+        <div className="mx-1 h-3.5 w-px bg-gray-200 dark:bg-gray-600"></div>
         <button
           onClick={onCancel}
-          className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white ml-2"
+          className="rounded-md px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
           title="Close toolbar"
         >
-          <FaTimes />
+          <FaTimes size={14} />
         </button>
       </motion.div>
     </AnimatePresence>

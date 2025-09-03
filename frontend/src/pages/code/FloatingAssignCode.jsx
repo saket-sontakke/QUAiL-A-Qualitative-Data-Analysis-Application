@@ -1,26 +1,31 @@
-/**
- * @file FloatingAssignCode.jsx
- * @description A floating UI component that appears next to a user's text selection,
- * allowing them to assign a predefined code. It includes functionality to search
- * for codes and to trigger the creation of a new code definition.
- */
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaPlus, FaSearch } from 'react-icons/fa';
 
+/**
+ * Renders a floating UI component that appears at a specified coordinate,
+ * typically next to a user's text selection. It allows the user to assign a
+ * predefined code to the selection. The component includes a search filter
+ * for the code list and an option to trigger the creation of a new code.
+ *
+ * @param {object} props - The component props.
+ * @param {number} props.x - The horizontal (left) position for the component in pixels.
+ * @param {number} props.y - The vertical (top) position for the component in pixels.
+ * @param {Function} props.onClose - The callback function to execute when the component should be closed.
+ * @param {Function} props.onAssignCode - The callback function to execute when a code is selected, passed the code's ID.
+ * @param {Array<object>} props.codeDefinitions - The array of available code definition objects to display.
+ * @param {Function} props.onDefineNewCode - The callback function to trigger the UI for defining a new code.
+ * @returns {JSX.Element} The rendered floating code assignment component.
+ */
 const FloatingAssignCode = ({ x, y, onClose, onAssignCode, codeDefinitions, onDefineNewCode }) => {
-  // State for the search input to filter code definitions.
   const [filterText, setFilterText] = useState('');
 
-  // Dynamically positions the component based on the provided x and y coordinates.
   const style = {
     left: `${x}px`,
     top: `${y}px`,
     position: 'fixed',
   };
 
-  // Filters the list of codes based on the user's search text.
   const filteredCodes = codeDefinitions.filter(code =>
     code.name.toLowerCase().includes(filterText.toLowerCase()) ||
     (code.description && code.description.toLowerCase().includes(filterText.toLowerCase()))
@@ -32,12 +37,12 @@ const FloatingAssignCode = ({ x, y, onClose, onAssignCode, codeDefinitions, onDe
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
-        className="floating-assign-code bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl z-50 w-60 flex flex-col"
+        className="floating-assign-code z-50 flex w-60 flex-col rounded-lg border-[1.5px] border-gray-700 bg-white p-4 shadow-xl dark:bg-gray-800"
         style={style}
-        onClick={(e) => e.stopPropagation()} // Prevents clicks inside from closing the component.
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-bold text-[#1D3C87] dark:text-[#F05623]">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-cyan-900 dark:text-[#F05623]">
             Assign Code
           </h3>
           <button
@@ -49,52 +54,49 @@ const FloatingAssignCode = ({ x, y, onClose, onAssignCode, codeDefinitions, onDe
           </button>
         </div>
 
-        {/* Search input for filtering codes */}
         <div className="relative mb-3">
           <input
             type="text"
             placeholder="Search codes..."
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            className="w-full pl-8 pr-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-[#F05623] text-sm"
+            className="w-full rounded-md border border-gray-300 py-1.5 pl-8 pr-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#F05623] dark:border-gray-600 dark:bg-gray-700"
           />
-          <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm" />
+          <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500" />
         </div>
 
-        {/* Scrollable list of available codes */}
-        <div className="flex-grow overflow-y-auto pr-1 custom-scrollbar max-h-48">
+        <div className="custom-scrollbar max-h-27 flex-grow overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-1">
             {filteredCodes.map((code) => (
               <div
                 key={code._id}
                 onClick={() => onAssignCode(code._id)}
-                className="cursor-pointer bg-opacity-20 rounded-md transition-all duration-200 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 flex flex-col justify-center p-1"
+                className="flex cursor-pointer flex-col justify-center rounded-md bg-opacity-20 p-1 transition-all duration-200 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700"
                 style={{
-                  backgroundColor: code.color + '33', // Use the code's color with transparency.
+                  backgroundColor: code.color + '33',
                   height: '30px',
                 }}
               >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-[10px] text-gray-800 dark:text-white font-medium truncate w-[80%]">
+                <div className="flex w-full items-center justify-between">
+                  <span className="w-[80%] truncate text-[10px] font-medium text-gray-800 dark:text-white">
                     {code.name}
                   </span>
                   <div
-                    className="w-2 h-2 rounded-full border border-gray-400"
+                    className="h-2 w-2 rounded-full border border-gray-400"
                     style={{ backgroundColor: code.color }}
                   ></div>
                 </div>
               </div>
             ))}
 
-            {/* Button to open the 'Define New Code' modal */}
             <div
               onClick={onDefineNewCode}
-              className="cursor-pointer bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-all duration-200 ease-in-out flex items-center justify-center p-1"
+              className="group flex cursor-pointer items-center justify-start rounded-md bg-transparent pl-2 text-gray-900 transition-colors duration-200 ease-in-out dark:text-white"
               style={{ height: '30px' }}
               title="Define New Code"
             >
-              <FaPlus className="text-[10px] mr-1" />
-              <span className="text-[10px] font-medium">Define New</span>
+              <FaPlus className="mr-1 text-[10px] transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-300" />
+              <span className="text-[10px] font-medium transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-300">Define New</span>
             </div>
           </div>
         </div>

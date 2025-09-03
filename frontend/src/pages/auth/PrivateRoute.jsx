@@ -1,23 +1,29 @@
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+
 /**
- * @file PrivateRoute.jsx
- * @description This component acts as a guard for routes that require authentication.
- * It checks for the presence of an authentication token in localStorage. If the token
- * does not exist, it redirects the user to the login page. Otherwise, it renders
- * the intended child component.
+ * A higher-order component that acts as a route guard for authenticated routes.
+ * It checks the user's authentication status from the AuthContext. While the
+ * authentication status is being determined, it displays a loading indicator.
+ * If the user is not authenticated, it redirects them to the login page,
+ * preserving the intended destination for a potential redirect after login.
+ *
+ * @param {object} props - The component props.
+ * @param {React.ReactNode} props.children - The component to render if the user is authenticated.
+ * @returns {JSX.Element} The child component if authenticated, a loading indicator, or a redirect component.
  */
-
-import { Navigate } from 'react-router-dom';
-
 const PrivateRoute = ({ children }) => {
-  // Retrieve the authentication token from local storage.
-  const token = localStorage.getItem('token');
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
-  // If no token is found, redirect the user to the root path (login page).
-  if (!token) {
-    return <Navigate to="/" replace />;
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
-  // If a token exists, render the child component passed to the route.
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
   return children;
 };
 

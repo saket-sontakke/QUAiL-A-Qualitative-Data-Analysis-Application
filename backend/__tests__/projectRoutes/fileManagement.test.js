@@ -40,7 +40,8 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../../uploads');
+// Use separate test directory to avoid conflicts with production uploads
+const testUploadsDir = path.join(__dirname, '../../test_uploads');
 
 /**
  * Test suite for the File Import and Deletion API.
@@ -55,9 +56,12 @@ describe('File Import and Delete API', () => {
   /**
    * Setup runs once before all tests in this suite.
    * It dynamically imports the app server and the mocked mammoth library,
-   * connects to the database, and creates a temporary uploads directory.
+   * connects to the database, and creates a temporary test uploads directory.
    */
   beforeAll(async () => {
+    // Set NODE_ENV to test to ensure test directory usage
+    process.env.NODE_ENV = 'test';
+    
     // Dynamically import the app *after* mocks are defined. This is crucial.
     app = (await import('../../src/server.js')).default;
     mammoth = (await import('mammoth')).default;
@@ -65,18 +69,25 @@ describe('File Import and Delete API', () => {
     await db.connect();
 
     // Create a temporary directory for file uploads if it doesn't exist.
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir);
+    if (!fs.existsSync(testUploadsDir)) {
+      fs.mkdirSync(testUploadsDir, { recursive: true });
     }
   });
 
   /**
    * Teardown runs once after all tests in this suite have completed.
-   * It closes the database connection and removes the temporary uploads directory.
+   * It closes the database connection and removes the temporary test uploads directory.
    */
   afterAll(async () => {
     await db.closeDatabase();
-    fs.rmSync(uploadsDir, { recursive: true, force: true });
+    
+    // Clean up test uploads directory
+    if (fs.existsSync(testUploadsDir)) {
+      fs.rmSync(testUploadsDir, { recursive: true, force: true });
+    }
+    
+    // Reset NODE_ENV
+    delete process.env.NODE_ENV;
   });
 
   /**
@@ -100,14 +111,31 @@ describe('File Import and Delete API', () => {
   /**
    * Clears the database after each test to ensure test isolation.
    */
-  afterEach(db.clearDatabase);
+  afterEach(async () => {
+    await db.clearDatabase();
+    
+    // Clean up any test files created during the test
+    const textDir = path.join(testUploadsDir, 'text');
+    const audioDir = path.join(testUploadsDir, 'audio');
+    
+    [textDir, audioDir].forEach(dir => {
+      if (fs.existsSync(dir)) {
+        fs.readdirSync(dir).forEach(file => {
+          const filePath = path.join(dir, file);
+          if (fs.statSync(filePath).isFile()) {
+            fs.unlinkSync(filePath);
+          }
+        });
+      }
+    });
+  });
 
   /**
    * Test suite for POST /api/projects/import/:id
    */
   describe('POST /api/projects/import/:id', () => {
     it('should return 200 and import a .txt file successfully', async () => {
-      const txtFilePath = path.join(uploadsDir, 'test.txt');
+      const txtFilePath = path.join(testUploadsDir, 'test.txt');
       fs.writeFileSync(txtFilePath, 'This is a test text file.');
 
       const res = await request(app)
@@ -122,7 +150,7 @@ describe('File Import and Delete API', () => {
     });
 
     it('should return 200 and import a .docx file using the mocked mammoth extractor', async () => {
-      const docxFilePath = path.join(uploadsDir, 'test.docx');
+      const docxFilePath = path.join(testUploadsDir, 'test.docx');
       fs.writeFileSync(docxFilePath, 'dummy docx content');
 
       // Mock the return value for the docx text extraction.
@@ -149,7 +177,7 @@ describe('File Import and Delete API', () => {
     });
 
     it('should return 401 if no authorization token is provided', async () => {
-      const txtFilePath = path.join(uploadsDir, 'unauthorized.txt');
+      const txtFilePath = path.join(testUploadsDir, 'unauthorized.txt');
       fs.writeFileSync(txtFilePath, 'content');
 
       const res = await request(app)
@@ -203,7 +231,7 @@ describe('File Import and Delete API', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.message).toBe('File and related data deleted');
+      expect(res.body.message).toBe('File and related data deleted successfully');
 
       // Verify final state from the response.
       expect(res.body.project.importedFiles).toHaveLength(0);

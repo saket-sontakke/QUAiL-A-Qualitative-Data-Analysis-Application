@@ -1,6 +1,8 @@
-// In src/context/ProjectContext.jsx
-
 import { createContext } from 'react';
 
-// Create the context and export it
+/**
+ * @description Defines a React Context for sharing project-related data and
+ * functions throughout the component tree, avoiding the need to pass props
+ * down through multiple levels.
+ */
 export const ProjectContext = createContext(null);
