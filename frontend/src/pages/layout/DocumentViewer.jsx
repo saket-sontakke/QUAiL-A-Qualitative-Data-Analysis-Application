@@ -350,7 +350,6 @@ const DocumentViewer = ({
    */
   const parseTimestamp = (timestampStr) => {
     if (!timestampStr) return null;
-    // This regex handles formats like [HH:MM:SS]
     const match = timestampStr.match(/(\d{2}):(\d{2}):(\d{2})/);
     if (!match) return null;
 
@@ -412,7 +411,6 @@ const DocumentViewer = ({
       const dialogueOffset = blockStartOffset + header.length;
       
       const handleBlockClick = (e) => {
-        // Check for Ctrl key or Command key on Mac
         if (!e.ctrlKey && !e.metaKey) return;
         
         e.preventDefault();

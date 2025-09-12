@@ -147,45 +147,47 @@ const DocumentToolbar = ({
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="relative flex items-center">
-          <input
-            type="text"
-            ref={viewerSearchInputRef}
-            placeholder="Search..."
-            value={viewerSearchQuery}
-            onChange={handleViewerSearchChange}
-            className="w-64 rounded-md border border-gray-300 bg-gray-50 py-1.5 pl-8 pr-28 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:ring-[#F05623]"
-          />
-          <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
-          {viewerSearchQuery && (
-            <div className="absolute right-0 flex h-full items-center gap-1 pr-4">
-              <span className="whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
-                {viewerSearchMatches.length > 0 ? `${currentMatchIndex + 1}/${viewerSearchMatches.length}` : '0/0'}
-              </span>
-              <div className="flex">
-                <button
-                  onClick={goToPrevMatch}
-                  disabled={viewerSearchMatches.length === 0}
-                  className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-600"
-                  title="Previous"
-                >
-                  <FaChevronUp size={12} />
-                </button>
-                <button
-                  onClick={goToNextMatch}
-                  disabled={viewerSearchMatches.length === 0}
-                  className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-600"
-                  title="Next"
-                >
-                  <FaChevronDown size={12} />
+        {!isEditing && (
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              ref={viewerSearchInputRef}
+              placeholder="Search..."
+              value={viewerSearchQuery}
+              onChange={handleViewerSearchChange}
+              className="w-64 rounded-md border border-gray-300 bg-gray-50 py-1.5 pl-8 pr-28 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:ring-[#F05623]"
+            />
+            <FaSearch className="absolute left-2 text-gray-400 dark:text-gray-500" />
+            {viewerSearchQuery && (
+              <div className="absolute right-0 flex h-full items-center gap-1 pr-4">
+                <span className="whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
+                  {viewerSearchMatches.length > 0 ? `${currentMatchIndex + 1}/${viewerSearchMatches.length}` : '0/0'}
+                </span>
+                <div className="flex">
+                  <button
+                    onClick={goToPrevMatch}
+                    disabled={viewerSearchMatches.length === 0}
+                    className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-600"
+                    title="Previous"
+                  >
+                    <FaChevronUp size={12} />
+                  </button>
+                  <button
+                    onClick={goToNextMatch}
+                    disabled={viewerSearchMatches.length === 0}
+                    className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-600"
+                    title="Next"
+                  >
+                    <FaChevronDown size={12} />
+                  </button>
+                </div>
+                <button onClick={handleClearViewerSearch} className="p-1 text-gray-600 hover:text-gray-800 dark:text-gray-500 dark:hover:text-gray-300" title="Clear">
+                  <FaTimes />
                 </button>
               </div>
-              <button onClick={handleClearViewerSearch} className="p-1 text-gray-600 hover:text-gray-800 dark:text-gray-500 dark:hover:text-gray-300" title="Clear">
-                <FaTimes />
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-1 rounded-md border border-gray-200 p-1 shadow-sm dark:border-gray-700">
           <button onClick={() => setFontSize(size => Math.max(8, size - 1))} className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-600" title="Zoom Out">
@@ -219,7 +221,7 @@ const DocumentToolbar = ({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="color-dropdown-menu absolute right-0 z-50 mt-2 w-24 rounded-lg bg-white p-2 shadow-lg dark:bg-gray-700"
+                className="color-dropdown-menu absolute right-0 z-50 mt-2 w-28 rounded-lg bg-white p-2 shadow-lg dark:bg-gray-700"
               >
                 {isCustomInputVisible ? (
                   <div className="flex flex-col gap-2">
@@ -227,17 +229,33 @@ const DocumentToolbar = ({
                       <button onClick={() => setIsCustomInputVisible(false)} className="rounded-sm p-1 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600" title="Back">
                         <FaArrowLeft size={12} />
                       </button>
-                      <input
-                        type="number"
-                        step="0.05"
-                        min="1.0"
-                        max="4.0"
-                        value={customLineHeight}
-                        onChange={(e) => setCustomLineHeight(e.target.value)}
-                        autoFocus
-                        onKeyDown={(e) => e.key === 'Enter' && handleSetCustomSpacing()}
-                        className="w-full rounded-md bg-gray-100 p-0.5 text-center text-sm focus:outline-none focus:ring-1 focus:ring-cyan-900 dark:bg-gray-800 dark:focus:ring-[#F05623]"
-                      />
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="1.0"
+                          max="4.0"
+                          value={customLineHeight}
+                          onChange={(e) => setCustomLineHeight(e.target.value)}
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && handleSetCustomSpacing()}
+                          className="w-full rounded-md bg-gray-100 p-0.5 pr-4 text-center text-sm focus:outline-none focus:ring-1 focus:ring-cyan-900 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-[#F05623] hide-number-arrows"
+                        />
+                        <div className="absolute right-0 mr-1 flex h-full flex-col items-center justify-center">
+                          <button 
+                            onClick={() => setCustomLineHeight(lh => (Math.min(4.0, parseFloat(lh) + 0.05)).toFixed(2))}
+                            className="h-1/2 rounded-tr-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 4.86l-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/></svg>
+                          </button>
+                          <button 
+                            onClick={() => setCustomLineHeight(lh => (Math.max(1.0, parseFloat(lh) - 0.05)).toFixed(2))}
+                            className="h-1/2 rounded-br-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     <button onClick={handleSetCustomSpacing} className="w-full rounded-md bg-cyan-800 py-1 text-xs font-bold text-white hover:bg-cyan-700 dark:bg-[#F05623] dark:hover:bg-orange-700">
                       Set

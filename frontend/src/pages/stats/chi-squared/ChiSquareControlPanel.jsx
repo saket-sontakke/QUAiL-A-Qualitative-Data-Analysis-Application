@@ -174,9 +174,35 @@ const GoodnessOfFitPanel = ({ codeDefinitions, gofCodes, setGofCodes, project, g
               return (
                 <div key={codeId} className="flex items-center justify-between gap-4">
                   <label htmlFor={`prop-${codeId}`} className="truncate text-sm">{code?.name}</label>
-                  <div className="relative w-24">
-                    <input id={`prop-${codeId}`} type="number" min="0" max="100" step="0.1" value={gofCustomProportions[codeId] || ''} onChange={(e) => setGofCustomProportions(p => ({ ...p, [codeId]: e.target.value }))} className="w-full rounded-md border-gray-300 p-1" placeholder="e.g., 25" />
-                    <span className="absolute inset-y-0 right-6 flex items-center text-gray-500">%</span>
+                  <div className="relative w-22">
+                    <input 
+                      id={`prop-${codeId}`} 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      step="0.1" 
+                      value={gofCustomProportions[codeId] || ''} 
+                      onChange={(e) => setGofCustomProportions(p => ({ ...p, [codeId]: e.target.value }))} 
+                      className="w-full rounded-md border-gray-300 py-1 pl-2 pr-5 text-black dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 hide-number-arrows" 
+                      placeholder="e.g., 25" 
+                    />
+
+                    <span className="pointer-events-none absolute inset-y-0 right-6 flex items-center text-gray-500">%</span>
+                    
+                    <div className="absolute right-0 top-0 mr-1 flex h-full flex-col items-center justify-center">
+                      <button 
+                        onClick={() => setGofCustomProportions(p => ({ ...p, [codeId]: (Math.min(100, (parseFloat(p[codeId]) || 0) + 0.1)).toFixed(1) }))}
+                        className="h-1/2 rounded-tr-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 4.86l-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/></svg>
+                      </button>
+                      <button 
+                        onClick={() => setGofCustomProportions(p => ({ ...p, [codeId]: (Math.max(0, (parseFloat(p[codeId]) || 0) - 0.1)).toFixed(1) }))}
+                        className="h-1/2 rounded-br-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

@@ -4,6 +4,34 @@ import { useEffect, useRef, useState, createElement, useMemo, useCallback } from
 import { gsap } from "gsap";
 import "./TextType.css";
 
+/**
+ * A versatile React component for creating animated typing effects.
+ * It can type out single or multiple sentences, loop the animation,
+ * control typing/deleting speeds, and customize the cursor's appearance and behavior.
+ *
+ * @component
+ * @param {object} props - The component props.
+ * @param {string|string[]} props.text - The text to be typed. Can be a single string or an array of strings for multiple sentences.
+ * @param {string|React.ElementType} [props.as="div"] - The HTML tag or React component to use as the container.
+ * @param {number} [props.typingSpeed=50] - The speed of typing in milliseconds per character.
+ * @param {number} [props.initialDelay=0] - An initial delay in milliseconds before the animation starts.
+ * @param {number} [props.pauseDuration=2000] - The pause duration in milliseconds after a sentence is typed.
+ * @param {number} [props.deletingSpeed=30] - The speed of deleting in milliseconds per character.
+ * @param {boolean} [props.loop=true] - Whether the animation should loop indefinitely.
+ * @param {string} [props.className=""] - Additional CSS class for the container element.
+ * @param {boolean} [props.showCursor=true] - Whether to display the typing cursor.
+ * @param {boolean} [props.hideCursorWhileTyping=false] - If true, the cursor is hidden during typing and deleting.
+ * @param {string} [props.cursorCharacter="|"] - The character to use for the cursor.
+ * @param {string} [props.cursorClassName=""] - Additional CSS class for the cursor element.
+ * @param {number} [props.cursorBlinkDuration=0.5] - The duration of the cursor's blink animation in seconds.
+ * @param {string[]} [props.textColors=[]] - An array of color strings to apply to each sentence in sequence.
+ * @param {{min: number, max: number}} [props.variableSpeed] - An object to define a random typing speed range.
+ * @param {(sentence: string, index: number) => void} [props.onSentenceComplete] - Callback fired after each sentence is fully typed.
+ * @param {() => void} [props.onComplete] - Callback fired once the entire sequence is complete (only when `loop` is `false`).
+ * @param {boolean} [props.startOnVisible=false] - If true, the animation starts only when the component enters the viewport.
+ * @param {boolean} [props.reverseMode=false] - If true, types out the text in reverse.
+ * @returns {JSX.Element} The rendered TextType component.
+ */
 const TextType = ({
   text,
   as: Component = "div",
@@ -20,8 +48,8 @@ const TextType = ({
   cursorBlinkDuration = 0.5,
   textColors = [],
   variableSpeed,
-  onSentenceComplete, // called after each sentence finishes typing (immediately when full text is displayed)
-  onComplete, // called once when whole run finishes (only when loop === false and last sentence finished)
+  onSentenceComplete,
+  onComplete,
   startOnVisible = false,
   reverseMode = false,
   ...props
@@ -31,10 +59,9 @@ const TextType = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(!startOnVisible);
+
   const cursorRef = useRef(null);
   const containerRef = useRef(null);
-
-  // to ensure onComplete only fires once
   const completeCalledRef = useRef(false);
 
   const textArray = useMemo(() => (Array.isArray(text) ? text : [text]), [text]);
@@ -46,13 +73,11 @@ const TextType = ({
   }, [variableSpeed, typingSpeed]);
 
   const getCurrentTextColor = () => {
-    // FIX FOR GRADIENT: return undefined instead of a color when using gradients
     if (textColors.length === 0) return undefined;
     return textColors[currentTextIndex % textColors.length];
   };
 
   useEffect(() => {
-    // Reset complete flag whenever inputs that affect lifecycle change
     completeCalledRef.current = false;
   }, [textArray.length, loop]);
 
@@ -95,80 +120,63 @@ const TextType = ({
     const processedText = reverseMode ? currentText.split("").reverse().join("") : currentText;
 
     const executeTypingAnimation = () => {
-      // DELETING PHASE
       if (isDeleting) {
         if (displayedText.endsWith(processedText) && displayedText.length === processedText.length) {
-          // finished deleting, move to next sentence (or stop if at end and not looping)
           setIsDeleting(false);
-
-          // If we've just deleted and we were at the last sentence and loop === false -> do nothing further.
           if (currentTextIndex === textArray.length - 1 && !loop) {
-            // Do not advance index; we remain at last sentence displayed as empty.
             return;
           }
-
-          // advance to next sentence
           setCurrentTextIndex((prev) => (prev + 1) % textArray.length);
           setCurrentCharIndex(0);
-          setDisplayedText(""); // Clear text for the next sentence
-
-          // small pause before typing next sentence
-          timeout = setTimeout(() => {}, pauseDuration / 2); // Shorter pause when cycling
+          setDisplayedText("");
+          timeout = setTimeout(() => {}, pauseDuration / 2);
         } else {
           timeout = setTimeout(() => {
             setDisplayedText((prev) => prev.slice(0, -1));
           }, deletingSpeed);
         }
-
         return;
       }
 
-      // TYPING PHASE
       if (currentCharIndex < processedText.length) {
         const isLastChar = currentCharIndex === processedText.length - 1;
 
-        timeout = setTimeout(() => {
-          // append next character
-          setDisplayedText((prev) => prev + processedText[currentCharIndex]);
-          setCurrentCharIndex((i) => i + 1);
+        timeout = setTimeout(
+          () => {
+            setDisplayedText((prev) => prev + processedText[currentCharIndex]);
+            setCurrentCharIndex((i) => i + 1);
 
-          // If that was the last character, notify sentence-complete & maybe overall-complete
-          if (isLastChar) {
-            // notify sentence completed (immediately when full text becomes visible)
-            if (typeof onSentenceComplete === "function") {
-              try {
-                onSentenceComplete(currentText, currentTextIndex);
-              } catch (e) {
-                // swallow callback errors
-                // console.warn("onSentenceComplete callback error", e);
+            if (isLastChar) {
+              if (typeof onSentenceComplete === "function") {
+                try {
+                  onSentenceComplete(currentText, currentTextIndex);
+                } catch (e) {
+                  console.warn("onSentenceComplete callback error", e);
+                }
+              }
+
+              if (!loop && currentTextIndex === textArray.length - 1 && typeof onComplete === "function" && !completeCalledRef.current) {
+                try {
+                  onComplete();
+                } catch (e) {
+                  console.warn("onComplete callback error", e);
+                }
+                completeCalledRef.current = true;
               }
             }
-
-            // if this is the final sentence and loop===false, call onComplete (only once)
-            if (!loop && currentTextIndex === textArray.length - 1 && typeof onComplete === "function" && !completeCalledRef.current) {
-              try {
-                onComplete();
-              } catch (e) {
-                // console.warn("onComplete callback error", e);
-              }
-              completeCalledRef.current = true;
-            }
-          }
-        }, variableSpeed ? getRandomSpeed() : typingSpeed);
+          },
+          variableSpeed ? getRandomSpeed() : typingSpeed
+        );
       } else {
-        // finished typing full sentence
         const isLastSentence = currentTextIndex === textArray.length - 1;
 
-        // If there are more sentences and we're not looping, proceed to the next line.
         if (!isLastSentence && !loop) {
           timeout = setTimeout(() => {
             setDisplayedText((prev) => prev + "\n");
             setCurrentTextIndex((prev) => prev + 1);
             setCurrentCharIndex(0);
           }, pauseDuration);
-        }
-        // If we are looping (and have more than one sentence), start deleting.
-        else if (loop && textArray.length > 1) {
+        } else if (loop && textArray.length > 1) {
           timeout = setTimeout(() => {
             setIsDeleting(true);
             setCurrentCharIndex(processedText.length);
@@ -177,7 +185,6 @@ const TextType = ({
       }
     };
 
-    // handle initialDelay only on very first tick for a fresh sentence
     if (currentCharIndex === 0 && !isDeleting && (displayedText === "" || displayedText.endsWith("\n"))) {
       timeout = setTimeout(executeTypingAnimation, initialDelay);
     } else {
@@ -185,7 +192,6 @@ const TextType = ({
     }
 
     return () => clearTimeout(timeout);
-    // intentionally include getRandomSpeed in deps
   }, [
     currentCharIndex,
     displayedText,
@@ -208,7 +214,6 @@ const TextType = ({
   const isTyping = currentCharIndex < (textArray[currentTextIndex] ?? "").length || isDeleting;
   const shouldHideCursor = hideCursorWhileTyping && isTyping;
 
-
   return createElement(
     Component,
     {
@@ -216,10 +221,7 @@ const TextType = ({
       className: `text-type ${className}`,
       ...props,
     },
-    <span
-      className="text-type__content"
-      style={{ color: getCurrentTextColor() }}
-    >
+    <span className="text-type__content" style={{ color: getCurrentTextColor() }}>
       {displayedText}
     </span>,
     showCursor && (

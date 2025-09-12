@@ -22,7 +22,6 @@ const ChiSquareTypeCard = ({ icon, title, description, example, onSelect, disabl
 );
 
 const ChiSquareTypeSelector = ({ onSelect, stats }) => {
-  // Use stats to create dynamic examples, with fallbacks if data is missing
   const numSegments = stats?.numSegments || '[X]';
   const topCode = stats?.mostUsedCode?.name || '[Top Code]';
   const secondCode = stats?.codeStats?.[1]?.name || '[Another Code]';

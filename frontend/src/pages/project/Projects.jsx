@@ -1,27 +1,22 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Navbar from '../layout/Navbar.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
+import EditProjectModal from './EditProjectModal.jsx';
+import CreateProjectModal from './CreateProjectModal.jsx';
 import {
-  FaSearch,
-  FaTh,
-  FaList,
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaEye,
-  FaCalendarAlt,
-  FaSortAlphaDown,
-  FaSortAlphaDownAlt,
-  FaSortAmountDown,
-  FaSortAmountDownAlt,
-  FaCheck,
-  FaTimes
+  FaSearch, FaTh, FaList, FaPlus, FaEdit, FaTrash, FaCalendarAlt,
+  FaSortAlphaDown, FaSortAlphaDownAlt, FaSortAmountDown, FaSortAmountDownAlt, FaCheck, FaTimes
 } from 'react-icons/fa';
 
+/**
+ * Renders an icon indicating the current sort configuration.
+ * @param {{sortConfig: {key: string, direction: string}}} props - The component props.
+ * @returns {JSX.Element|null} The rendered sort icon.
+ */
 const RenderSortIcon = ({ sortConfig }) => {
   const { key, direction } = sortConfig;
   const iconProps = { className: "text-gray-600 dark:text-gray-300", size: 20 };
@@ -32,12 +27,21 @@ const RenderSortIcon = ({ sortConfig }) => {
   return null;
 };
 
+/**
+ * Renders the main projects dashboard, allowing users to view, create,
+ * edit, delete, search, and sort their projects.
+ * @returns {JSX.Element} The rendered projects dashboard component.
+ */
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [error, setError] = useState('');
-  
-  const [showModal, setShowModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -47,11 +51,18 @@ const Projects = () => {
   const [viewMode, setViewMode] = useState('tiles');
   const [sortConfig, setSortConfig] = useState({ key: 'created', direction: 'desc' });
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const sortMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (location.state?.openCreateModal) {
+      setShowCreateModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -96,26 +107,56 @@ const Projects = () => {
     }
     result.sort((a, b) => {
       if (sortConfig.key === 'name') {
-        const comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
+        return sortConfig.direction === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
       }
-      if (sortConfig.key === 'modified') {
-        const dateA = new Date(a.updatedAt);
-        const dateB = new Date(b.updatedAt);
-        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
-      }
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
+      const dateA = new Date(sortConfig.key === 'modified' ? a.updatedAt : a.createdAt);
+      const dateB = new Date(sortConfig.key === 'modified' ? b.updatedAt : b.createdAt);
       return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
     });
     setFilteredProjects(result);
   }, [projects, searchQuery, sortConfig]);
 
-  const deleteProject = async () => {
+  const handleCreateProject = async (newProjectData) => {
+    const token = user?.token;
+    if (!token) {
+      setError("You must be logged in to create a project.");
+      return;
+    }
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/create`, newProjectData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShowCreateModal(false);
+      navigate(`/project/${res.data._id}`);
+    } catch (err) {
+      setError(err.response?.data?.error || "Project creation failed.");
+    }
+  };
+
+  const handleUpdateProject = async (updatedData) => {
     const token = user?.token;
     if (!token) {
       setError("Authentication error. Please log in again.");
-      setShowModal(false);
+      return;
+    }
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToEdit._id}`, updatedData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProjects(projects.map(p => (p._id === projectToEdit._id ? res.data : p)));
+      setShowEditModal(false);
+      setProjectToEdit(null);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update project.");
+      setShowEditModal(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    const token = user?.token;
+    if (!token) {
+      setError("Authentication error. Please log in again.");
+      setShowDeleteModal(false);
       return;
     }
     try {
@@ -123,18 +164,22 @@ const Projects = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProjects(projects.filter(project => project._id !== projectToDelete));
-      setShowModal(false);
+      setShowDeleteModal(false);
       setProjectToDelete(null);
-    } catch (err)
-     {
+    } catch (err) {
       setError(err.response?.data?.error || "Failed to delete project");
-      setShowModal(false);
+      setShowDeleteModal(false);
     }
   };
-  
+
+  const openEditModal = (project) => {
+    setProjectToEdit(project);
+    setShowEditModal(true);
+  };
+
   const confirmDelete = (id) => {
     setProjectToDelete(id);
-    setShowModal(true);
+    setShowDeleteModal(true);
   };
 
   const handleSortChange = (key, direction) => {
@@ -146,7 +191,7 @@ const Projects = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white">
-      <Navbar 
+      <Navbar
         setShowConfirmModal={setShowLogoutConfirm}
         setConfirmModalData={setLogoutConfirmData}
       />
@@ -166,11 +211,7 @@ const Projects = () => {
                 className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-900 dark:focus:ring-[#F05623]"
               />
               {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  aria-label="Clear search"
-                >
+                <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center" aria-label="Clear search">
                   <FaTimes className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
                 </button>
               )}
@@ -224,55 +265,51 @@ const Projects = () => {
                 )}
               </AnimatePresence>
             </div>
-             <div className="flex-grow"></div>
-            <Link to="/create-project" className="flex items-center justify-center gap-2 transform rounded-lg bg-[#F05623] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#d74918]">
+            <div className="flex-grow"></div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center justify-center gap-2 transform rounded-lg bg-[#F05623] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#d74918]"
+            >
               <FaPlus className="text-sm" />
               Create Project
-            </Link>
+            </button>
           </div>
         </div>
-        
-        <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
-          {error && (<div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200 rounded"><p>{error}</p></div>)}
 
+        <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 pt-2">
+          {error && (<div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200 rounded"><p>{error}</p></div>)}
           {isLoading && (<div className="flex justify-center items-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F05623]"></div></div>)}
-          
           {!isLoading && filteredProjects.length === 0 && !error && (
-              <div className="text-center py-12 px-4 rounded-xl bg-white dark:bg-gray-800 shadow">
-                  <div className="mx-auto w-24 h-24 mb-6 text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  </div>
-                  <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">No projects found</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6">{searchQuery ? 'Try adjusting your search query.' : 'Create your first project to get started!'}</p>
+            <div className="text-center py-12 px-4 rounded-xl bg-white dark:bg-gray-800 shadow">
+              <div className="mx-auto w-24 h-24 mb-6 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </div>
+              <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">No projects found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">{searchQuery ? 'Try adjusting your search query.' : 'Create your first project to get started!'}</p>
+            </div>
           )}
 
           {!isLoading && filteredProjects.length > 0 && viewMode === 'tiles' && (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map((project) => (
-                <motion.div key={project._id} className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
-                  <div>
-                    <h2 className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
-                    {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      <div className="flex items-center">
-                        <FaCalendarAlt className="mr-1.5 flex-shrink-0" />
-                        <span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <FaEdit className="mr-1.5 flex-shrink-0" />
-                        <span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                <Link to={`/project/${project._id}`} key={project._id} className="block">
+                  <motion.div className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
+                    <div>
+                      <h2 className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
+                      {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
+                      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <div className="flex items-center"><FaCalendarAlt className="mr-1.5 flex-shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+                        <div className="flex items-center"><FaEdit className="mr-1.5 flex-shrink-0" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-6 flex items-center justify-between">
-                    <Link to={`/project/${project._id}`} className="flex items-center gap-1.5 font-medium text-cyan-700 transition duration-200 hover:text-cyan-900 dark:text-blue-400 dark:hover:text-blue-200"><FaEye />View</Link>
-                    <div className="flex space-x-4">
-                      <Link to={`/edit-project/${project._id}`} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"><FaEdit />Edit</Link>
-                      <button onClick={() => confirmDelete(project._id)} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"><FaTrash />Delete</button>
+                    <div className="mt-6 flex items-center justify-end">
+                      <div className="flex space-x-4">
+                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"><FaEdit />Edit</button>
+                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"><FaTrash />Delete</button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </Link>
               ))}
             </div>
           )}
@@ -281,29 +318,24 @@ const Projects = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredProjects.map((project) => (
-                  <motion.li key={project._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
-                        {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
-                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            <div className="flex items-center">
-                                <FaCalendarAlt className="mr-1.5" />
-                                <span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <FaEdit className="mr-1.5" />
-                                <span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                            </div>
+                  <Link to={`/project/${project._id}`} key={project._id} className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+                    <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
+                          {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
+                          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+                            <div className="flex items-center"><FaEdit className="mr-1.5" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4 flex-shrink-0">
+                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200" title="Edit Project"><FaEdit /><span className="hidden sm:inline">Edit</span></button>
+                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200" title="Delete Project"><FaTrash /><span className="hidden sm:inline">Delete</span></button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4 flex-shrink-0">
-                        <Link to={`/project/${project._id}`} className="flex items-center gap-1.5 text-sm font-medium text-cyan-700 transition hover:text-cyan-900 dark:text-blue-400 dark:hover:text-blue-200" title="View Project"><FaEye /><span className="hidden sm:inline">View</span></Link>
-                        <Link to={`/edit-project/${project._id}`} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200" title="Edit Project"><FaEdit /><span className="hidden sm:inline">Edit</span></Link>
-                        <button onClick={() => confirmDelete(project._id)} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200" title="Delete Project"><FaTrash /><span className="hidden sm:inline">Delete</span></button>
-                      </div>
-                    </div>
-                  </motion.li>
+                    </motion.li>
+                  </Link>
                 ))}
               </ul>
             </div>
@@ -311,19 +343,26 @@ const Projects = () => {
         </div>
       </main>
 
+      <CreateProjectModal
+        show={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onConfirm={handleCreateProject}
+      />
+
+      <EditProjectModal
+        show={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onConfirm={handleUpdateProject}
+        project={projectToEdit}
+      />
+
       <ConfirmationModal
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={deleteProject}
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteProject}
         title="Confirm Deletion"
         shortMessage={
-          <p>
-            Deleting "{projectToDeleteDetails?.name || 'this project'}" will <strong>permanently remove the project and all the data associated with it.</strong>
-            <br /> <br />
-            <span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span>
-            <br /> <br />
-            Are you sure you want to delete the project?
-          </p>
+          <p>Deleting "{projectToDeleteDetails?.name || 'this project'}" will <strong>permanently remove it and all associated data.</strong><br/><br/><span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span><br/><br/>Are you sure you want to delete this project?</p>
         }
         showInput={true}
         promptText={projectToDeleteDetails?.name}

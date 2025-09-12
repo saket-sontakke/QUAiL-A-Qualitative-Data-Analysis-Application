@@ -145,7 +145,7 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows="3"
-                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#F05623] dark:border-gray-600 dark:bg-gray-700"
+                  className="w-full resize-none custom-scrollbar rounded-lg border border-gray-300 px-4 py-2 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#F05623] dark:border-gray-600 dark:bg-gray-700"
                 ></textarea>
               </div>
               <div>

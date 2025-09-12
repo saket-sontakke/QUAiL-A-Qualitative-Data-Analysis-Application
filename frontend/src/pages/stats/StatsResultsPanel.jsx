@@ -244,8 +244,6 @@ const StatsResultsPanel = forwardRef(({
     frequencyHeading = "Contingency Table";
   }
 
-  // --- NEW CODE ---
-  // Create a structured array for the statistics table to make rendering easier
   const keyStatsForTable = [
     { label: isFisherTest ? "Odds Ratio" : "χ² Statistic", value: results.statistic?.toFixed(2) ?? 'N/A' },
     { label: "p-value", value: results.pValue.toFixed(4) },
@@ -260,7 +258,6 @@ const StatsResultsPanel = forwardRef(({
   }
 
   keyStatsForTable.push({ label: "Sample Size (N)", value: results.sampleSize });
-  // --- END NEW CODE ---
 
 
   return (

@@ -104,21 +104,21 @@ const ProjectStatsSummary = ({ stats, onProceed }) => {
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4"><strong>What it does:</strong> Checks if the frequency distribution of a single categorical variable in your sample matches a specific, expected distribution.</p>
                         <div className="text-sm bg-gray-100 dark:bg-gray-900/50 p-3 rounded-md">
                             <p className="font-semibold text-gray-700 dark:text-gray-200">Example with your data:</p>
-                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Based on my {stats.numSegments} coded segments, is there a significant difference in how often each code is used?"</p>
+                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Based on my <b>{stats.numSegments}</b> coded segments, is there a significant difference in how often each code is used?"</p>
                         </div>
                     </ChiSquareInfoCard>
                     <ChiSquareInfoCard title="Chi-Square Test for Independence" icon={<FaUsers className="text-cyan-800 dark:text-orange-500" />}>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4"><strong>What it does:</strong> Determines if there's a significant association between two categorical variables within a single population.</p>
                         <div className="text-sm bg-gray-100 dark:bg-gray-900/50 p-3 rounded-md">
                             <p className="font-semibold text-gray-700 dark:text-gray-200">Example with your data:</p>
-                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Are instructors more likely to mention '{stats.codeStats[1]?.name || '[Code B]'}' and students more likely to mention '{stats.codeStats[2]?.name || '[Code C]'}'?"</p>
+                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Are instructors more likely to mention '<b>{stats.mostUsedCode?.name || '[Top Code]'}</b>' and students more likely to mention '<b>{stats.codeStats[1]?.name || '[Another Code]'}</b>'?"</p>
                         </div>
                     </ChiSquareInfoCard>
                     <ChiSquareInfoCard title="Chi-Square Test for Homogeneity" icon={<FaLayerGroup className="text-cyan-800 dark:text-orange-500" />}>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4"><strong>What it does:</strong> Compares the distribution of a single categorical variable across two or more different populations or groups.</p>
                         <div className="text-sm bg-gray-100 dark:bg-gray-900/50 p-3 rounded-md">
                             <p className="font-semibold text-gray-700 dark:text-gray-200">Example with your data:</p>
-                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Does the usage of the code '{stats.mostUsedCode?.name || '[Top Code]'}' differ significantly between two participant groups (e.g., Campus A vs. Campus B)?"</p>
+                            <p className="italic text-gray-500 dark:text-gray-400 mt-1">"Does the usage of the code '<b>{stats.mostUsedCode?.name || '[Top Code]'}</b>' differ significantly between two participant groups (e.g., Campus A vs. Campus B)?"</p>
                         </div>
                     </ChiSquareInfoCard>
                 </div>
@@ -141,33 +141,31 @@ const TestSelectionCard = ({ icon, title, description, onClick, disabled = false
   );
 };
 
-const StatsView = forwardRef(function StatsView({ project, codeDefinitions, projectId, onResultsChange }, ref) {
-  const {
-    view, setView, selectedChiSquareType, setSelectedChiSquareType,
-    loading, error, results, 
-    isValidationRunning, validationStatus,
-    showAssumptionsConfirm, setShowAssumptionsConfirm,
-    areAssumptionsAcknowledged, setAreAssumptionsAcknowledged,
-    showFisherConfirm, setShowFisherConfirm,
-    gofCodes, setGofCodes,
-    gofDocs, setGofDocs,
-    gofDistributionType, setGofDistributionType,
-    gofCustomProportions, setGofCustomProportions,
-    indepCodes, setIndepCodes,
-    indepDocs, setIndepDocs,
-    homoCodes, setHomoCodes,
-    homoNumGroups, setHomoNumGroups,
-    homoDocGroups, setHomoDocGroups,
-    areChiSquareInputsIncomplete,
-    isValidationPassed,
-    handleRevalidateWithCombinations,
-    handleValidateTest,
-    handleConfirmAndProceedWithValidation,
-    handleRunTest,
-    handleConfirmFisher,
-    handleStatsBack
-  } = useStatsLogic({ projectId });
-
+const StatsView = forwardRef(function StatsView({
+  project, codeDefinitions, projectId, onResultsChange,
+  view, setView, selectedChiSquareType, setSelectedChiSquareType,
+  loading, error, results,
+  isValidationRunning, validationStatus,
+  showAssumptionsConfirm, setShowAssumptionsConfirm,
+  areAssumptionsAcknowledged, setAreAssumptionsAcknowledged,
+  showFisherConfirm, setShowFisherConfirm,
+  gofCodes, setGofCodes,
+  gofDocs, setGofDocs,
+  gofDistributionType, setGofDistributionType,
+  gofCustomProportions, setGofCustomProportions,
+  indepCodes, setIndepCodes,
+  indepDocs, setIndepDocs,
+  homoCodes, setHomoCodes,
+  homoNumGroups, setHomoNumGroups,
+  homoDocGroups, setHomoDocGroups,
+  areChiSquareInputsIncomplete,
+  isValidationPassed,
+  handleRevalidateWithCombinations,
+  handleValidateTest,
+  handleConfirmAndProceedWithValidation,
+  handleRunTest,
+  handleConfirmFisher
+}, ref) {
   const resultsPanelRef = useRef(null);
 
   const stats = useMemo(() => {

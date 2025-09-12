@@ -48,22 +48,35 @@ export const useStatsLogic = ({ projectId }) => {
     setResults(null);
     setCodeCombinations(null);
     setAreAssumptionsAcknowledged(false);
-    setView('summary'); // Also reset the view
+    setView('summary'); 
   };
-
+  
   const handleStatsBack = () => {
     setError(null);
+
     if (results) {
       setResults(null);
       setValidationStatus(null);
-    } else if (view === 'chi-square-config') {
-      setView('chi-square-type-selection');
-      setResults(null);
-      setValidationStatus(null);
-    } else if (view === 'chi-square-type-selection') {
-      setView('test-selection');
-    } else if (view === 'test-selection') {
-      setView('summary');
+      return;
+    }
+
+    switch (view) {
+      case 'chi-square-config':
+        setView('chi-square-type-selection');
+        setResults(null);
+        setValidationStatus(null);
+        break;
+      
+      case 'chi-square-type-selection':
+        setView('test-selection');
+        break;
+        
+      case 'test-selection':
+        setView('summary');
+        break;
+      
+      default:
+        return 'exit-stats';
     }
   };
 

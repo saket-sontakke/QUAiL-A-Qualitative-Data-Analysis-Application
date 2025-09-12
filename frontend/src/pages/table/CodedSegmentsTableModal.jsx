@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTimes, FaArrowLeft } from "react-icons/fa";
-import { CgExport, CgImport } from "react-icons/cg";
+import { CgImport } from "react-icons/cg";
+import { PiExportBold } from "react-icons/pi";
 import { useTheme } from '../theme/ThemeContext.jsx';
 import TableView from './TableView.jsx';
 import VisualizationsView from './VisualizationsView.jsx';
@@ -9,11 +10,6 @@ import StatsView from './StatsView.jsx';
 import { useStatsLogic } from './hooks/useStatsLogic.js';
 import { useTableData } from "./hooks/useTableData.js";
 
-/**
- * A comprehensive modal for viewing, visualizing, and analyzing coded segments.
- * It serves as a container that manages the active tab (Table, Visualizations, Stats)
- * and renders the corresponding view component.
- */
 const CodedSegmentsTableModal = ({
   show,
   onClose,
@@ -31,30 +27,23 @@ const CodedSegmentsTableModal = ({
   const [activeTab, setActiveTab] = useState("table");
   const [tableView, setTableView] = useState(isProjectOverview ? 'overall' : 'byDocument');
   const [showQualityPopup, setShowQualityPopup] = useState(false);
-  const [statsResults, setStatsResults] = useState(null); 
+  const [statsResults, setStatsResults] = useState(null);
 
   const visualizationsViewRef = useRef(null);
   const statsViewRef = useRef(null);
   const dropdownRef = useRef(null);
-  const isFirstOpen = useRef(true);
+
+  const statsLogic = useStatsLogic({ projectId });
+  const { view: statsView, handleStatsBack, resetChiSquareState } = statsLogic;
   
-  const { view: statsView, handleStatsBack, resetChiSquareState } = useStatsLogic({ projectId });
-
-  const tableData = useTableData({ codedSegments, codeDefinitions, project });
-
   useEffect(() => {
     if (show) {
       setActiveTab("table");
       setTableView(isProjectOverview ? 'overall' : 'byDocument');
-      if (isFirstOpen.current) {
-        resetChiSquareState();
-        setStatsResults(null); 
-        isFirstOpen.current = false;
-      }
+      resetChiSquareState();
+      setStatsResults(null);
       tableData.setSearchTerm("");
       tableData.setOverlapSearchTerm("");
-    } else {
-      isFirstOpen.current = true;
     }
   }, [show, isProjectOverview]);
 
@@ -68,9 +57,7 @@ const CodedSegmentsTableModal = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleModalClose = () => {
-    onClose();
-  };
+  const tableData = useTableData({ codedSegments, codeDefinitions, project });
 
   const handleDownloadChart = (pixelRatio) => {
     visualizationsViewRef.current?.downloadChart(pixelRatio);
@@ -84,29 +71,30 @@ const CodedSegmentsTableModal = ({
   const renderActiveTab = () => {
     switch (activeTab) {
       case "visualizations":
-        return <VisualizationsView 
+        return <VisualizationsView
                   ref={visualizationsViewRef}
-                  codedSegments={tableData.filteredSegments} 
-                  codeDefinitions={codeDefinitions} 
+                  codedSegments={tableData.filteredSegments}
+                  codeDefinitions={codeDefinitions}
                   baseNameForDownload={baseNameForDownload}
                   isDarkMode={theme === 'dark'}
                 />;
       case "stats":
-        return isProjectOverview ? 
-          <StatsView 
-            ref={statsViewRef} 
-            project={project} 
-            codeDefinitions={codeDefinitions} 
-            projectId={projectId} 
+        return isProjectOverview ?
+          <StatsView
+            ref={statsViewRef}
+            project={project}
+            codeDefinitions={codeDefinitions}
+            projectId={projectId}
             onResultsChange={setStatsResults}
+            {...statsLogic} 
           /> : null;
       case "table":
       default:
-        return <TableView 
+        return <TableView
                   {...tableData}
                   tableView={tableView}
                   setTableView={setTableView}
-                  project={project} 
+                  project={project}
                   isProjectOverview={isProjectOverview}
                 />;
     }
@@ -132,10 +120,11 @@ const CodedSegmentsTableModal = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 relative">
+              {/* --- MODIFICATION 3: Make the back button's visibility conditional and its action simpler. --- */}
               {isProjectOverview && activeTab === 'stats' && statsView !== 'summary' && (
                 <button
                   onClick={handleStatsBack}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
+                  className="absolute left-6 top-1/2 -translate-y-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors"
                   title="Back"
                 >
                   <FaArrowLeft size={20} />
@@ -146,15 +135,24 @@ const CodedSegmentsTableModal = ({
               </h2>
               <div className="flex items-center space-x-4 absolute right-6 top-1/2 -translate-y-1/2">
                 {activeTab === "table" && (tableView === 'overlaps' ? tableData.filteredOverlapsData.length > 0 : tableData.totalFrequency > 0) && (
-                  <button 
+                  <button
                     onClick={() => tableView === 'overlaps' ? handleExportOverlaps() : handleExportToExcel(tableView)}
                     className="bg-[#D94A1F] hover:bg-[#F05623] text-white font-bold py-2 px-4 rounded-md shadow-sm hover:shadow-md transition-all duration-200 flex items-center"
                   >
-                    <CgExport className="mr-2" size={20} /> 
+                    <PiExportBold className="mr-2" size={20} />
                     {tableView === 'overlaps' ? 'Export Overlaps' : 'Export Table'}
                   </button>
                 )}
-                {/* Use totalFrequency from the hook, which respects the search filter */}
+                {activeTab === "table" && isProjectOverview && (
+                  <button
+                    onClick={() => handleExportToExcel('matrix')}
+                    className="bg-teal-700 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md shadow-sm hover:shadow-md transition-all duration-200 flex items-center"
+                    title="Export a matrix of segments and codes"
+                  >
+                    <PiExportBold className="mr-2" size={20} />
+                    Export Code Matrix
+                  </button>
+                )}
                 {activeTab === "visualizations" && tableData.totalFrequency > 0 && (
                   <div className="relative" ref={dropdownRef}>
                     <button
@@ -181,15 +179,15 @@ const CodedSegmentsTableModal = ({
                     className="bg-[#D94A1F] hover:bg-[#F05623] text-white font-bold py-2 px-4 rounded-md shadow-sm hover:shadow-md transition-all duration-200 flex items-center"
                     title="Export results as a PDF file"
                   >
-                    <CgExport className="mr-2" size={20} /> Export as PDF
+                    <PiExportBold className="mr-2" size={20} /> Export as PDF
                   </button>
                 )}
-                <button onClick={handleModalClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <FaTimes size={20} />
                 </button>
               </div>
             </div>
-            
+
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button onClick={() => setActiveTab("table")} className={`py-2 px-4 text-sm font-medium ${activeTab === "table" ? "border-b-2 border-[#F05623] text-[#F05623]" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}>Table View</button>
               <button onClick={() => setActiveTab("visualizations")} className={`py-2 px-4 text-sm font-medium ${activeTab === "visualizations" ? "border-b-2 border-[#F05623] text-[#F05623]" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}>Visualizations</button>

@@ -1,14 +1,16 @@
-import { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaPlus, FaSearch, FaTimes, FaCaretDown, FaCaretRight,
-  FaTrashAlt, FaEdit, FaList,
+  FaTrashAlt, FaEdit, FaList, FaCheck,
 } from 'react-icons/fa';
 import { FaAnglesLeft, FaAnglesRight } from "react-icons/fa6";
-import { CgImport, CgExport } from 'react-icons/cg';
+import { CgImport } from 'react-icons/cg';
+import { PiExportBold } from "react-icons/pi";
 import { AiFillAudio } from "react-icons/ai";
 import { IoDocumentTextOutline } from "react-icons/io5";
-import { MdOutlineVerticalSplit, MdDragIndicator } from "react-icons/md";
+import { MdOutlineVerticalSplit, MdDragIndicator, MdOutlineMoreVert } from "react-icons/md";
+import { RiPushpinFill, RiUnpinFill } from "react-icons/ri";
 
 /**
  * A collapsible and resizable side panel that serves as the main hub for
@@ -31,6 +33,10 @@ import { MdOutlineVerticalSplit, MdDragIndicator } from "react-icons/md";
  * @param {string|null} props.selectedFileId - The ID of the currently selected file.
  * @param {(file: object) => void} props.handleSelectFile - Function to handle selecting a file.
  * @param {(fileId: string, fileName: string) => void} props.handleDeleteFile - Function to handle deleting a file.
+ * @param {(fileId: string) => void} props.handlePinFile - Function to toggle a file's pinned state.
+ * @param {Array<string>} props.pinnedFiles - An array of IDs for pinned files.
+ * @param {(fileId: string, newName: string) => Promise<void>} props.handleRenameFile - Function to rename a file.
+ * @param {(file: object, format: string) => void} props.handleExportFile - Function to handle exporting a file.
  * @param {boolean} props.showCodeDefinitions - A flag to toggle the code definitions list.
  * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowCodeDefinitions - Function to set code definitions visibility.
  * @param {Array<object>} props.codeDefinitions - An array of all code definition objects.
@@ -76,6 +82,10 @@ const LeftPanel = ({
   selectedFileId,
   handleSelectFile,
   handleDeleteFile,
+  handlePinFile,
+  pinnedFiles,
+  handleRenameFile,
+  handleExportFile,
   showCodeDefinitions,
   setShowCodeDefinitions,
   codeDefinitions,
@@ -104,12 +114,55 @@ const LeftPanel = ({
   setShowCodeDetailsModal,
   setShowSplitMergeModal,
   isEditing,
+  fileInEditMode
 }) => {
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [renamingFileId, setRenamingFileId] = useState(null);
+  const [newBaseName, setNewBaseName] = useState('');
+  const [fileExtension, setFileExtension] = useState('');
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [exportMenuFileId, setExportMenuFileId] = useState(null);
+  const menuRef = useRef(null);
+
+  const handleConfirmRename = async (file) => {
+      const finalNewName = (newBaseName.trim() + fileExtension);
+      if (finalNewName.trim() && finalNewName !== file.name) {
+          await handleRenameFile(file, finalNewName);
+      }
+      setRenamingFileId(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const lowerCaseQuery = searchQuery.toLowerCase();
 
-  const filteredFiles = project?.importedFiles?.filter(file =>
-    file.name.toLowerCase().includes(lowerCaseQuery)
-  ) || [];
+  const filesToShow = [...(project?.importedFiles || [])];
+
+  if (isEditing && fileInEditMode && fileInEditMode.isStaged) {
+      filesToShow.unshift({ ...fileInEditMode, _id: 'staged-file' });
+  }
+
+  const sortedAndFilteredFiles = filesToShow
+    .filter(file => file.name.toLowerCase().includes(lowerCaseQuery))
+    .sort((a, b) => {
+      const isAPinned = pinnedFiles.includes(a._id);
+      const isBPinned = pinnedFiles.includes(b._id);
+      if (isAPinned && !isBPinned) return -1;
+      if (!isAPinned && isBPinned) return 1;
+      if (a._id === 'staged-file') return -1;
+      if (b._id === 'staged-file') return 1;
+      return a.name.localeCompare(b.name);
+    });
 
   const filteredCodeDefinitions = codeDefinitions.filter(codeDef =>
     codeDef.name.toLowerCase().includes(lowerCaseQuery)
@@ -133,12 +186,8 @@ const LeftPanel = ({
   const [showScrollFade, setShowScrollFade] = useState(false);
   const fileListRef = useRef(null);
 
-  /**
-   * Checks if the fade should be visible based on the current scroll position.
-   * The fade appears if the content is overflowing AND the user is not at the bottom.
-   */
   const checkScrollability = (element) => {
-    if (!element || filteredFiles.length <= 4) {
+    if (!element || sortedAndFilteredFiles.length <= 4) {
       setShowScrollFade(false);
       return;
     }
@@ -146,14 +195,9 @@ const LeftPanel = ({
     setShowScrollFade(isScrollable);
   };
 
-
-  /**
-   * This effect runs when the file list content changes to set the initial
-   * state of the scroll fade.
-   */
   useLayoutEffect(() => {
     checkScrollability(fileListRef.current);
-  }, [filteredFiles, showImportedFiles]);
+  }, [sortedAndFilteredFiles, showImportedFiles]);
 
   return (
     <motion.div
@@ -247,34 +291,161 @@ const LeftPanel = ({
                         transition={{ duration: 0.2 }}
                         className="max-h-40 space-y-2 overflow-y-auto pr-1 custom-scrollbar"
                       >
-                        {filteredFiles.length > 0 ? (
-                          filteredFiles.map((file) => (
-                            <li
-                              key={file._id}
-                              onClick={() => handleSelectFile(file)}
-                              className={`flex cursor-pointer items-center justify-between rounded-md py-1 px-2 transition duration-200 ease-in-out ${file._id === selectedFileId ? 'border border-gray-300 bg-gray-200 font-semibold text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}
-                              title={file.name}
-                            >
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                {file.sourceType === 'audio' ? (
-                                  <AiFillAudio className="flex-shrink-0 text-[#F05623]" title="Transcribed Audio File" />
-                                ) : (
-                                  <IoDocumentTextOutline className="flex-shrink-0 text-[#1D3C87] dark:text-blue-500" title="Text File" />
-                                )}
-                                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFile(file._id, file.name);
+                        {sortedAndFilteredFiles.length > 0 ? (
+                          sortedAndFilteredFiles.map((file) => {
+                            const isPinned = pinnedFiles.includes(file._id);
+                            return (
+                              <li
+                                key={file._id}
+                                onClick={() => {
+                                  if (renamingFileId !== file._id && file._id !== 'staged-file') {
+                                    handleSelectFile(file);
+                                  }
                                 }}
-                                className="flex-shrink-0 rounded-full p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-600"
-                                title="Delete File"
+                                className={`group flex items-center justify-between rounded-md py-1 px-2 transition duration-200 ease-in-out ${
+                                  file._id === selectedFileId ? 'border border-gray-300 bg-gray-200 font-semibold text-gray-800 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                                } ${file._id === 'staged-file' ? 'opacity-70 cursor-default' : 'cursor-pointer'}`}
+                                title={file.name}
                               >
-                                <FaTrashAlt size={12} />
-                              </button>
-                            </li>
-                          ))
+                                <div className="flex flex-1 items-center gap-2 overflow-hidden">
+                                  {isPinned && <RiPushpinFill className="flex-shrink-0 text-gray-500 dark:text-gray-300" title="Pinned File" />}
+                                  {file.sourceType === 'audio' ? (
+                                    <AiFillAudio className="flex-shrink-0 text-[#F05623]" title="Transcribed Audio File" />
+                                  ) : (
+                                    <IoDocumentTextOutline className="flex-shrink-0 text-[#1D3C87] dark:text-blue-500" title="Text File" />
+                                  )}
+                                  {renamingFileId === file._id ? (
+                                    <div className="flex w-full items-center gap-1">
+                                      <div className="flex w-full items-center rounded border border-gray-400 bg-white dark:border-gray-500 dark:bg-gray-600">
+                                          <input
+                                              type="text"
+                                              value={newBaseName}
+                                              onChange={(e) => setNewBaseName(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') handleConfirmRename(file);
+                                                  if (e.key === 'Escape') setRenamingFileId(null);
+                                              }}
+                                              onBlur={() => setRenamingFileId(null)}
+                                              className="w-full bg-transparent px-1 text-sm text-gray-900 outline-none dark:text-white"
+                                              autoFocus
+                                              onClick={(e) => e.stopPropagation()}
+                                          />
+                                          <span className="flex-shrink-0 pr-1 text-sm text-gray-500 dark:text-gray-400">
+                                              {fileExtension}
+                                          </span>
+                                      </div>
+                                      <button
+                                          onMouseDown={(e) => {
+                                              e.stopPropagation();
+                                              handleConfirmRename(file);
+                                          }}
+                                          className="rounded p-1 text-green-500 hover:bg-green-100 dark:hover:bg-gray-600"
+                                          title="Confirm"
+                                      >
+                                          <FaCheck size={12} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setRenamingFileId(null);
+                                        }}
+                                        className="rounded p-1 text-red-500 hover:bg-red-100 dark:hover:bg-gray-600"
+                                        title="Cancel"
+                                      >
+                                        <FaTimes size={12} />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                                      {file.name}
+                                      {file._id === 'staged-file' && <em className="ml-2 text-gray-500 dark:text-gray-400">(editing...)</em>}
+                                    </span>
+                                  )}
+                                </div>
+                                {renamingFileId !== file._id && (
+                                  <div className="flex-shrink-0">
+                                    { file._id !== 'staged-file' && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          const menuWidth = 128;
+                                          setMenuPosition({ top: rect.bottom, left: rect.right - menuWidth });
+                                          setOpenMenuId(openMenuId === file._id ? null : file._id);
+                                        }}
+                                        className="rounded-full p-1 text-gray-500 opacity-0 group-hover:opacity-100 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                                        title="More options"
+                                      >
+                                        <MdOutlineMoreVert size={16} />
+                                      </button>
+                                    )}
+                                    {openMenuId === file._id && (
+                                      <div
+                                        ref={menuRef}
+                                        className="fixed z-50 mt-1 w-32 rounded-md bg-white py-1 shadow-lg dark:bg-gray-900"
+                                        style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
+                                        onMouseLeave={() => setExportMenuFileId(null)}
+                                      >
+                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePinFile(file._id); setOpenMenuId(null); }} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+                                            {isPinned ? <RiUnpinFill /> : <RiPushpinFill />}
+                                            <span>{isPinned ? 'Unpin' : 'Pin'}</span>
+                                        </a>
+                                        <a href="#" onClick={(e) => {
+                                            e.preventDefault();
+                                            const originalName = file.name;
+                                            const lastDot = originalName.lastIndexOf('.');
+                                            const baseName = lastDot === -1 ? originalName : originalName.substring(0, lastDot);
+                                            const extension = lastDot === -1 ? '' : originalName.substring(lastDot);
+                                            setNewBaseName(baseName);
+                                            setFileExtension(extension);
+                                            setRenamingFileId(file._id);
+                                            setOpenMenuId(null);
+                                        }} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+                                            <FaEdit />
+                                            <span>Rename</span>
+                                        </a>
+                                        <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteFile(file._id, file.name); setOpenMenuId(null); }} className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-800">
+                                            <FaTrashAlt />
+                                            <span>Delete</span>
+                                        </a>
+                                        <div 
+                                            className="relative" 
+                                            onMouseEnter={() => setExportMenuFileId(file._id)} 
+                                            onMouseLeave={() => setExportMenuFileId(null)}
+                                        >
+                                            <div className="flex cursor-pointer items-center justify-between gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+                                                <div className="flex items-center gap-2">
+                                                    <PiExportBold />
+                                                    <span>Export</span>
+                                                </div>
+                                                <FaCaretRight />
+                                            </div>
+                                            <AnimatePresence>
+                                            {exportMenuFileId === file._id && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: -10 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    className="absolute left-full -top-1 z-10 w-32 rounded-md bg-white py-1 shadow-lg dark:bg-gray-900"
+                                                >
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); handleExportFile(file, 'pdf'); setOpenMenuId(null); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+                                                        PDF
+                                                    </a>
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); handleExportFile(file, 'docx'); setOpenMenuId(null); }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+                                                        Word (.docx)
+                                                    </a>
+                                                </motion.div>
+                                            )}
+                                            </AnimatePresence>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </li>
+                            )
+                          })
                         ) : (
                           <li className="text-sm text-gray-500">
                             {searchQuery ? 'No files found.' : 'No files imported yet.'}
@@ -324,7 +495,6 @@ const LeftPanel = ({
                               }}
                             >
                               <span className="font-medium text-sm">{codeDef.name}</span>
-
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={(e) => {
@@ -416,7 +586,7 @@ const LeftPanel = ({
                 <div className="mb-2 flex cursor-pointer items-center justify-between" onClick={() => setShowMemosPanel(!showMemosPanel)}>
                   <h4 className="flex items-center gap-3 font-bold text-cyan-900 dark:text-[#F05623]">
                     Memos
-                    <CgExport onClick={(e) => { e.stopPropagation(); if (!selectedFileId) { console.error("Please select a document to export its memos."); return; } handleExportMemos(); }} className="cursor-pointer text-base text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" title="Export Memos" />
+                    <PiExportBold onClick={(e) => { e.stopPropagation(); if (!selectedFileId) { console.error("Please select a document to export its memos."); return; } handleExportMemos(); }} className="cursor-pointer text-base text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" title="Export Memos" />
                   </h4>
                   {showMemosPanel ? <FaCaretDown /> : <FaCaretRight />}
                 </div>

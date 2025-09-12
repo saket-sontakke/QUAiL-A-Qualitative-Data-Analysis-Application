@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import Project from '../models/Project.js';
 import { requireAuth } from '../controllers/projectController.js';
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
+import PDFDocument from 'pdfkit';
 
 dotenv.config();
 const router = express.Router();
@@ -106,6 +108,142 @@ router.post('/create', requireAuth, async (req, res) => {
       return res.status(409).json({ error: 'A project with this name already exists.' });
     }
     res.status(500).json({ error: 'Project creation failed', details: err.message });
+  }
+});
+
+/**
+ * Stages a text file for editing without saving it to the project.
+ * It processes the file's content and returns it to the client.
+ * @param {string} req.params.projectId - The ID of the project to which the file is being staged.
+ * @param {object} req.file - The uploaded file object provided by multer.
+ * @param {string} [req.body.splittingOption='sentence'] - The processing option for the text content.
+ * @param {string} [req.body.overrideName] - An optional name to use if the user confirms a duplicate import.
+ * @returns {object} 200 - An object containing the staged file's name and processed content.
+ * @returns {object} 400 - An error object if no file is uploaded.
+ * @returns {object} 404 - An error object if the project is not found.
+ * @returns {object} 409 - An error object if a file with the same name already exists, includes a suggested new name.
+ * @returns {object} 500 - An error object if the file staging process fails.
+ */
+router.post('/:projectId/files/stage', requireAuth, textUpload.single('file'), handleMulterError, async (req, res) => {
+  const file = req.file;
+  const { splittingOption = 'sentence', overrideName } = req.body;
+
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  try {
+    const project = await Project.findOne({ _id: req.params.projectId, owner: req.userId });
+
+    if (!project) {
+      fs.unlinkSync(file.path);
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const finalFileName = overrideName || file.originalname;
+
+    if (!overrideName) {
+        const fileExists = project.importedFiles.some(
+            importedFile => importedFile.name.toLowerCase() === file.originalname.toLowerCase()
+        );
+
+        if (fileExists) {
+            fs.unlinkSync(file.path);
+            let suggestedName;
+            let counter = 1;
+            const ext = path.extname(file.originalname);
+            const baseName = path.basename(file.originalname, ext);
+            do {
+                suggestedName = `${baseName} (${counter})${ext}`;
+                counter++;
+            } while (project.importedFiles.some(f => f.name.toLowerCase() === suggestedName.toLowerCase()));
+            
+            return res.status(409).json({
+                error: `A file named "${file.originalname}" already exists.`,
+                promptRequired: true,
+                suggestedName: suggestedName,
+            });
+        }
+    }
+    
+    let rawText = '';
+    const buffer = fs.readFileSync(file.path);
+    if (file.mimetype.includes('text') || path.extname(file.originalname).toLowerCase() === '.rtf') {
+      rawText = buffer.toString('utf8');
+    } else if (file.mimetype.includes('word')) {
+      rawText = (await mammoth.extractRawText({ buffer })).value;
+    }
+    fs.unlinkSync(file.path);
+
+    let processedText = rawText;
+    if (splittingOption === 'sentence') {
+      const sentences = rawText.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').match(/[^.!?…]+[.!?…"]*(\s|$)/g);
+      if (sentences && sentences.length > 0) {
+        processedText = sentences.map(s => s.trim()).join('\n\n');
+      }
+    }
+
+    res.json({
+      stagedFile: {
+        name: finalFileName,
+        content: processedText,
+        sourceType: 'text',
+      }
+    });
+
+  } catch (err) {
+    if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    console.error('File staging error:', err);
+    res.status(500).json({ error: 'File staging failed', details: err.message });
+  }
+});
+
+/**
+ * Commits a new file to a specific project.
+ * This endpoint adds a file with its content and optional metadata
+ * to a project's `importedFiles` array.
+ * @param {string} req.params.projectId - The ID of the project to add the file to.
+ * @param {string} req.body.name - The name of the new file.
+ * @param {string} req.body.content - The text content of the new file.
+ * @param {string} [req.body.sourceType] - The source type of the file (e.g., 'audio', 'text').
+ * @param {string} [req.body.audioUrl] - Optional URL if the source is an audio file.
+ * @param {Array<object>} [req.body.words] - Optional word-level data for audio transcriptions.
+ * @returns {object} 200 - The updated project object, including the newly added file.
+ * @returns {object} 400 - An error object if the file name or content is missing.
+ * @returns {object} 404 - An error object if the project is not found for the authenticated user.
+ * @returns {object} 500 - An error object if saving the file to the database fails.
+ */
+router.post('/:projectId/files/commit', requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const { name, content, sourceType, audioUrl, words } = req.body;
+
+  if (!name || typeof content !== 'string') {
+    return res.status(400).json({ error: 'File name and content are required.' });
+  }
+
+  try {
+    const fileData = {
+      name,
+      content,
+      sourceType,
+      ...(audioUrl && { audioUrl }),
+      ...(words && { words }),
+    };
+
+    const updatedProject = await Project.findOneAndUpdate(
+      { _id: projectId, owner: req.userId },
+      { $push: { importedFiles: fileData } },
+      { new: true }
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    res.json({ project: updatedProject });
+  } catch (err) {
+    console.error('File commit error:', err);
+    res.status(500).json({ error: 'Failed to save the file.', details: err.message });
   }
 });
 
@@ -359,6 +497,62 @@ router.post('/import/:id', requireAuth, textUpload.single('file'), handleMulterE
 });
 
 /**
+ * Renames a specific file within a project.
+ * @param {string} req.params.projectId - The ID of the project.
+ * @param {string} req.params.fileId - The ID of the file to rename.
+ * @param {string} req.body.name - The new name for the file.
+ * @returns {object} 200 - The updated project object.
+ */
+router.put('/:projectId/files/:fileId/rename', requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const { projectId, fileId } = req.params;
+
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'A valid new file name is required.' });
+  }
+
+  try {
+    const project = await Project.findOne({ _id: projectId, owner: req.userId });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    const fileToUpdate = project.importedFiles.id(fileId);
+    if (!fileToUpdate) {
+      return res.status(404).json({ error: 'File not found in this project.' });
+    }
+
+    const getExtension = (filename) => {
+        const lastDot = filename.lastIndexOf('.');
+        if (lastDot === -1) return '';
+        return filename.substring(lastDot);
+    };
+
+    const originalExtension = getExtension(fileToUpdate.name);
+    const newExtension = getExtension(name.trim());
+
+    if (originalExtension.toLowerCase() !== newExtension.toLowerCase()) {
+        return res.status(400).json({ error: 'Changing the file extension is not allowed.' });
+    }
+
+    const fileExists = project.importedFiles.some(
+      file => file.name.toLowerCase() === name.toLowerCase() && file._id.toString() !== fileId
+    );
+    if (fileExists) {
+      return res.status(409).json({ error: `A file named "${name}" already exists.` });
+    }
+
+    fileToUpdate.name = name.trim();
+    await project.save();
+
+    res.json({ project });
+  } catch (err) {
+    console.error('Error renaming file:', err);
+    res.status(500).json({ error: 'Server error while renaming the file.' });
+  }
+});
+
+/**
  * Deletes a file and all its associated data (coded segments, highlights, memos) from a project.
  * @param {string} req.params.projectId - The ID of the project.
  * @param {string} req.params.fileId - The ID of the file to delete.
@@ -383,7 +577,6 @@ router.delete('/:projectId/files/:fileId', requireAuth, async (req, res) => {
         const fullPath = path.resolve(relativePath);
         if (fs.existsSync(fullPath)) {
           fs.unlinkSync(fullPath);
-          console.log(`Successfully deleted audio file: ${fullPath}`);
         } else {
           console.warn(`Audio file not found on disk: ${fullPath}`);
         }
@@ -433,18 +626,56 @@ const formatTimestamp = (ms) => {
  */
 router.post('/import-audio/:id', requireAuth, audioUpload.single('audio'), handleMulterError, async (req, res) => {
   const file = req.file;
-  const splittingOption = req.body.splittingOption || 'turn';
+  const { splittingOption = 'turn', overrideName } = req.body;
+
   if (!file) {
     return res.status(400).json({ error: 'No audio file uploaded.' });
   }
+
   const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
   if (!ASSEMBLYAI_API_KEY) {
     fs.unlinkSync(file.path);
     return res.status(500).json({ error: 'AssemblyAI API key not configured on the server.' });
   }
-  const filePath = file.path;
-  const audioUrl = `/${filePath.replace(/\\/g, '/')}`;
+
   try {
+    const project = await Project.findOne({ _id: req.params.id, owner: req.userId });
+    if (!project) {
+        fs.unlinkSync(file.path);
+        return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const originalTranscriptName = file.originalname.replace(/\.[^/.]+$/, " (Transcript).txt");
+    let finalTranscriptName = overrideName || originalTranscriptName;
+
+    if (!overrideName) {
+        const fileExists = project.importedFiles.some(
+            importedFile => importedFile.name.toLowerCase() === finalTranscriptName.toLowerCase()
+        );
+
+        if (fileExists) {
+            fs.unlinkSync(file.path);
+            let suggestedName;
+            let counter = 1;
+            const ext = path.extname(originalTranscriptName);
+            const baseName = path.basename(originalTranscriptName, ext);
+
+            do {
+                suggestedName = `${baseName} (${counter})${ext}`;
+                counter++;
+            } while (project.importedFiles.some(f => f.name.toLowerCase() === suggestedName.toLowerCase()));
+
+            return res.status(409).json({
+                error: `A transcript named "${originalTranscriptName}" already exists. Renaming is suggested.`,
+                promptRequired: true,
+                suggestedName: suggestedName,
+            });
+        }
+    }
+
+    const filePath = file.path;
+    const audioUrl = `/${filePath.replace(/\\/g, '/')}`;
+
     const fileStream = fs.createReadStream(filePath);
     const uploadResponse = await axios({
       method: 'post',
@@ -454,8 +685,10 @@ router.post('/import-audio/:id', requireAuth, audioUpload.single('audio'), handl
       maxContentLength: Infinity,
       maxBodyLength: Infinity
     });
+    
     const uploadUrl = uploadResponse.data.upload_url;
     if (!uploadUrl) throw new Error('No upload URL returned from AssemblyAI');
+    
     const transcriptParams = { audio_url: uploadUrl, speaker_labels: true, disfluencies: true, punctuate: true, format_text: true, };
     const transcriptResponse = await axios({
       method: 'post',
@@ -463,11 +696,14 @@ router.post('/import-audio/:id', requireAuth, audioUpload.single('audio'), handl
       data: transcriptParams,
       headers: { 'authorization': ASSEMBLYAI_API_KEY, 'Content-Type': 'application/json' }
     });
+    
     const transcriptId = transcriptResponse.data.id;
     if (!transcriptId) throw new Error('No transcript ID returned from AssemblyAI');
+    
     let transcriptData;
     let pollAttempts = 0;
     const maxPollAttempts = 100;
+    
     while (pollAttempts < maxPollAttempts) {
       const pollResponse = await axios({
         method: 'get',
@@ -480,10 +716,13 @@ router.post('/import-audio/:id', requireAuth, audioUpload.single('audio'), handl
       await new Promise(resolve => setTimeout(resolve, 3000));
       pollAttempts++;
     }
+    
     if (pollAttempts >= maxPollAttempts) throw new Error('Transcription polling timeout - took too long to complete');
+    
     let formattedTranscript = '';
     const processedWords = [];
     let currentIndex = 0;
+    
     if (transcriptData.words && transcriptData.words.length > 0) {
       if (splittingOption === 'sentence') {
         let fullText = '';
@@ -535,13 +774,19 @@ router.post('/import-audio/:id', requireAuth, audioUpload.single('audio'), handl
     } else {
       formattedTranscript = transcriptData.text || 'No transcript available';
     }
-    const newFileName = file.originalname.replace(/\.[^/.]+$/, " (Transcript).txt");
-    const project = await Project.findOneAndUpdate({ _id: req.params.id, owner: req.userId }, { $push: { importedFiles: { name: newFileName, content: formattedTranscript, sourceType: 'audio', audioUrl: audioUrl, words: processedWords } } }, { new: true }).populate('importedFiles');
-    res.json({ project });
+
+    const updatedProject = await Project.findOneAndUpdate(
+        { _id: req.params.id, owner: req.userId }, 
+        { $push: { importedFiles: { name: finalTranscriptName, content: formattedTranscript, sourceType: 'audio', audioUrl: audioUrl, words: processedWords } } }, 
+        { new: true }
+    ).populate('importedFiles');
+    
+    res.json({ project: updatedProject });
+
   } catch (error) {
     console.error('Audio import error:', error);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (file && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
     }
     if (error.response) {
       console.error('AssemblyAI API Error Response:', { status: error.response.status, statusText: error.response.statusText, data: error.response.data, headers: error.response.headers });
@@ -985,7 +1230,376 @@ const applySubtleColoring = (worksheet, codeStartRow, codeEndRow, baseHexColor, 
 /**
  * Exports all coded segments from a project to an Excel file.
  * @param {string} req.params.projectId - The ID of the project.
- * @param {string} [req.query.format='byDocument'] - The format of the export ('byDocument' or 'overall').
+ * @param {string} [req.query.format='byDocument'] - The format of the export ('byDocument', 'overall', or 'matrix').
+ * @returns {File} 200 - The generated Excel file.
+ * @returns {object} 404 - An error object if the project is not found.
+ * @returns {object} 500 - An error object if the export fails.
+ */
+// router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) => {
+//   const { projectId } = req.params;
+//   const userId = req.userId;
+//   const { format = 'byDocument' } = req.query;
+
+//   try {
+//     const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
+//     if (!project) {
+//       return res.status(404).json({ error: 'Project not found or unauthorized' });
+//     }
+//     const workbook = new ExcelJS.Workbook();
+
+//     if (format === 'matrix') {
+//         const worksheet = workbook.addWorksheet('Code Matrix Report');
+  
+//         const sortedCodeDefs = [...project.codeDefinitions].sort((a, b) => a.name.localeCompare(b.name));
+//         const allCodeNames = sortedCodeDefs.map(cd => cd.name);
+//         const codeNameToColorMap = new Map(sortedCodeDefs.map(cd => [cd.name, cd.color || '#CCCCCC']));
+//         const codeKeys = allCodeNames.map(name => name.replace(/[^a-zA-Z0-9]/g, ''));
+  
+//         const headers = ['Document', 'Timestamp', 'Speaker', 'Segment Text', ...allCodeNames, 'Total'];
+//         worksheet.columns = headers.map((h, i) => ({
+//           header: h,
+//           key: i < 4 ? h.toLowerCase().replace(/\s+/g, '') : (i < headers.length - 1 ? codeKeys[i - 4] : 'total'),
+//         }));
+  
+//         const headerRow = worksheet.getRow(1);
+//         headerRow.font = { bold: true };
+//         headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  
+//         allCodeNames.forEach((name, index) => {
+//           const cell = headerRow.getCell(5 + index);
+//           const color = codeNameToColorMap.get(name);
+//           cell.fill = {
+//             type: 'pattern',
+//             pattern: 'solid',
+//             fgColor: { argb: hexToArgb(color, 0.25) }
+//           };
+//         });
+  
+//         const audioFiles = project.importedFiles.filter(file => file.sourceType === 'audio');
+//         let currentRowIndex = 2;
+  
+//         for (const file of audioFiles) {
+//           const fileStartRow = currentRowIndex;
+//           const fileContent = file.content || '';
+//           const segmentsForThisFile = project.codedSegments.filter(cs => cs.fileId.toString() === file._id.toString());
+//           const lines = fileContent.split('\n');
+//           let currentPosition = 0;
+  
+//           for (const lineText of lines) {
+//             const lineLength = lineText.length;
+//             const lineStart = currentPosition;
+//             const lineEnd = currentPosition + lineLength;
+//             currentPosition += lineLength + 1;
+  
+//             if (lineText.trim() === '') continue;
+  
+//             let rowData = {};
+//             let rowTotal = 0;
+  
+//             const transcriptLineRegex = /^(\[.+?\])\s*(Speaker\s+[A-Z0-9]+):\s*(.*)/;
+//             const match = lineText.match(transcriptLineRegex);
+//             if (match) {
+//               rowData.timestamp = (match[1] || '').replace(/[\[\]]/g, '');
+//               rowData.speaker = match[2] || '';
+//               rowData.segmenttext = match[3] || '';
+//             } else {
+//               rowData.timestamp = '';
+//               rowData.speaker = '';
+//               rowData.segmenttext = lineText;
+//             }
+  
+//             codeKeys.forEach(key => rowData[key] = '');
+  
+//             segmentsForThisFile.forEach(segment => {
+//               if (Math.max(lineStart, segment.startIndex) < Math.min(lineEnd, segment.endIndex)) {
+//                 const codeName = segment.codeDefinition.name;
+//                 const codeIndex = allCodeNames.indexOf(codeName);
+//                 if (codeIndex > -1) {
+//                   const key = codeKeys[codeIndex];
+//                   if (rowData[key] !== 1) {
+//                     rowData[key] = 1;
+//                     rowTotal++;
+//                   }
+//                 }
+//               }
+//             });
+  
+//             rowData.total = rowTotal > 0 ? rowTotal : '';
+//             rowData.document = file.name;
+  
+//             worksheet.addRow(rowData);
+//             currentRowIndex++;
+//           }
+  
+//           const fileEndRow = currentRowIndex - 1;
+//           if (fileEndRow >= fileStartRow) {
+//             worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
+//           }
+//         }
+  
+//         const summaryRowIndex = currentRowIndex;
+//         const summaryRow = worksheet.addRow({});
+//         summaryRow.getCell('segmenttext').value = 'Total';
+//         summaryRow.font = { bold: true };
+  
+//         for (let i = 0; i < allCodeNames.length; i++) {
+//           const colLetter = String.fromCharCode('E'.charCodeAt(0) + i);
+//           summaryRow.getCell(5 + i).value = { formula: `SUM(${colLetter}2:${colLetter}${summaryRowIndex - 1})` };
+//         }
+//         const totalColLetter = String.fromCharCode('E'.charCodeAt(0) + allCodeNames.length);
+//         summaryRow.getCell(headers.length).value = { formula: `SUM(${totalColLetter}2:${totalColLetter}${summaryRowIndex - 1})` };
+  
+//         worksheet.columns.forEach((column, index) => {
+//           if (index === 0) column.width = 30;
+//           else if (index === 1) column.width = 12;
+//           else if (index === 2) column.width = 20;
+//           else if (index === 3) column.width = 60;
+//           else if (index < headers.length - 1) column.width = column.header.length > 15 ? 20 : 15;
+//           else column.width = 10;
+//         });
+  
+//         for (let i = 2; i <= summaryRowIndex; i++) {
+//           const row = worksheet.getRow(i);
+//           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+//             cell.alignment = { wrapText: true };
+//             if (colNumber === 4) {
+//               cell.alignment.vertical = 'top';
+//               cell.alignment.horizontal = 'left';
+//             } else {
+//               cell.alignment.vertical = 'middle';
+//               cell.alignment.horizontal = 'center';
+//             }
+  
+//             if (colNumber >= 5 && colNumber < headers.length) {
+//               const headerName = headers[colNumber - 1];
+//               const color = codeNameToColorMap.get(headerName);
+//               if (color) {
+//                 cell.fill = {
+//                   type: 'pattern',
+//                   pattern: 'solid',
+//                   fgColor: { argb: hexToArgb(color, 0.08) }
+//                 };
+//               }
+//             }
+//           });
+//         }
+  
+//         for (let i = 1; i <= summaryRowIndex; i++) {
+//           const row = worksheet.getRow(i);
+//           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+//             if (colNumber > headers.length) return;
+  
+//             const isExcludedSummaryCell = (i === summaryRowIndex && colNumber < 4);
+  
+//             if (!isExcludedSummaryCell) {
+//               cell.border = {
+//                 top: { style: 'thin', color: { argb: 'FF000000' } },
+//                 left: { style: 'thin', color: { argb: 'FF000000' } },
+//                 bottom: { style: 'thin', color: { argb: 'FF000000' } },
+//                 right: { style: 'thin', color: { argb: 'FF000000' } }
+//               };
+//             }
+//           });
+//         }
+  
+//         const date = new Date().toISOString().slice(0, 10);
+//         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//         res.setHeader('Content-Disposition', `attachment; filename="${project.name}_Code_Matrix_${date}.xlsx"`);
+//         await workbook.xlsx.write(res);
+//         return res.end();
+//       }
+
+//     const worksheet = workbook.addWorksheet('Coded Segments');
+//     let totalFrequency = 0;
+    
+//     const styleHeader = (ws) => {
+//       const headerRow = ws.getRow(1);
+//       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+//       headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF444444' } };
+//       headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+//       headerRow.eachCell({ includeEmpty: true }, (cell) => {
+//         cell.border = {
+//           top: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+//           left: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+//           bottom: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+//           right: { style: 'thin', color: { argb: 'FF6A6A6A' } }
+//         };
+//       });
+//     };
+
+//     if (format === 'overall') {
+//       worksheet.columns = [
+//         { header: 'Code Definition', key: 'codeName', width: 30 },
+//         { header: 'Code Description', key: 'codeDescription', width: 40 },
+//         { header: 'File Name', key: 'fileName', width: 30 },
+//         { header: 'Coded Segment Text', key: 'text', width: 60 },
+//         { header: 'Frequency', key: 'frequency', width: 15 },
+//       ];
+//       styleHeader(worksheet);
+
+//       const groupedByCode = {};
+//       project.codedSegments.forEach(segment => {
+//         const defId = segment.codeDefinition?._id?.toString() || 'undefined';
+//         if (!groupedByCode[defId]) {
+//           groupedByCode[defId] = { definition: segment.codeDefinition, segments: [] };
+//         }
+//         groupedByCode[defId].segments.push(segment);
+//       });
+
+//       let currentRow = 2;
+//       for (const { definition, segments } of Object.values(groupedByCode)) {
+//         const codeStartRow = currentRow;
+//         const baseHexColor = definition?.color || '#CCCCCC';
+
+//         const segmentsByFile = segments.reduce((acc, segment) => {
+//             const fileName = segment.fileName || 'Unknown File';
+//             if (!acc[fileName]) acc[fileName] = [];
+//             acc[fileName].push(segment);
+//             return acc;
+//         }, {});
+
+//         for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+//             for (const segment of fileSegments) {
+//                 worksheet.addRow({ text: `"${segment.text || ''}"` });
+//                 currentRow++;
+//             }
+//         }
+
+//         const codeEndRow = currentRow - 1;
+//         worksheet.mergeCells(`A${codeStartRow}:A${codeEndRow}`);
+//         worksheet.mergeCells(`B${codeStartRow}:B${codeEndRow}`);
+//         worksheet.mergeCells(`E${codeStartRow}:E${codeEndRow}`);
+//         worksheet.getCell(`A${codeStartRow}`).value = definition?.name || 'Unknown Code';
+//         worksheet.getCell(`B${codeStartRow}`).value = definition?.description || 'No description';
+//         worksheet.getCell(`E${codeStartRow}`).value = segments.length;
+
+//         applySubtleColoring(worksheet, codeStartRow, codeEndRow, baseHexColor, {
+//           nameColumn: 'A',
+//           otherColumns: ['B', 'E'],
+//           contentColumns: ['C', 'D']
+//         });
+
+//         let fileRowTracker = codeStartRow;
+//         for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+//             const fileStartRow = fileRowTracker;
+//             const fileEndRow = fileRowTracker + fileSegments.length - 1;
+//             if (fileEndRow >= fileStartRow) {
+//                 worksheet.mergeCells(`C${fileStartRow}:C${fileEndRow}`);
+//                 const fileCell = worksheet.getCell(`C${fileStartRow}`);
+//                 fileCell.value = fileName;
+//                 fileCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+//             }
+//             fileRowTracker = fileEndRow + 1;
+//         }
+//       }
+//       totalFrequency = project.codedSegments.length;
+//     } else {
+//       worksheet.columns = [
+//         { header: 'File Name', key: 'fileName', width: 30 },
+//         { header: 'Code Definition', key: 'codeName', width: 25 },
+//         { header: 'Code Description', key: 'codeDescription', width: 40 },
+//         { header: 'Coded Segment Text', key: 'text', width: 60 },
+//         { header: 'Frequency', key: 'frequency', width: 15 },
+//       ];
+//       styleHeader(worksheet);
+      
+//       const groupedByFile = {};
+//       project.codedSegments.forEach(segment => {
+//         const fileName = segment.fileName || 'Unknown File';
+//         if (!groupedByFile[fileName]) groupedByFile[fileName] = [];
+//         groupedByFile[fileName].push(segment);
+//       });
+//       let currentRow = 2;
+      
+//       for (const [fileName, segmentsInFile] of Object.entries(groupedByFile)) {
+//         const fileStartRow = currentRow;
+//         const groupedByCode = {};
+//         segmentsInFile.forEach(segment => {
+//           const defId = segment.codeDefinition?._id?.toString() || 'undefined';
+//           if (!groupedByCode[defId]) {
+//             groupedByCode[defId] = { definition: segment.codeDefinition, segments: [] };
+//           }
+//           groupedByCode[defId].segments.push(segment);
+//         });
+        
+//         for (const { definition, segments } of Object.values(groupedByCode)) {
+//           const codeStartRow = currentRow;
+//           const baseHexColor = definition?.color || '#CCCCCC';
+          
+//           for (const segment of segments) {
+//             worksheet.addRow({ text: `"${segment.text || ''}"` });
+//             currentRow++;
+//           }
+          
+//           const codeEndRow = currentRow - 1;
+//           worksheet.mergeCells(`B${codeStartRow}:B${codeEndRow}`);
+//           worksheet.mergeCells(`C${codeStartRow}:C${codeEndRow}`);
+//           worksheet.mergeCells(`E${codeStartRow}:E${codeEndRow}`);
+//           worksheet.getCell(`B${codeStartRow}`).value = definition?.name || 'Unknown Code';
+//           worksheet.getCell(`C${codeStartRow}`).value = definition?.description || 'No description';
+//           worksheet.getCell(`E${codeStartRow}`).value = segments.length;
+          
+//           applySubtleColoring(worksheet, codeStartRow, codeEndRow, baseHexColor, {
+//             nameColumn: 'B',
+//             otherColumns: ['C', 'E'],
+//             contentColumns: ['D']
+//           });
+//         }
+        
+//         const fileEndRow = currentRow - 1;
+//         if (fileEndRow >= fileStartRow) {
+//           worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
+//           const firstCell = worksheet.getCell(`A${fileStartRow}`);
+//           firstCell.value = fileName;
+//           firstCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+//           firstCell.font = { bold: true };
+
+//           for (let i = fileStartRow; i <= fileEndRow; i++) {
+//             const cell = worksheet.getCell(`A${i}`);
+//             cell.fill = {
+//               type: 'pattern',
+//               pattern: 'solid',
+//               fgColor: { argb: 'FFF5F5F5' }
+//             };
+//             cell.border = {
+//               left: { style: 'thick', color: { argb: 'FF666666' } },
+//               right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+//               top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+//               bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+//             };
+//           }
+//         }
+//       }
+//       totalFrequency = project.codedSegments.length;
+//     }
+//     const totalRow = worksheet.addRow({});
+//     const totalLabelCell = worksheet.getCell(totalRow.number, worksheet.columns.length - 1);
+//     const totalValueCell = worksheet.getCell(totalRow.number, worksheet.columns.length);
+//     totalLabelCell.value = 'Total Frequency';
+//     totalValueCell.value = totalFrequency;
+//     totalLabelCell.font = { bold: true };
+//     totalValueCell.font = { bold: true };
+//     totalLabelCell.alignment = { horizontal: 'right' };
+//     totalValueCell.alignment = { horizontal: 'center' };
+//     totalLabelCell.border = {
+//       top: { style: 'thick', color: { argb: 'FF666666' } }
+//     };
+//     totalValueCell.border = {
+//       top: { style: 'thick', color: { argb: 'FF666666' } }
+//     };
+//     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//     res.setHeader('Content-Disposition', `attachment; filename="${project.name}_coded_segments_${format}.xlsx"`);
+//     await workbook.xlsx.write(res);
+//     res.end();
+//   } catch (err) {
+//     console.error('[EXPORT ERROR]', err);
+//     res.status(500).json({ error: 'Failed to export coded segments', details: err.message });
+//   }
+// });
+/**
+ * Exports all coded segments from a project to an Excel file.
+ * @param {string} req.params.projectId - The ID of the project.
+ * @param {string} [req.query.format='byDocument'] - The format of the export ('byDocument', 'overall', or 'matrix').
  * @returns {File} 200 - The generated Excel file.
  * @returns {object} 404 - An error object if the project is not found.
  * @returns {object} 500 - An error object if the export fails.
@@ -994,14 +1608,202 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
   const { projectId } = req.params;
   const userId = req.userId;
   const { format = 'byDocument' } = req.query;
+
   try {
     const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
     if (!project) {
       return res.status(404).json({ error: 'Project not found or unauthorized' });
     }
     const workbook = new ExcelJS.Workbook();
+
+    if (format === 'matrix') {
+        const worksheet = workbook.addWorksheet('Code Matrix Report');
+  
+        const sortedCodeDefs = [...project.codeDefinitions].sort((a, b) => a.name.localeCompare(b.name));
+        const allCodeNames = sortedCodeDefs.map(cd => cd.name);
+        const codeNameToColorMap = new Map(sortedCodeDefs.map(cd => [cd.name, cd.color || '#CCCCCC']));
+        const codeKeys = allCodeNames.map(name => name.replace(/[^a-zA-Z0-9]/g, ''));
+  
+        const headers = ['Document', 'Timestamp', 'Speaker', 'Segment Text', ...allCodeNames, 'Total'];
+        worksheet.columns = headers.map((h, i) => ({
+          header: h,
+          key: i < 4 ? h.toLowerCase().replace(/\s+/g, '') : (i < headers.length - 1 ? codeKeys[i - 4] : 'total'),
+        }));
+  
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  
+        allCodeNames.forEach((name, index) => {
+          const cell = headerRow.getCell(5 + index);
+          const color = codeNameToColorMap.get(name);
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: hexToArgb(color, 0.25) }
+          };
+        });
+        
+        // --- START OF MODIFIED LOGIC ---
+        
+        const allFiles = project.importedFiles; // MODIFICATION: Process all imported files
+        let currentRowIndex = 2;
+  
+        for (const file of allFiles) { // MODIFICATION: Loop over all files
+          const fileStartRow = currentRowIndex;
+          const fileContent = file.content || '';
+          const segmentsForThisFile = project.codedSegments.filter(cs => cs.fileId.toString() === file._id.toString());
+          const lines = fileContent.split('\n');
+          let currentPosition = 0;
+  
+          for (const lineText of lines) {
+            const lineLength = lineText.length;
+            const lineStart = currentPosition;
+            const lineEnd = currentPosition + lineLength;
+            currentPosition += lineLength + 1;
+  
+            if (lineText.trim() === '') continue;
+  
+            let rowData = {};
+            let rowTotal = 0;
+  
+            // MODIFICATION: Final, robust regex to handle optional timestamps and flexible identifiers
+            const transcriptLineRegex = /^(?:(\[.+?\])\s*)?([^:]+):\s*(.*)/;
+            const match = lineText.match(transcriptLineRegex);
+
+            if (match) {
+                const timestampValue = (match[1] || '').replace(/[\[\]]/g, '');
+                rowData.timestamp = timestampValue || '-'; // MODIFICATION: Use hyphen for missing timestamps
+                rowData.speaker = (match[2] || '').trim();
+                rowData.segmenttext = (match[3] || '').trim();
+            } else {
+                rowData.timestamp = '-'; // MODIFICATION: Use hyphen for plain text lines
+                rowData.speaker = '';
+                rowData.segmenttext = lineText;
+            }
+  
+            codeKeys.forEach(key => rowData[key] = '');
+  
+            segmentsForThisFile.forEach(segment => {
+              if (Math.max(lineStart, segment.startIndex) < Math.min(lineEnd, segment.endIndex)) {
+                const codeName = segment.codeDefinition.name;
+                const codeIndex = allCodeNames.indexOf(codeName);
+                if (codeIndex > -1) {
+                  const key = codeKeys[codeIndex];
+                  if (rowData[key] !== 1) {
+                    rowData[key] = 1;
+                    rowTotal++;
+                  }
+                }
+              }
+            });
+  
+            rowData.total = rowTotal > 0 ? rowTotal : '';
+            rowData.document = file.name;
+  
+            worksheet.addRow(rowData);
+            currentRowIndex++;
+          }
+  
+          const fileEndRow = currentRowIndex - 1;
+          if (fileEndRow >= fileStartRow) {
+            worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
+          }
+        }
+        
+        // --- END OF MODIFIED LOGIC ---
+  
+        const summaryRowIndex = currentRowIndex;
+        const summaryRow = worksheet.addRow({});
+        summaryRow.getCell('segmenttext').value = 'Total';
+        summaryRow.font = { bold: true };
+  
+        for (let i = 0; i < allCodeNames.length; i++) {
+          const colLetter = String.fromCharCode('E'.charCodeAt(0) + i);
+          summaryRow.getCell(5 + i).value = { formula: `SUM(${colLetter}2:${colLetter}${summaryRowIndex - 1})` };
+        }
+        const totalColLetter = String.fromCharCode('E'.charCodeAt(0) + allCodeNames.length);
+        summaryRow.getCell(headers.length).value = { formula: `SUM(${totalColLetter}2:${totalColLetter}${summaryRowIndex - 1})` };
+  
+        worksheet.columns.forEach((column, index) => {
+          if (index === 0) column.width = 30;
+          else if (index === 1) column.width = 12;
+          else if (index === 2) column.width = 20;
+          else if (index === 3) column.width = 60;
+          else if (index < headers.length - 1) column.width = column.header.length > 15 ? 20 : 15;
+          else column.width = 10;
+        });
+  
+        for (let i = 2; i <= summaryRowIndex; i++) {
+          const row = worksheet.getRow(i);
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            cell.alignment = { wrapText: true };
+            if (colNumber === 4) {
+              cell.alignment.vertical = 'top';
+              cell.alignment.horizontal = 'left';
+            } else {
+              cell.alignment.vertical = 'middle';
+              cell.alignment.horizontal = 'center';
+            }
+  
+            if (colNumber >= 5 && colNumber < headers.length) {
+              const headerName = headers[colNumber - 1];
+              const color = codeNameToColorMap.get(headerName);
+              if (color) {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: hexToArgb(color, 0.08) }
+                };
+              }
+            }
+          });
+        }
+  
+        for (let i = 1; i <= summaryRowIndex; i++) {
+          const row = worksheet.getRow(i);
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (colNumber > headers.length) return;
+  
+            const isExcludedSummaryCell = (i === summaryRowIndex && colNumber < 4);
+  
+            if (!isExcludedSummaryCell) {
+              cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+              };
+            }
+          });
+        }
+  
+        const date = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${project.name}_Code_Matrix_${date}.xlsx"`);
+        await workbook.xlsx.write(res);
+        return res.end();
+      }
+
+    // This is the fallback logic for 'overall' and 'byDocument' formats. It remains unchanged.
     const worksheet = workbook.addWorksheet('Coded Segments');
     let totalFrequency = 0;
+    
+    const styleHeader = (ws) => {
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF444444' } };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          left: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          bottom: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          right: { style: 'thin', color: { argb: 'FF6A6A6A' } }
+        };
+      });
+    };
+
     if (format === 'overall') {
       worksheet.columns = [
         { header: 'Code Definition', key: 'codeName', width: 30 },
@@ -1010,9 +1812,8 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
         { header: 'Coded Segment Text', key: 'text', width: 60 },
         { header: 'Frequency', key: 'frequency', width: 15 },
       ];
-      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF444444' } };
-      worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      styleHeader(worksheet);
+
       const groupedByCode = {};
       project.codedSegments.forEach(segment => {
         const defId = segment.codeDefinition?._id?.toString() || 'undefined';
@@ -1021,14 +1822,26 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
         }
         groupedByCode[defId].segments.push(segment);
       });
+
       let currentRow = 2;
       for (const { definition, segments } of Object.values(groupedByCode)) {
         const codeStartRow = currentRow;
         const baseHexColor = definition?.color || '#CCCCCC';
-        for (const segment of segments) {
-          worksheet.addRow({ fileName: segment.fileName || 'Unknown', text: `"${segment.text || ''}"` });
-          currentRow++;
+
+        const segmentsByFile = segments.reduce((acc, segment) => {
+            const fileName = segment.fileName || 'Unknown File';
+            if (!acc[fileName]) acc[fileName] = [];
+            acc[fileName].push(segment);
+            return acc;
+        }, {});
+
+        for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+            for (const segment of fileSegments) {
+                worksheet.addRow({ text: `"${segment.text || ''}"` });
+                currentRow++;
+            }
         }
+
         const codeEndRow = currentRow - 1;
         worksheet.mergeCells(`A${codeStartRow}:A${codeEndRow}`);
         worksheet.mergeCells(`B${codeStartRow}:B${codeEndRow}`);
@@ -1036,11 +1849,25 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
         worksheet.getCell(`A${codeStartRow}`).value = definition?.name || 'Unknown Code';
         worksheet.getCell(`B${codeStartRow}`).value = definition?.description || 'No description';
         worksheet.getCell(`E${codeStartRow}`).value = segments.length;
+
         applySubtleColoring(worksheet, codeStartRow, codeEndRow, baseHexColor, {
           nameColumn: 'A',
           otherColumns: ['B', 'E'],
           contentColumns: ['C', 'D']
         });
+
+        let fileRowTracker = codeStartRow;
+        for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+            const fileStartRow = fileRowTracker;
+            const fileEndRow = fileRowTracker + fileSegments.length - 1;
+            if (fileEndRow >= fileStartRow) {
+                worksheet.mergeCells(`C${fileStartRow}:C${fileEndRow}`);
+                const fileCell = worksheet.getCell(`C${fileStartRow}`);
+                fileCell.value = fileName;
+                fileCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            }
+            fileRowTracker = fileEndRow + 1;
+        }
       }
       totalFrequency = project.codedSegments.length;
     } else {
@@ -1051,9 +1878,8 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
         { header: 'Coded Segment Text', key: 'text', width: 60 },
         { header: 'Frequency', key: 'frequency', width: 15 },
       ];
-      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF444444' } };
-      worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      styleHeader(worksheet);
+      
       const groupedByFile = {};
       project.codedSegments.forEach(segment => {
         const fileName = segment.fileName || 'Unknown File';
@@ -1061,6 +1887,7 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
         groupedByFile[fileName].push(segment);
       });
       let currentRow = 2;
+      
       for (const [fileName, segmentsInFile] of Object.entries(groupedByFile)) {
         const fileStartRow = currentRow;
         const groupedByCode = {};
@@ -1071,13 +1898,16 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
           }
           groupedByCode[defId].segments.push(segment);
         });
+        
         for (const { definition, segments } of Object.values(groupedByCode)) {
           const codeStartRow = currentRow;
           const baseHexColor = definition?.color || '#CCCCCC';
+          
           for (const segment of segments) {
             worksheet.addRow({ text: `"${segment.text || ''}"` });
             currentRow++;
           }
+          
           const codeEndRow = currentRow - 1;
           worksheet.mergeCells(`B${codeStartRow}:B${codeEndRow}`);
           worksheet.mergeCells(`C${codeStartRow}:C${codeEndRow}`);
@@ -1085,25 +1915,36 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
           worksheet.getCell(`B${codeStartRow}`).value = definition?.name || 'Unknown Code';
           worksheet.getCell(`C${codeStartRow}`).value = definition?.description || 'No description';
           worksheet.getCell(`E${codeStartRow}`).value = segments.length;
+          
           applySubtleColoring(worksheet, codeStartRow, codeEndRow, baseHexColor, {
             nameColumn: 'B',
             otherColumns: ['C', 'E'],
             contentColumns: ['D']
           });
         }
+        
         const fileEndRow = currentRow - 1;
         if (fileEndRow >= fileStartRow) {
           worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
-          worksheet.getCell(`A${fileStartRow}`).value = fileName;
-          worksheet.getCell(`A${fileStartRow}`).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-          worksheet.getCell(`A${fileStartRow}`).font = { bold: true };
-          worksheet.getCell(`A${fileStartRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
-          worksheet.getCell(`A${fileStartRow}`).border = {
-            left: { style: 'thick', color: { argb: 'FF666666' } },
-            right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-            top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-            bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }
-          };
+          const firstCell = worksheet.getCell(`A${fileStartRow}`);
+          firstCell.value = fileName;
+          firstCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          firstCell.font = { bold: true };
+
+          for (let i = fileStartRow; i <= fileEndRow; i++) {
+            const cell = worksheet.getCell(`A${i}`);
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF5F5F5' }
+            };
+            cell.border = {
+              left: { style: 'thick', color: { argb: 'FF666666' } },
+              right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+              top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+              bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+            };
+          }
         }
       }
       totalFrequency = project.codedSegments.length;
@@ -1118,16 +1959,10 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
     totalLabelCell.alignment = { horizontal: 'right' };
     totalValueCell.alignment = { horizontal: 'center' };
     totalLabelCell.border = {
-      left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      top: { style: 'thick', color: { argb: 'FF666666' } },
-      bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+      top: { style: 'thick', color: { argb: 'FF666666' } }
     };
     totalValueCell.border = {
-      left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      top: { style: 'thick', color: { argb: 'FF666666' } },
-      bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+      top: { style: 'thick', color: { argb: 'FF666666' } }
     };
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${project.name}_coded_segments_${format}.xlsx"`);
@@ -1150,13 +1985,6 @@ router.get('/:projectId/export-coded-segments', requireAuth, async (req, res) =>
 router.get('/:projectId/export-overlaps', requireAuth, async (req, res) => {
   const { projectId } = req.params;
   const userId = req.userId;
-
-  // const hexToArgb = (hex) => {
-  //   if (!hex || !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
-  //       return 'FFCCCCCC';
-  //   }
-  //   return `FF${hex.replace('#', '')}`;
-  // };
 
   try {
     const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
@@ -1426,6 +2254,75 @@ router.get('/:projectId/files/:fileId/export-memos', requireAuth, async (req, re
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to export memos.' });
+  }
+});
+
+/**
+ * Exports a specific file from a project in a user-requested format (e.g., DOCX or PDF).
+ * The function retrieves the file content and uses appropriate libraries to generate
+ * the document in the specified format, streaming it back to the client for download.
+ *
+ * @param {string} req.params.projectId - The ID of the project containing the file.
+ * @param {string} req.params.fileId - The ID of the file to be exported.
+ * @param {string} req.query.format - The desired export format. Supported values: 'docx', 'pdf'.
+ * @returns {File} 200 - The generated file (DOCX or PDF) for download.
+ * @returns {object} 400 - An error object if the requested format is invalid or not supported.
+ * @returns {object} 404 - An error object if the project or file is not found.
+ * @returns {object} 500 - An error object if the file generation or export process fails.
+ */
+router.get('/:projectId/files/:fileId/export', requireAuth, async (req, res) => {
+  const { projectId, fileId } = req.params;
+  const { format } = req.query;
+
+  try {
+    const project = await Project.findOne({ _id: projectId, owner: req.userId });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    const file = project.importedFiles.id(fileId);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found.' });
+    }
+
+    const baseName = path.basename(file.name, path.extname(file.name));
+
+    if (format === 'docx') {
+      const paragraphs = file.content.split('\n').map(line => new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        children: [new TextRun(line)],
+      }));
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: paragraphs,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Disposition', `attachment; filename="${baseName}.docx"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.send(buffer);
+
+    } else if (format === 'pdf') {
+      const doc = new PDFDocument();
+      let filename = `${baseName}.pdf`;
+      filename = encodeURIComponent(filename);
+      res.setHeader('Content-disposition', `attachment; filename*=UTF-8''${filename}`);
+      res.setHeader('Content-type', 'application/pdf');
+
+      doc.pipe(res);
+      doc.fontSize(12).text(file.content, {
+        align: 'justify'
+      });
+      doc.end();
+
+    } else {
+      return res.status(400).json({ error: 'Invalid or unsupported format specified.' });
+    }
+  } catch (err) {
+    console.error('File export error:', err);
+    res.status(500).json({ error: 'Failed to export file.' });
   }
 });
 

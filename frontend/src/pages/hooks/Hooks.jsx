@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useHistory } from './useHistory.js';
+import FileSaver from 'file-saver';
 
 /**
  * A comprehensive custom hook that encapsulates the state management and business
@@ -15,7 +16,7 @@ import { useHistory } from './useHistory.js';
  * @param {string|null} [props.idFromProp=null] - An optional project ID passed as a prop, overriding the URL parameter.
  * @returns {object} An object containing all the state and handler functions required by the `ProjectView` component and its children.
  */
-export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode, idFromProp = null }) {
+export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode, idFromProp = null, isInEditMode }) {
   const { user } = useAuth();
 
   const { id: idFromParams } = useParams();
@@ -50,13 +51,6 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
   const [showCodeDefinitions, setShowCodeDefinitions] = useState(true);
   const [showCodedSegments, setShowCodedSegments] = useState(true);
   const [showMemosPanel, setShowMemosPanel] = useState(true);
-  // const [dontShowDeleteConfirm, setDontShowDeleteConfirm] = useState(() => {
-  //   const saved = localStorage.getItem('dontShowDeleteConfirm');
-  //   return saved === 'true';
-  // });
-  // const [dontShowDeleteMemoConfirm, setDontShowDeleteMemoConfirm] = useState(() => {
-  //   return localStorage.getItem('dontShowDeleteMemoConfirm') === 'true';
-  // });
 
   const [selectedHighlightColor, setSelectedHighlightColor] = useState('#00FF00');
   const [showHighlightColorDropdown, setShowHighlightColorDropdown] = useState(false);
@@ -111,6 +105,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
   const searchInputRef = useRef(null);
   const viewerSearchInputRef = useRef(null);
   const setDefineModalBackendErrorRef = useRef(null);
+  const [pinnedFiles, setPinnedFiles] = useState([]);
 
   const highlightColors = [
     { name: 'Yellow', value: '#FFFF00', cssClass: 'bg-yellow-300' },
@@ -238,7 +233,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
    * @returns {void}
    */
   const handleSelectFile = useCallback((file) => {
-    if (!file || !project) { // Add a guard for project
+    if (!file || !project) {
       setSelectedContent('');
       setSelectedFileName('');
       setSelectedFileId(null);
@@ -252,7 +247,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     setSelectedFileName(file.name);
     setSelectedFileId(file._id);
     setSelectedFileAudioUrl(file.audioUrl || null);
-    // Get annotation data directly from the 'project' state
+
     const filteredCodes = project.codedSegments?.filter(seg => seg.fileId === file._id) || [];
     filteredCodes.sort((a, b) => a.startIndex - b.startIndex);
     setCodedSegments(filteredCodes);
@@ -270,7 +265,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     setCurrentMatchIndex(-1);
     setActiveCodedSegmentId(null);
     setActiveMemoId(null);
-  }, [project]); // Add 'project' to the dependency array
+  }, [project]);
 
     /**
      * Fetches the full project data from the backend API.
@@ -293,6 +288,12 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
         setProject(fetchedProject);
         setProjectName(fetchedProject.name);
         setCodeDefinitions(fetchedProject.codeDefinitions || []);
+        
+        const savedPinnedFiles = localStorage.getItem(`pinnedFiles_${projectId}`);
+        if (savedPinnedFiles) {
+          setPinnedFiles(JSON.parse(savedPinnedFiles));
+        }
+
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load project');
       } finally {
@@ -318,7 +319,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     }
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/projects/import/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/stage`,
         formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -326,15 +327,13 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
           },
         }
       );
-      setProject(res.data.project);
-      const newlyImportedFile = res.data.project.importedFiles.at(-1);
-      if (newlyImportedFile) {
-        if (onImportSuccess) {
-          onImportSuccess(newlyImportedFile);
-        } else {
-          handleSelectFile(newlyImportedFile, res.data.project.codedSegments, res.data.project.inlineHighlights, res.data.project.memos);
-        }
+
+      const { stagedFile } = res.data;
+
+      if (stagedFile && onImportSuccess) {
+        onImportSuccess({ ...stagedFile, isStaged: true });
       }
+
     } catch (err) {
       if (err.response && err.response.status === 409 && err.response.data.promptRequired) {
         const { suggestedName } = err.response.data;
@@ -355,6 +354,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
             handleTextImport(file, splittingOption, suggestedName);
           },
           showCheckbox: true,
+          isCheckboxRequired: true,
           checkboxLabel: "I understand the risks and wish to proceed."
         });
         setShowConfirmModal(true);
@@ -369,6 +369,40 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
       }
     }
   };
+
+/**
+ * Commits a staged file to the project, making it permanent.
+ * This function sends the staged file data to the backend to be saved in the database.
+ * @param {object} fileData - The data of the staged file to be committed.
+ * @returns {Promise<{success: boolean, error?: string}>} An object indicating the outcome of the commit operation.
+ */
+const handleCommitNewFile = async (fileData) => {
+  const token = user?.token;
+  if (!token) return { success: false, error: 'You must be logged in to save files.' };
+
+  try {
+    const res = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/commit`,
+      { ...fileData },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    setProject(res.data.project);
+    
+    const newlyCommittedFile = res.data.project.importedFiles.at(-1);
+    if (newlyCommittedFile) {
+      handleSelectFile(newlyCommittedFile);
+    }
+
+    return { success: true };
+  } catch (err) {
+    const error = err.response?.data?.error || 'Failed to save new file.';
+    setError(error);
+    setConfirmModalData({ title: 'Save Failed', message: error, onConfirm: () => setShowConfirmModal(false) });
+    setShowConfirmModal(true);
+    return { success: false, error };
+  }
+};
 
   /**
    * Handles the import and transcription of an audio file.
@@ -395,24 +429,36 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
         headers: { Authorization: `Bearer ${token}` },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setTranscriptionStatus(prev => ({ ...prev, progress: percentCompleted, message: percentCompleted < 100 ? `Uploading audio...` : `Upload complete. Transcribing...` }));
+          setTranscriptionStatus(prev => ({
+            ...prev,
+            progress: percentCompleted,
+            message: percentCompleted < 100
+              ? 'Uploading audio...'
+              : (
+                <>
+                  Upload complete. Transcribing...
+                  <br />
+                  <span className="text-sm italic text-gray-500 dark:text-gray-400">
+                    This may take a while...
+                  </span>
+                </>
+              )
+          }));
         },
       };
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/import-audio/${projectId}`, formData, axiosConfig);
       setProject(res.data.project);
       const newlyImportedFile = res.data.project.importedFiles.at(-1);
-      if (newlyImportedFile) {
-        if (onImportSuccess) {
-          onImportSuccess(newlyImportedFile);
-        } else {
-          handleSelectFile(newlyImportedFile, res.data.project.codedSegments, res.data.project.inlineHighlights, res.data.project.memos);
-        }
+      if (newlyImportedFile && onImportSuccess) {
+        onImportSuccess(newlyImportedFile);
       }
+
       setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
     } catch (err) {
       if (err.response && err.response.status === 409 && err.response.data.promptRequired) {
         const { suggestedName } = err.response.data;
         const originalTranscriptName = file.name.replace(/\.[^/.]+$/, " (Transcript).txt");
+        setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
         setConfirmModalData({
           title: 'Duplicate Transcript Detected',
           shortMessage: (
@@ -487,6 +533,117 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
       handleTextImport(file);
     }
     e.target.value = null;
+  };
+
+  /**
+   * Renames a file in the project.
+   */
+  const handleRenameFile = async (file, newName) => {
+    const { _id: fileId, name: originalName } = file;
+
+    const getExtension = (filename) => {
+      const lastDot = filename.lastIndexOf('.');
+      if (lastDot === -1) return '';
+      return filename.substring(lastDot);
+    };
+
+    const originalExtension = getExtension(originalName);
+    const newExtension = getExtension(newName);
+
+    if (originalExtension.toLowerCase() !== newExtension.toLowerCase()) {
+      setConfirmModalData({
+        title: 'Rename Error',
+        shortMessage: 'Changing the file extension is not permitted. Please keep the original extension.',
+        confirmText: 'OK',
+        showCancelButton: false,
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+      return { success: false, error: 'Cannot change file extension.' };
+    }
+
+    const token = user?.token;
+    if (!token) return { success: false, error: 'You must be logged in to rename files.' };
+    try {
+      const res = await axios.put(
+        `/api/projects/${projectId}/files/${fileId}/rename`,
+        { name: newName },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProject(res.data.project);
+      return { success: true };
+    } catch (err) {
+      const error = err.response?.data?.error || 'Failed to rename file.';
+      setError(error);
+      return { success: false, error };
+    }
+  };
+
+  /**
+   * Toggles the pinned state of a file and saves it to localStorage.
+   */
+  const handlePinFile = (fileId) => {
+    const isPinned = pinnedFiles.includes(fileId);
+
+    if (!isPinned && pinnedFiles.length >= 3) {
+      setConfirmModalData({
+        title: 'Pin Limit Reached',
+        shortMessage: 'You can only pin a maximum of 3 files. Please unpin another file to continue.',
+        confirmText: 'OK',
+        showCancelButton: false,
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+      return;
+    }
+    
+    setPinnedFiles(prev => {
+      const newPinned = isPinned
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId];
+      
+      localStorage.setItem(`pinnedFiles_${projectId}`, JSON.stringify(newPinned));
+      return newPinned;
+    });
+  };
+
+  /**
+   * Handles the direct export of a file in the specified format.
+   */
+  const handleExportFile = async (file, format) => {
+      try {
+        const token = user?.token;
+        if (!token) throw new Error('Authentication required.');
+
+        const response = await axios.get(
+          `/api/projects/${projectId}/files/${file._id}/export?format=${format}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: 'blob',
+          }
+        );
+
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = `${file.name}.${format}`;
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1];
+            }
+        }
+        
+        FileSaver.saveAs(response.data, filename);
+
+      } catch (err) {
+        console.error(`Export as ${format} failed`, err);
+        setConfirmModalData({
+          title: 'Export Failed',
+          shortMessage: err.response?.data?.error || `Could not export the file as ${format.toUpperCase()}.`,
+          onConfirm: () => setShowConfirmModal(false),
+          confirmText: 'OK',
+          showCancelButton: false,
+        });
+        setShowConfirmModal(true);
+      }
   };
 
   /**
@@ -822,7 +979,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     setShowConfirmModal(true);
   };
 
-  /**
+   /**
    * Prompts the user and then permanently deletes an imported file and all its associated data.
    * This action is destructive and cannot be undone.
    * @param {string} fileId - The ID of the file to delete.
@@ -834,11 +991,11 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
       title: 'Confirm File Deletion',
       shortMessage: (
         <p>
-          Deleting "{fileName}" will <strong>permanently remove it and all its associated codes, highlights, and memos from the project.</strong>
+          This will <strong>permanently remove "{fileName}" and all associated data.</strong>
           <br /><br />
           <span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span>
           <br /><br />
-          Are you sure you want to delete this file?
+          To confirm, please type the file name below.
         </p>
       ),
       onConfirm: async () => {
@@ -846,13 +1003,14 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
         if (!token) return setError('Authentication error.');
         try {
           const res = await axios.delete(
-            `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`, { headers: { Authorization: `Bearer ${token}` } }
+            `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`, 
+            { headers: { Authorization: `Bearer ${token}` } }
           );
           if (setFileInEditMode) setFileInEditMode(null);
           setProject(res.data.project);
           const remainingFiles = res.data.project.importedFiles;
           if (remainingFiles.length > 0) {
-            handleSelectFile(remainingFiles[0], res.data.project.codedSegments, res.data.project.inlineHighlights, res.data.project.memos);
+            handleSelectFile(remainingFiles[0]);
           } else {
             setSelectedFileId(null);
             setSelectedFileName('');
@@ -867,7 +1025,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
         }
       },
       showInput: true,
-      promptText: "I confirm",
+      promptText: fileName,
       confirmText: "Delete",
     });
     setShowConfirmModal(true);
@@ -996,7 +1154,6 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
       let url;
       let defaultFilename;
 
-      // This logic directs the call to the correct backend endpoint
       if (format === 'overlaps') {
         url = `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-overlaps`;
         defaultFilename = `${projectName}_overlaps.xlsx`;
@@ -1230,7 +1387,13 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     const info = selectionInfoOverride || getSelectionInfo();
     if (!info || !selectedFileId) {
       setShowConfirmModal(true);
-      setConfirmModalData({ title: 'Code Error', message: 'Please select text in a document to apply a code.', onConfirm: () => setShowConfirmModal(false) });
+      setConfirmModalData({ 
+        title: 'Code Error', 
+        shortMessage: 'Please select text in a document to apply a code.', 
+        onConfirm: () => setShowConfirmModal(false),
+        confirmText: 'OK',
+        showCancelButton: false
+      });
       return;
     }
     setCurrentSelectionInfo(info);
@@ -1274,7 +1437,13 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     const info = selectionInfoOverride || getSelectionInfo();
     if (!info || !selectedFileId) {
       setShowConfirmModal(true);
-      setConfirmModalData({ title: 'Highlight Error', message: 'Please select text in a document.', onConfirm: () => setShowConfirmModal(false) });
+      setConfirmModalData({ 
+        title: 'Highlight Error', 
+        shortMessage: 'Please select text in a document.', 
+        onConfirm: () => setShowConfirmModal(false),
+        confirmText: 'OK',
+        showCancelButton: false
+      });
       return;
     }
     const token = user?.token;
@@ -1311,7 +1480,13 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     const info = selectionInfoOverride || getSelectionInfo();
     if (!selectedFileId) {
       setShowConfirmModal(true);
-      setConfirmModalData({ title: 'Memo Error', message: 'Please select a document to create a memo.', onConfirm: () => setShowConfirmModal(false) });
+      setConfirmModalData({ 
+        title: 'Memo Error', 
+        shortMessage: 'Please select a document to create a memo.', 
+        onConfirm: () => setShowConfirmModal(false),
+        confirmText: 'OK',
+        showCancelButton: false
+      });
       return;
     }
     setCurrentMemoSelectionInfo(info || { text: '', startIndex: -1, endIndex: -1 });
@@ -1391,6 +1566,10 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
    * @returns {void}
    */
   const handleViewerMouseUp = useCallback(() => {
+
+    if (isInEditMode) {
+      return;
+    }
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
@@ -1549,10 +1728,10 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     if (project && selectedFileId) {
       const currentFile = project.importedFiles.find(f => f._id === selectedFileId);
       if (currentFile) {
-        handleSelectFile(currentFile); // Pass only the file
+        handleSelectFile(currentFile);
       }
     } else if (project && project.importedFiles?.length > 0 && !selectedFileId) {
-      handleSelectFile(project.importedFiles[0]); // Pass only the file
+      handleSelectFile(project.importedFiles[0]);
     }
   }, [project, selectedFileId, handleSelectFile]);
 
@@ -1660,6 +1839,7 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     setCurrentSelectionInfo,
     currentSelectionRange,
     setCurrentSelectionRange,
+    isInEditMode, 
     activeTool,
     setActiveTool,
     showMemoModal,
@@ -1731,12 +1911,17 @@ export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode
     handleSaveMemo,
     handleDeleteMemo,
     handleDeleteFile,
+    handleRenameFile,
+    handlePinFile,
+    pinnedFiles,
+    handleExportFile,
     handleDeleteCodeDefinition,
     handleDeleteCodedSegment,
     handleExportToExcel,
     handleExportFileCodedSegments,
     handleExportOverlaps,
     handleExportMemos,
+    handleCommitNewFile,
     handleUpdateFileContent,
     groupedCodedSegments,
     groupedMemos,

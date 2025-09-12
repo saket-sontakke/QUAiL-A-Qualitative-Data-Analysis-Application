@@ -6,25 +6,6 @@ import ThemeToggle from '../theme/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import Logo from '../theme/Logo.jsx';
 
-/**
- * This component displays the brand logo, contextual project controls, a theme toggle,
- * and a user profile dropdown. The profile dropdown provides user information, access to
- * preferences, feedback/bug report links, and a logout option. It's designed to handle
- * user interactions safely, especially when the user is in an 'editing' state, by using
- * specific callback props to prevent accidental data loss.
- * 
- * @component
- * @param {object} props - The component props.
- * @param {string} [props.projectName] - The name of the currently active project, displayed when on a project page.
- * @param {() => void} props.onOpenProjectOverviewModal - Callback function to open the project overview modal.
- * @param {() => void} props.onOpenPreferencesModal - Callback function to open the user preferences modal.
- * @param {boolean} props.isEditing - A flag indicating if the user is in an editing state, which disables certain actions.
- * @param {(path: string) => void} [props.onNavigateAttempt] - Optional callback triggered on navigation attempts while `isEditing` is true. Prevents direct navigation.
- * @param {() => void} [props.onLogoutAttempt] - Optional callback triggered on logout attempts while `isEditing` is true. Prevents direct logout.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} [props.setShowConfirmModal] - State setter to show a generic confirmation modal (e.g., for logout).
- * @param {React.Dispatch<React.SetStateAction<object>>} [props.setConfirmModalData] - State setter to configure the data for the confirmation modal.
- * @returns {JSX.Element} The rendered navigation bar component.
- */
 const Navbar = ({
   projectName,
   onOpenProjectOverviewModal,
@@ -57,27 +38,21 @@ const Navbar = ({
 
   const toggleProfile = () => setShowProfile(!showProfile);
 
-  const handleNavigation = (path) => {
+    const handleNavigation = (path, options) => {
     if (typeof onNavigateAttempt === 'function') {
-      onNavigateAttempt(path);
+      onNavigateAttempt(path, options);
     } else {
-      navigate(path);
+      navigate(path, options);
     }
   };
 
-  /**
-   * Handles logout attempts.
-   * If onLogoutAttempt prop is provided (i.e., in edit mode), it uses it.
-   * Otherwise, it triggers a standard confirmation modal.
-   */
+
   const handleLogout = () => {
-    // This is the special handler for when the user is in edit mode
     if (typeof onLogoutAttempt === 'function') {
       onLogoutAttempt();
       return;
     }
 
-    // This is the default handler for all other pages
     if (typeof setConfirmModalData === 'function' && typeof setShowConfirmModal === 'function') {
       const executeLogout = () => {
           logout();
@@ -96,7 +71,6 @@ const Navbar = ({
       });
       setShowConfirmModal(true);
     } else {
-      // Fallback in case props are not passed
       logout();
       navigate('/');
     }
@@ -121,10 +95,11 @@ const Navbar = ({
             {projectName && (
               <span className="ml-3 text-lg font-semibold text-white">{projectName}</span>
             )}
-            <div className="ml-3 flex items-center space-x-4">
-              <button onClick={() => handleNavigation('/create-project')} className="text-white transition-colors duration-200 hover:text-[#F05623]" title="New Project">
+              <div className="ml-3 flex items-center space-x-4">
+              <button onClick={() => handleNavigation('/projects', { state: { openCreateModal: true } })} className="text-white transition-colors duration-200 hover:text-[#F05623]" title="New Project">
                 <FaFolderPlus className="text-xl" />
               </button>
+
               <button onClick={() => handleNavigation('/projects')} className="text-white transition-colors duration-200 hover:text-[#F05623]" title="Open Project">
                 <FaFolderOpen className="text-xl" />
               </button>

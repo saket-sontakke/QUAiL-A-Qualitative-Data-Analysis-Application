@@ -39,9 +39,7 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
   const getOS = () => {
     if (typeof navigator === 'undefined') return 'unknown';
 
-    // Modern API (userAgentData) — available in Chromium-based browsers
     try {
-      // userAgentData.platform is typically something like 'macOS', 'Windows', 'Linux'
       if (navigator.userAgentData?.platform) {
         return navigator.userAgentData.platform;
       }
@@ -84,7 +82,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
   };
 
   const handleTimeUpdate = useCallback(() => {
-    // Only update time from the audio element if the user is not actively seeking
     if (audioRef.current && isLoaded && !isSeeking) {
       setCurrentTime(audioRef.current.currentTime);
     }
@@ -131,7 +128,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
     }
   }, [fileId]);
 
-  // Effect to handle clicks outside the info popup to close it
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (infoPopupRef.current && !infoPopupRef.current.contains(event.target)) {
@@ -162,7 +158,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
     }
   };
 
-  // This function calculates the seek time based on a mouse event
   const handleScrub = useCallback((e) => {
     if (!duration || !isLoaded || !progressBarRef.current || !audioRef.current) return;
     const progressBar = progressBarRef.current;
@@ -176,7 +171,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
     }
   }, [duration, isLoaded]);
 
-  // This effect adds and removes global listeners for dragging the progress bar
   useEffect(() => {
     const handleMouseUp = () => setIsSeeking(false);
 
@@ -191,7 +185,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
     };
   }, [isSeeking, handleScrub]);
 
-  // Initiates seeking when the user clicks and holds the progress bar
   const handleMouseDownOnScrubber = useCallback((e) => {
     e.preventDefault();
     setIsSeeking(true);
@@ -256,7 +249,6 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
     }
   };
 
-  // Toggles the visibility of the info popup and stops the click from propagating
   const toggleInfoPopup = (e) => {
     e.stopPropagation();
     setIsInfoVisible(prev => !prev);
@@ -339,7 +331,33 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
                   <button onClick={() => setIsCustomSpeedInputVisible(false)} className="rounded-sm p-1 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600" title="Back">
                     <FaArrowLeft size={12} />
                   </button>
-                  <input type="number" step="0.05" min="0.25" max="4.0" value={customPlaybackRate} onChange={(e) => setCustomPlaybackRate(e.target.value)} autoFocus onKeyDown={(e) => e.key === 'Enter' && handleSetCustomSpeed()} className="w-full rounded-md bg-gray-100 p-0.5 text-center text-sm focus:outline-none focus:ring-1 focus:ring-cyan-900 dark:bg-gray-800 dark:focus:ring-[#F05623]"/>
+                  <div className="relative flex-1">
+                    <input 
+                      type="number" 
+                      step="0.05" 
+                      min="0.25" 
+                      max="4.0" 
+                      value={customPlaybackRate} 
+                      onChange={(e) => setCustomPlaybackRate(e.target.value)} 
+                      autoFocus 
+                      onKeyDown={(e) => e.key === 'Enter' && handleSetCustomSpeed()} 
+                      className="w-full rounded-md bg-gray-100 p-1 pr-5 text-center text-sm focus:outline-none focus:ring-1 focus:ring-cyan-900 dark:bg-gray-800 dark:focus:ring-[#F05623] hide-number-arrows"
+                    />
+                    <div className="absolute right-0 top-0 mr-1 flex h-full flex-col items-center justify-center">
+                      <button 
+                        onClick={() => setCustomPlaybackRate(rate => (Math.min(4.0, parseFloat(rate) + 0.05)).toFixed(2))}
+                        className="h-1/2 rounded-tr-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 4.86l-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/></svg>
+                      </button>
+                      <button 
+                        onClick={() => setCustomPlaybackRate(rate => (Math.max(0.25, parseFloat(rate) - 0.05)).toFixed(2))}
+                        className="h-1/2 rounded-br-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <button onClick={handleSetCustomSpeed} className="w-full rounded-md bg-cyan-800 py-1 text-xs font-bold text-white hover:bg-cyan-700 dark:bg-[#F05623] dark:hover:bg-orange-700">Set</button>
               </div>

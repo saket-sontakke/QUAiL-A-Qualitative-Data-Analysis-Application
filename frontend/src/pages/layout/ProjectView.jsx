@@ -28,20 +28,25 @@ const DEFAULT_WIDTH = 250;
 const COLLAPSED_WIDTH = 40;
 const COLLAPSE_THRESHOLD = 120;
 
-/**
- * The main container component for the project workspace. It integrates the
- * `useProjectViewHooks` hook to manage all application state and orchestrates
- * the rendering and interaction of all major UI components, including the
- * navbar, resizable side panel, document viewer, and all modals.
- *
- * @returns {JSX.Element} The rendered project view page.
- */
 const ProjectView = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [fileInEditMode, setFileInEditMode] = useState(null);
   const [editedContent, setEditedContent] = useState('');
   const isEditing = !!fileInEditMode;
+  const [showFormattingTip, setShowFormattingTip] = useState(false);
+
+  const [showFind, setShowFind] = useState(false);
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  const [findMatches, setFindMatches] = useState([]);
+  const [currentFindIndex, setCurrentFindIndex] = useState(-1);
+
+  const [history, setHistory] = useState({
+    undoStack: [],
+    redoStack: [],
+  });
 
   const [showCodeTooltip, setShowCodeTooltip] = useState(() => {
     const savedPreference = localStorage.getItem('showCodeTooltip');
@@ -50,13 +55,13 @@ const ProjectView = () => {
 
   const {
     projectName, project, fetchProject, projectId, error, loading, transcriptionStatus,
-    handleAudioImport, handleTextImport, handleUpdateFileContent, selectedContent,
+    handleAudioImport, handleTextImport, handleCommitNewFile, handleUpdateFileContent, selectedContent,
     selectedFileId, selectedFileAudioUrl, showImportedFiles, setShowImportedFiles,
-    handleFileChange, handleSelectFile, handleDeleteFile, codeDefinitions,
-    showCodeDefinitions, setShowCodeDefinitions, showDefineCodeModal, setShowDefineCodeModal,
-    codeDefinitionToEdit, setCodeDefinitionToEdit, handleSaveCodeDefinition,
-    handleDefineCodeModalClose, handleDeleteCodeDefinition, handleDefineModalErrorSetter,
-    codedSegments, inlineHighlights, groupedCodedSegments, expandedCodes,
+    handleFileChange, handleSelectFile, handleDeleteFile, handleRenameFile, handlePinFile,
+    pinnedFiles, handleExportFile, codeDefinitions, showCodeDefinitions, setShowCodeDefinitions,
+    showDefineCodeModal, setShowDefineCodeModal, codeDefinitionToEdit, setCodeDefinitionToEdit,
+    handleSaveCodeDefinition, handleDefineCodeModalClose, handleDeleteCodeDefinition,
+    handleDefineModalErrorSetter, codedSegments, inlineHighlights, groupedCodedSegments, expandedCodes,
     toggleCodeGroup, showCodedSegments, setShowCodedSegments, showCodedSegmentsTableModal,
     setShowCodedSegmentsTableModal, activeCodedSegmentId, setActiveCodedSegmentId,
     handleAssignCode, handleReassignCodeClick, setSegmentToReassign, handleDeleteCodedSegment,
@@ -77,7 +82,7 @@ const ProjectView = () => {
     setShowCodeDropdown, showConfirmModal, setShowConfirmModal, confirmModalData,
     setConfirmModalData, searchQuery, setSearchQuery, searchInputRef, handleMergeCodes,
     handleSplitCodes, undo, redo, canUndo, canRedo, handleCreateMemoForSegment,
-  } = useProjectViewHooks({ onImportSuccess: enterEditMode, setFileInEditMode: setFileInEditMode });
+  } = useProjectViewHooks({ onImportSuccess: enterEditMode, setFileInEditMode: setFileInEditMode, isInEditMode: isEditing });
 
   const [showSplitMergeModal, setShowSplitMergeModal] = useState(false);
   const [splitReviewData, setSplitReviewData] = useState({
@@ -97,23 +102,131 @@ const ProjectView = () => {
   const audioPlayerRef = useRef(null);
   const textareaRef = useRef(null);
 
-  /**
-   * Logs the user out by clearing session data and redirecting.
-   * This will be used by the confirmation modal.
-   */
+  const updateContentAndHistory = (newContent) => {
+    setHistory(prev => ({
+      undoStack: [...prev.undoStack, editedContent],
+      redoStack: [],
+    }));
+    setEditedContent(newContent);
+  };
+
+  const escapeRegExp = (string) => {
+    if (!string) return '';
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  useEffect(() => {
+    const currentToolActive = showFind || showFindReplace;
+    if (!isEditing || !currentToolActive || !findQuery) {
+      setFindMatches([]);
+      setCurrentFindIndex(-1);
+      return;
+    }
+    try {
+      const escapedQuery = escapeRegExp(findQuery);
+      const regex = new RegExp(escapedQuery, 'gi');
+      const matches = Array.from(editedContent.matchAll(regex)).map(match => ({
+        startIndex: match.index,
+        endIndex: match.index + match[0].length,
+      }));
+      setFindMatches(matches);
+      setCurrentFindIndex(matches.length > 0 ? 0 : -1);
+    } catch (error) {
+      console.error("Error creating RegExp:", error);
+      setFindMatches([]);
+      setCurrentFindIndex(-1);
+    }
+  }, [findQuery, editedContent, showFind, showFindReplace, isEditing]);
+
+  useEffect(() => {
+    const currentToolActive = showFind || showFindReplace;
+    if (!isEditing || !currentToolActive || findMatches.length === 0 || currentFindIndex < 0) return;
+    const match = findMatches[currentFindIndex];
+    const textarea = textareaRef?.current;
+    if (!textarea || !match) return;
+    if (document.activeElement.tagName !== 'INPUT') {
+        textarea.focus();
+    }
+    textarea.setSelectionRange(match.startIndex, match.endIndex);
+    const textBefore = textarea.value.substring(0, match.startIndex);
+    const lines = textBefore.split('\n').length;
+    const avgLineHeight = textarea.scrollHeight / textarea.value.split('\n').length;
+    const newScrollTop = (lines * avgLineHeight) - (textarea.clientHeight / 2);
+    textarea.scrollTop = Math.max(0, newScrollTop);
+  }, [currentFindIndex, findMatches, isEditing, showFind, showFindReplace]);
+
+  const handleToggleFind = () => {
+    setShowFind(prev => !prev);
+    if (showFindReplace) {
+      setShowFindReplace(false);
+    }
+  };
+
+  const handleToggleFindReplace = () => {
+    setShowFindReplace(prev => !prev);
+    if (showFind) {
+      setShowFind(false);
+    }
+  };
+
+  const handleFindNext = () => {
+    if (findMatches.length > 0) {
+      setCurrentFindIndex(prev => (prev + 1) % findMatches.length);
+    }
+  };
+
+  const handleFindPrev = () => {
+    if (findMatches.length > 0) {
+      setCurrentFindIndex(prev => (prev - 1 + findMatches.length) % findMatches.length);
+    }
+  };
+
+  const handleReplaceOne = () => {
+    if (findMatches.length === 0 || currentFindIndex < 0) return;
+    const match = findMatches[currentFindIndex];
+    const newContent =
+      editedContent.substring(0, match.startIndex) +
+      replaceQuery +
+      editedContent.substring(match.endIndex);
+    updateContentAndHistory(newContent);
+  };
+
+  const handleReplaceAll = () => {
+    if (!findQuery || findMatches.length === 0) return;
+    const escapedQuery = escapeRegExp(findQuery);
+    const regex = new RegExp(escapedQuery, 'gi');
+    const newContent = editedContent.replace(regex, replaceQuery);
+    updateContentAndHistory(newContent);
+  };
+
+  const handleEditorUndo = useCallback(() => {
+    if (history.undoStack.length === 0) return;
+    const lastState = history.undoStack[history.undoStack.length - 1];
+    setHistory(prev => ({
+      undoStack: prev.undoStack.slice(0, -1),
+      redoStack: [...prev.redoStack, editedContent],
+    }));
+    setEditedContent(lastState);
+  }, [history.undoStack, editedContent]);
+
+  const handleEditorRedo = useCallback(() => {
+    if (history.redoStack.length === 0) return;
+    const nextState = history.redoStack[history.redoStack.length - 1];
+    setHistory(prev => ({
+      undoStack: [...prev.undoStack, editedContent],
+      redoStack: prev.redoStack.slice(0, -1),
+    }));
+    setEditedContent(nextState);
+  }, [history.redoStack, editedContent]);
+
   const executeLogout = () => {
     logout();
     navigate('/');
   };
 
-  /**
-   * Intercepts navigation requests to check if the user is in edit mode.
-   * If so, it prompts for confirmation before proceeding.
-   * @param {string} path - The destination path to navigate to.
-   */
-  const handleNavigationAttempt = (path) => {
+  const handleNavigationAttempt = (path, options) => {
     if (!isEditing) {
-      navigate(path);
+      navigate(path, options);
       return;
     }
     setConfirmModalData({
@@ -123,16 +236,13 @@ const ProjectView = () => {
       showCancelButton: true,
       onConfirm: () => {
         setShowConfirmModal(false);
-        navigate(path);
+        navigate(path, options);
       },
     });
     setShowConfirmModal(true);
   };
 
-  /**
-   * Intercepts logout requests to prompt for confirmation.
-   * The message changes if the user is in edit mode.
-   */
+
   const handleLogoutAttempt = () => {
     const modalConfig = isEditing
       ? {
@@ -145,7 +255,6 @@ const ProjectView = () => {
           shortMessage: 'Are you sure you want to log out?',
           confirmText: 'Logout',
         };
-
     setConfirmModalData({
       ...modalConfig,
       showCancelButton: true,
@@ -157,74 +266,66 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Effect to warn the user before they refresh or close the page during an edit session.
-   */
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (!isEditing) {
-        return;
-      }
-
+      if (!isEditing) return;
       e.preventDefault();
       e.returnValue = '';
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isEditing]);
 
-  /**
-   * Effect to prevent accidental back/forward navigation via trackpad swipe
-   * when in edit mode.
-   */
   useEffect(() => {
     const preventSwipeNavigation = (e) => {
-      if (!isEditing) {
-        return;
-      }
-
+      if (!isEditing) return;
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && e.deltaX !== 0) {
         e.preventDefault();
       }
     };
-
     window.addEventListener('wheel', preventSwipeNavigation, { passive: false });
-
     return () => {
       window.removeEventListener('wheel', preventSwipeNavigation);
     };
-  }, [isEditing]); 
+  }, [isEditing]);
 
-  /**
-   * Effect to add keyboard shortcuts for undo (Ctrl+Z) and redo (Ctrl+Y).
-   * Shortcuts are disabled when a modal is open or when typing in an input field.
-   */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (showConfirmModal || showDefineCodeModal || showMemoModal || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (showConfirmModal || showDefineCodeModal || showMemoModal || (e.target.tagName === 'INPUT' && isEditing)) {
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      if (isCtrlOrMeta && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        undo();
+        if (isEditing) {
+          handleEditorUndo();
+        } else {
+          undo();
+        }
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+
+      if (isCtrlOrMeta && e.key.toLowerCase() === 'y') {
         e.preventDefault();
-        redo();
+        if (isEditing) {
+          handleEditorRedo();
+        } else {
+          redo();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [undo, redo, showConfirmModal, showDefineCodeModal, showMemoModal]);
+  }, [
+    isEditing, undo, redo, handleEditorUndo, handleEditorRedo, 
+    showConfirmModal, showDefineCodeModal, showMemoModal
+  ]);
 
-  /**
-   * Effect to handle the mouse events for resizing the left panel.
-   */
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing) return;
@@ -237,11 +338,7 @@ const ProjectView = () => {
       if (newWidth > MAX_WIDTH) newWidth = MAX_WIDTH;
       setLeftPanelWidth(newWidth);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
+    const handleMouseUp = () => setIsResizing(false);
     if (isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
@@ -257,9 +354,6 @@ const ProjectView = () => {
     setIsResizing(true);
   };
 
-  /**
-   * Toggles the local storage preference for showing the code tooltip on hover.
-   */
   const handleToggleCodeTooltip = () => {
     setShowCodeTooltip(prev => {
       const newValue = !prev;
@@ -268,108 +362,37 @@ const ProjectView = () => {
     });
   };
 
-  /**
-   * Effect to synchronize the text selection in the editor with the current search match.
-   * When in edit mode, if the user navigates to a new search result, this effect
-   * will programmatically focus, select, and scroll to the text of that match.
-   */
-  useEffect(() => {
-    if (!isEditing || !viewerSearchMatches || viewerSearchMatches.length === 0 || currentMatchIndex < 0) return;
-    const match = viewerSearchMatches[currentMatchIndex];
-    const textarea = textareaRef?.current;
-    if (!textarea || !match) return;
-
-    if (document.activeElement !== viewerSearchInputRef?.current) {
-      textarea.focus();
-    }
-
-    const safeStart = Math.max(0, Math.min(match.startIndex, textarea.value.length));
-    const safeEnd = Math.max(0, Math.min(match.endIndex, textarea.value.length));
-
-    try {
-      textarea.setSelectionRange(safeStart, safeEnd);
-    } catch (err) {
-      console.warn('setSelectionRange failed', err);
-    }
-
-    requestAnimationFrame(() => {
-      try {
-        const mirror = document.createElement('div');
-        const style = window.getComputedStyle(textarea);
-        const propsToCopy = [
-          'boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-          'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-          'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing',
-          'textTransform', 'textIndent', 'whiteSpace'
-        ];
-        propsToCopy.forEach(p => {
-          mirror.style[p] = style[p];
-        });
-
-        mirror.style.position = 'absolute';
-        mirror.style.visibility = 'hidden';
-        mirror.style.overflow = 'hidden';
-        mirror.style.whiteSpace = 'pre-wrap';
-        mirror.style.wordWrap = 'break-word';
-        mirror.style.top = '0';
-        mirror.style.left = '-99999px';
-        mirror.style.width = `${textarea.clientWidth}px`; 
-
-        const textUpToMatch = textarea.value.substring(0, safeStart);
-        const MAX_CHARS = 20000;
-        const sliceStart = Math.max(0, textUpToMatch.length - MAX_CHARS);
-        const sliceText = textUpToMatch.slice(sliceStart);
-        const prefix = sliceStart > 0 ? '\n' : '';
-
-        mirror.textContent = prefix + sliceText;
-
-        document.body.appendChild(mirror);
-
-        const topOfMatch = mirror.offsetHeight;
-        const viewportHeight = textarea.clientHeight;
-        const desired = Math.max(0, topOfMatch - Math.floor(viewportHeight * 0.33));
-
-        textarea.scrollTop = desired;
-
-        document.body.removeChild(mirror);
-      } catch (err) {
-        console.error('Fallback scroll-to-match failed', err);
-        try {
-          const ratio = safeStart / Math.max(1, textarea.value.length);
-          textarea.scrollTop = Math.floor((textarea.scrollHeight - textarea.clientHeight) * ratio);
-        } catch (e) {
-        }
-      }
-    });
-  }, [currentMatchIndex, viewerSearchMatches, isEditing, viewerSearchInputRef, textareaRef]);
-
-  /**
-   * Initiates the document editing mode for a given file and displays an
-   * informational confirmation modal to the user.
-   * @param {object} file - The file object to be edited.
-   */
   function enterEditMode(file) {
-    setFileInEditMode(file);
+    const fileForSelection = {
+      ...file,
+      _id: file.isStaged ? 'staged-file' : file._id,
+    };
+
+    setFileInEditMode(fileForSelection);
     setEditedContent(file.content);
-    handleSelectFile(file);
+    handleSelectFile(fileForSelection); 
+    setHistory({ undoStack: [], redoStack: [] });
     setConfirmModalData({
-      title: 'Entering Edit Mode',
-      shortMessage: "Your document is now ready for edits. Please make any corrections or formatting changes now. Once you save, the document will be locked and you won't be able to edit it again.",
-      onConfirm: () => {
-        setShowConfirmModal(false);
-      },
+      title: 'Edit Your Document',
+      shortMessage: (
+        <p className="text-base leading-relaxed">
+          Your document is now in <strong>edit mode</strong>. This is your opportunity to refine the text before it's finalized.
+          <br /><br />
+          <span className="block text-center font-black uppercase tracking-wide text-gray-800 dark:text-gray-100">
+            PLEASE MAKE ANY CORRECTIONS OR FORMATTING CHANGES NOW.
+          </span>
+          <br />
+          After saving, this version will be committed to your project, and its <strong>content will be locked</strong> from further edits.
+        </p>
+      ),
       confirmText: 'Got It!',
       showCancelButton: false,
-      showInput: false,
-      showCheckbox: false,
+      onConfirm: () => setShowConfirmModal(false),
     });
     setShowConfirmModal(true);
+
   }
 
-  /**
-   * Displays a confirmation modal to restore all user preferences to their
-   * default settings, including warnings and UI toggles.
-   */
   const handleRestoreDefaults = () => {
     setShowPreferencesModal(false);
     setConfirmModalData({
@@ -396,35 +419,20 @@ const ProjectView = () => {
     const viewportHeight = window.innerHeight;
     let top = rect.bottom + window.scrollY;
     let left = rect.left + window.scrollX;
-
-    if (left + panelWidth > viewportWidth - margin) {
-      left = viewportWidth - panelWidth - margin;
-    }
-    if (top + panelHeight > viewportHeight - margin) {
-      top = rect.top + window.scrollY - panelHeight - margin + 130;
-    }
-    if (top < window.scrollY + margin) {
-      top = window.scrollY + margin;
-    }
-    if (left < window.scrollX + margin) {
-      left = window.scrollX + margin;
-    }
+    if (left + panelWidth > viewportWidth - margin) left = viewportWidth - panelWidth - margin;
+    if (top + panelHeight > viewportHeight - margin) top = rect.top + window.scrollY - panelHeight - margin + 130;
+    if (top < window.scrollY + margin) top = window.scrollY + margin;
+    if (left < window.scrollX + margin) left = window.scrollX + margin;
     setSegmentToReassign(codeAnnotation);
     setFloatingAssignCodePosition({ top, left });
     setShowFloatingAssignCode(true);
   };
 
-  /**
-   * Displays a confirmation modal before saving edited document content.
-   * This action is destructive as it locks the file from future edits.
-   */
   const handleSaveInitiate = () => {
     setConfirmModalData({
       title: 'Confirm Save',
       shortMessage: "This action will finalize the document and permanently lock it from any further edits. Are you sure you want to proceed?",
       onConfirm: handleSaveConfirm,
-      showInput: false,
-      showCheckbox: true,
       isCheckboxRequired: true,
       checkboxLabel: "I understand and wish to lock this document.",
       confirmText: 'Save and Lock',
@@ -433,24 +441,28 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Finalizes the save operation after user confirmation, updating the file
-   * content and exiting edit mode.
-   */
   const handleSaveConfirm = async () => {
-    if (!fileInEditMode) return;
-    await handleUpdateFileContent(fileInEditMode._id, editedContent);
-    setFileInEditMode(null);
-    setShowConfirmModal(false);
-    fetchProject();
-  };
+  if (!fileInEditMode) return;
 
-  /**
-   * Shows a confirmation modal before initiating the code splitting workflow.
-   * The actual process starts only after user confirmation.
-   * @param {string} sourceCodeId - The ID of the code definition to be split.
-   * @param {Array<object>} newCodes - The new code definitions to be created.
-   */
+  if (fileInEditMode.isStaged) {
+    const fileToCommit = {
+      name: fileInEditMode.name,
+      content: editedContent,
+      sourceType: fileInEditMode.sourceType,
+      audioUrl: fileInEditMode.audioUrl || null,
+      words: fileInEditMode.words || null,
+    };
+    await handleCommitNewFile(fileToCommit);
+  } else {
+    await handleUpdateFileContent(fileInEditMode._id, editedContent);
+  }
+
+  setFileInEditMode(null);
+  setShowConfirmModal(false);
+  setHistory({ undoStack: [], redoStack: [] });
+  setShowFormattingTip(false); 
+};
+
   const handleInitiateSplit = (sourceCodeId, newCodes) => {
     setShowSplitMergeModal(false);
     setConfirmModalData({
@@ -479,10 +491,6 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Finalizes the split operation after the user has reviewed all segments.
-   * @param {object} assignments - An object mapping original segment IDs to new code names.
-   */
   const handleCompleteSplit = async (assignments) => {
     const result = await handleSplitCodes({
       sourceCodeId: splitReviewData.sourceCode._id,
@@ -503,10 +511,6 @@ const ProjectView = () => {
     }
   };
 
-  /**
-   * Shows a confirmation modal before executing the merge operation.
-   * @param {object} mergeData - Data for the merge operation from the modal.
-   */
   const handleMerge = async (mergeData) => {
     setShowSplitMergeModal(false);
     setConfirmModalData({
@@ -544,10 +548,7 @@ const ProjectView = () => {
   };
 
   const handleExportToExcel = async (viewType) => {
-    if (!project || !user) {
-      console.error("Project data or user not available for export.");
-      return;
-    }
+    if (!project || !user) return;
     try {
       const response = await axios.get(
         `/api/projects/${projectId}/export-coded-segments?format=${viewType}`, {
@@ -562,11 +563,6 @@ const ProjectView = () => {
     }
   };
 
-  /**
-   * Handles a click on a timestamped line in the document viewer.
-   * Calls the seekToTime method on the AudioPlayer component instance.
-   * @param {number} seconds - The time in seconds to seek to.
-   */
   const handleTimestampClick = useCallback((seconds) => {
     if (audioPlayerRef.current) {
       audioPlayerRef.current.seekToTime(seconds);
@@ -639,6 +635,10 @@ const ProjectView = () => {
             selectedFileId={selectedFileId}
             handleSelectFile={handleSelectFile}
             handleDeleteFile={handleDeleteFile}
+            handleRenameFile={handleRenameFile}
+            handlePinFile={handlePinFile}
+            pinnedFiles={pinnedFiles}
+            handleExportFile={handleExportFile}
             showCodeDefinitions={showCodeDefinitions}
             setShowCodeDefinitions={setShowCodeDefinitions}
             codeDefinitions={codeDefinitions}
@@ -667,6 +667,7 @@ const ProjectView = () => {
             setShowCodeDetailsModal={setShowCodeDetailsModal}
             setShowSplitMergeModal={setShowSplitMergeModal}
             isEditing={isEditing}
+            fileInEditMode={fileInEditMode}
           />
 
           <div className="flex flex-1 flex-col gap-3 overflow-hidden">
@@ -674,10 +675,30 @@ const ProjectView = () => {
               <EditToolbar
                 onSave={handleSaveInitiate}
                 hasUnsavedChanges={editedContent !== fileInEditMode.content}
+                onUndo={handleEditorUndo}
+                onRedo={handleEditorRedo}
+                canUndo={history.undoStack.length > 0}
+                canRedo={history.redoStack.length > 0}
+                initialShowTip={showFormattingTip}
+                onDismissTip={() => setShowFormattingTip(false)}
+                showFind={showFind}
+                onToggleFind={handleToggleFind}
+                showFindReplace={showFindReplace}
+                onToggleFindReplace={handleToggleFindReplace}
+                findQuery={findQuery}
+                onFindChange={(e) => setFindQuery(e.target.value)}
+                replaceQuery={replaceQuery}
+                onReplaceChange={(e) => setReplaceQuery(e.target.value)}
+                onFindNext={handleFindNext}
+                onFindPrev={handleFindPrev}
+                onReplaceOne={handleReplaceOne}
+                onReplaceAll={handleReplaceAll}
+                matchesCount={findMatches.length}
+                currentMatchIndex={currentFindIndex}
               />
             )}
             <DocumentViewer
-              textareaRef={textareaRef} 
+              textareaRef={textareaRef}
               isEditing={isEditing}
               content={isEditing ? editedContent : selectedContent}
               onContentChange={(e) => setEditedContent(e.target.value)}
@@ -731,7 +752,7 @@ const ProjectView = () => {
               onRedo={redo}
               canUndo={canUndo}
               canRedo={canRedo}
-              handleCreateMemoForSegment={handleCreateMemoForSegment} 
+              handleCreateMemoForSegment={handleCreateMemoForSegment}
               hasAudio={!!selectedFileAudioUrl}
               onTimestampClick={handleTimestampClick}
             />
@@ -780,6 +801,8 @@ const ProjectView = () => {
                 title: 'Define Code Error',
                 shortMessage: 'Please select a document to define a code.',
                 onConfirm: () => setShowConfirmModal(false),
+                confirmText: 'OK',
+                showCancelButton: false
               });
               setShowConfirmModal(true);
               return;

@@ -19,6 +19,7 @@ import { FaCircleInfo } from 'react-icons/fa6';
  * @param {string} [props.promptText="I understand"] - The exact string the user must type into the input field to enable confirmation.
  * @param {string} [props.confirmText='Confirm'] - The text displayed on the confirmation button.
  * @param {boolean} [props.showCancelButton=true] - If true, displays the "Cancel" button.
+ * @param {Array<object>} [props.customButtons=[]] - An array of objects to render additional custom buttons.
  * @param {boolean} [props.showCheckbox=false] - If true, displays a checkbox.
  * @param {string} [props.checkboxLabel='I confirm and agree to proceed.'] - The label for the checkbox.
  * @param {boolean} [props.isCheckboxRequired=false] - If true, the checkbox must be checked to enable confirmation.
@@ -35,6 +36,7 @@ const ConfirmationModal = ({
   promptText = "I understand",
   confirmText = 'Confirm',
   showCancelButton = true,
+  customButtons = [],
   showCheckbox = false,
   checkboxLabel = 'I confirm and agree to proceed.',
   isCheckboxRequired = false,
@@ -53,6 +55,24 @@ const ConfirmationModal = ({
       setIsChecked(false);
     }
   }, [show]);
+
+  /**
+   * Safely handles the confirmation action. It checks if `onConfirm` is a valid
+   * function before calling it. If not, it logs a warning and falls back to
+   * closing the modal to prevent application crashes.
+   */
+  const handleConfirm = () => {
+    if (typeof onConfirm === 'function') {
+      onConfirm(isChecked);
+    } else {
+      console.warn(
+        "ConfirmationModal: 'onConfirm' prop is not a function. Falling back to onClose."
+      );
+      if (typeof onClose === 'function') {
+        onClose();
+      }
+    }
+  };
 
   const isConfirmDisabled =
     (showInput && inputValue !== promptText) ||
@@ -132,8 +152,17 @@ const ConfirmationModal = ({
             )}
 
             <div className="flex justify-center gap-4">
+              {customButtons.map((button, index) => (
+                <button
+                  key={index}
+                  onClick={button.onClick}
+                  className={`rounded-lg px-4 py-2 font-semibold text-white transition-all duration-200 ease-in-out hover:scale-105 ${button.className || 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  {button.text}
+                </button>
+              ))}
               <button
-                onClick={() => onConfirm(isChecked)}
+                onClick={handleConfirm}
                 disabled={isConfirmDisabled}
                 className={`
                   rounded-lg px-4 py-2 font-semibold text-white transition-all duration-200 ease-in-out
@@ -157,5 +186,25 @@ const ConfirmationModal = ({
     </AnimatePresence>
   );
 };
+
+/**
+ * Default props for the ConfirmationModal component. This ensures that the
+ * component has fallback values for essential functions, preventing errors
+ * if they are not passed by the parent component.
+ */
+ConfirmationModal.defaultProps = {
+  onClose: () => {},
+  onConfirm: () => {},
+  customButtons: [],
+  detailedMessage: '',
+  showInput: false,
+  promptText: "I understand",
+  confirmText: 'Confirm',
+  showCancelButton: true,
+  showCheckbox: false,
+  checkboxLabel: 'I confirm and agree to proceed.',
+  isCheckboxRequired: false,
+};
+
 
 export default ConfirmationModal;

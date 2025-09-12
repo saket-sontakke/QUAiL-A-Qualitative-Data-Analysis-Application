@@ -29,7 +29,7 @@ const formatXAxisTick = (tick) => {
  */
 const CustomAxisTick = ({ x, y, payload, isDarkMode }) => {
   const label = payload.value;
-  const maxCharsPerLine = 12; // Adjust this value to control wrapping
+  const maxCharsPerLine = 12;
   const words = label.split(' ');
   const lines = [];
   let currentLine = '';
@@ -44,8 +44,7 @@ const CustomAxisTick = ({ x, y, payload, isDarkMode }) => {
   });
   lines.push(currentLine);
 
-  // Set the tick color based on the dark mode prop
-  const tickColor = isDarkMode ? "#D1D5DB" : "#4B5563"; // gray-300 for dark, gray-600 for light
+  const tickColor = isDarkMode ? "#D1D5DB" : "#4B5563";
 
   return (
     <g transform={`translate(${x},${y + 15})`}>
