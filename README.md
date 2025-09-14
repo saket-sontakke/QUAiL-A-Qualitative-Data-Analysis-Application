@@ -28,7 +28,7 @@
 
 ## Landing page
 
-https://github.com/user-attachments/assets/6a0c76ab-b028-4ea2-acdc-a5d915714393
+https://github.com/user-attachments/assets/61d2f078-23f1-456c-9890-b504e1b1734c
 
 <img width="1893" height="930" alt="image" src="https://github.com/user-attachments/assets/85e81453-b9f7-4b72-8e19-640e4a276595" />
 
