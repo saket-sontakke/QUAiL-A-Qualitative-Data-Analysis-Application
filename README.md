@@ -20,7 +20,7 @@
 | #4 | • Memos (Create, Edit, Delete) <br> • Export Code Segments/Memos <br> • UI Updates | • No visualizations <br> • Lacks Audio file support |
 | #5 | • Major Refactoring of code for Maintainability and Separation of Concerns (SOC) <br> • Coded Segments Overview Table <br> • Visualizations <br> • Theme Toggle <br> • Automated Frontend and Backend Testing | • Lacks Audio file support <br> • No statistical tests for quantitative validation <br> • No advanced codebook management <br> • No Landing page |
 | #6 | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Integrated statistical tests <br> • Dynamic codebook <br> • Attractive Landing page | • Lacks an interactive Code Matrix <br> • No feature to pin/rename/export document viewer files <br> • Lacks find and replace functionality in the edit mode |
-| #7 | • Interactive Code Matrix <br> • Pin, rename, and export files from document viewer <br> • Find and Replace functionality in edit mode <br> | • Poor audio file edit mode (Integrity Issues) <br> • No feature to make Copy of Project |
+| #7 | • Interactive Code Matrix <br> • Pin, rename, and export files from document viewer <br> • Find and Replace functionality in edit mode <br> | • Poor audio file edit mode (Integrity Issues) <br> • No feature to make Copy of Project <br> • Lacks an Admin Dashboard <br> |
 | #8 | • Enhanced Edit Mode <br> • Copy of project feature <br> • SOC, Code reorganization <br> | • (To be updated) <br> |
 
 ---
