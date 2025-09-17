@@ -10,6 +10,12 @@
 
 ---
 
+## Architecture Diagram
+
+<img width="2048" height="1380" alt="Architecture (2)" src="https://github.com/user-attachments/assets/53d445d3-44fe-4abe-ab6d-cb60a46722df" />
+
+---
+
 ### Iteration Plan
 
 | Iteration No. | Iteration Plan | Limitations of the Iteration |
