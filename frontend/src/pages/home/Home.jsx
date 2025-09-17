@@ -14,7 +14,7 @@ import { FaSitemap } from "react-icons/fa6";
 import { LuWorkflow } from "react-icons/lu";
 import { BiSolidBarChartAlt2 } from "react-icons/bi";
 import { useAuth } from "../auth/AuthContext";
-import Logo from "../theme/Logo";
+import Logo from "../theme/Logo.jsx";
 import HomePageAnimation from "./HomePageAnimation";
 import TextType from "./TextType.jsx";
 import "./TextType.css";
