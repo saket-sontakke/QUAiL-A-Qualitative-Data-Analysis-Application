@@ -119,7 +119,7 @@ export const useStatsLogic = ({ projectId }) => {
       if (!token) throw new Error("Authentication failed.");
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const payload = { ...getChiSquarePayload(), validateOnly: true, codeCombinations: combinations };
-      const { data } = await axios.post('/api/stats/run', payload, config);
+      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/stats/run`, payload, config);
       setValidationStatus({
         ...data.validationResults,
         independence: { status: 'passed', message: 'You confirmed that each document represents a distinct observation.' },
@@ -157,7 +157,7 @@ export const useStatsLogic = ({ projectId }) => {
       if (!token) throw new Error("Authentication failed.");
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const payload = getChiSquarePayload(testSubtype);
-      const { data } = await axios.post('/api/stats/run', payload, config);
+      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/stats/run`, payload, config);
       setResults(data);
       setValidationStatus(null);
     } catch (err) {
