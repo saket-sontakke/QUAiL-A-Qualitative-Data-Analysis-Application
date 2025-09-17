@@ -131,7 +131,7 @@ const FloatingMemoInput = ({ x, y, onClose, onSave, selectionInfo, allMemos = []
           <div className="mt-auto flex justify-end">
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-md bg-cyan-700 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623] px-4 py-2 text-sm text-white transition-colors"
+              className="flex items-center gap-2 rounded-md bg-cyan-800 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623] px-4 py-2 text-sm text-white transition-colors"
 
             >
               <FaSave /> Save

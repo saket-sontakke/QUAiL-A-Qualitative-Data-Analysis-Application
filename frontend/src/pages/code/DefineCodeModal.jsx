@@ -168,7 +168,7 @@ const DefineCodeModal = ({ show, onClose, onSave, initialCode = null, onBackendE
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-green-600 px-5 py-2 text-white transition hover:bg-green-700"
+                  className="rounded-lg bg-cyan-800 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623] px-5 py-2 text-white transition"
                 >
                   {initialCode ? 'Update Code' : 'Save Code'}
                 </button>

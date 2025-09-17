@@ -34,7 +34,7 @@ const GoodnessOfFitChart = ({ results }) => {
 
   return (
     <div>
-      <h5 className="mb-2 text-center font-semibold">Observed vs. Expected Frequencies</h5>
+      <h5 className="no-export mb-2 text-center font-semibold">Observed vs. Expected Frequencies</h5>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -78,21 +78,8 @@ const ContingencyChart = ({ results }) => {
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="no-export mb-2">
         <h5 className="text-left font-semibold">Observed Frequencies by Group/Document</h5>
-        <div className="flex items-center gap-2 text-xs">
-          <span>Grouped</span>
-          <button
-            onClick={() => setIsStacked(!isStacked)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isStacked ? 'bg-gray-600' : 'bg-gray-400'}`}
-            title={`Switch to ${isStacked ? 'Grouped' : 'Stacked'} View`}
-          >
-            <span
-              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isStacked ? 'translate-x-5' : 'translate-x-1'}`}
-            />
-          </button>
-          <span>Stacked</span>
-        </div>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
@@ -112,6 +99,22 @@ const ContingencyChart = ({ results }) => {
           ))}
         </BarChart>
       </ResponsiveContainer>
+
+      <div className="no-export mt-2 flex justify-end">
+        <div className="flex items-center gap-2 text-xs">
+          <span>Grouped</span>
+          <button
+            onClick={() => setIsStacked(!isStacked)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isStacked ? 'bg-gray-600' : 'bg-gray-400'}`}
+            title={`Switch to ${isStacked ? 'Grouped' : 'Stacked'} View`}
+          >
+            <span
+              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isStacked ? 'translate-x-5' : 'translate-x-1'}`}
+            />
+          </button>
+          <span>Stacked</span>
+        </div>
+      </div>
     </div>
   );
 };

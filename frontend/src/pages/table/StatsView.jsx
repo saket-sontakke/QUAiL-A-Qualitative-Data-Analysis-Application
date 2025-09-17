@@ -4,7 +4,7 @@ import { FaTable, FaChartBar, FaThList, FaExclamationTriangle, FaFileAlt, FaTags
 import ChiSquareTypeSelector from '../stats/chi-squared/ChiSquareTypeSelector.jsx';
 import ChiSquareControlPanel from '../stats/chi-squared/ChiSquareControlPanel.jsx';
 import StatsResultsPanel from '../stats/StatsResultsPanel.jsx';
-import { useStatsLogic } from './hooks/useStatsLogic.js';
+import { useStatsLogic } from '../hooks/useStatsLogic.js';
 
 const ProjectStatsSummary = ({ stats, onProceed }) => {
     const summaryMetrics = [
@@ -42,7 +42,7 @@ const ProjectStatsSummary = ({ stats, onProceed }) => {
                 </div>
                 <button
                     onClick={onProceed}
-                    className="bg-[#D94A1F] hover:bg-[#F05623] text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex items-center text-base flex-shrink-0"
+                    className="bg-[#d34715] hover:bg-[#F05623] text-white font-bold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex items-center text-base flex-shrink-0"
                 >
                     Proceed to Test Selection <FaArrowRight className="ml-3" />
                 </button>
@@ -445,6 +445,7 @@ const StatsView = forwardRef(function StatsView({
             onRevalidate={handleRevalidateWithCombinations}
             isValidateDisabled={areChiSquareInputsIncomplete}
             isValidationPassed={isValidationPassed}
+            projectName={project.name}
           />
         );
     }

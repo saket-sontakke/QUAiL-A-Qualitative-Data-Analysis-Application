@@ -6,6 +6,23 @@ import ThemeToggle from '../theme/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import Logo from '../theme/Logo.jsx';
 
+/**
+ * A responsive, fixed-position navigation bar for the application. It displays
+ * the app logo, contextual project controls, a theme toggler, and a user profile
+ * dropdown for authenticated users. It also handles navigation interception for
+ * unsaved changes.
+ *
+ * @param {object} props - The component props.
+ * @param {string} [props.projectName] - The name of the current project, displayed only on project views.
+ * @param {() => void} props.onOpenProjectOverviewModal - Callback to open the project overview modal.
+ * @param {() => void} props.onOpenPreferencesModal - Callback to open the user preferences modal.
+ * @param {boolean} props.isEditing - Flag indicating if there are unsaved changes, used to disable certain actions.
+ * @param {(path: string, options?: object) => void} [props.onNavigateAttempt] - Optional callback to intercept navigation, allowing for "unsaved changes" warnings.
+ * @param {() => void} [props.onLogoutAttempt] - Optional callback to intercept logout, for the same reason as onNavigateAttempt.
+ * @param {(show: boolean) => void} [props.setShowConfirmModal] - State setter to show a generic confirmation modal.
+ * @param {(data: object) => void} [props.setConfirmModalData] - State setter to configure the confirmation modal's content and actions.
+ * @returns {JSX.Element} The rendered navigation bar component.
+ */
 const Navbar = ({
   projectName,
   onOpenProjectOverviewModal,
@@ -24,6 +41,9 @@ const Navbar = ({
 
   const isProjectView = location.pathname.startsWith('/project/');
 
+  /**
+   * Effect to handle clicks outside the profile dropdown to close it.
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
@@ -36,8 +56,17 @@ const Navbar = ({
     };
   }, []);
 
+  /**
+   * Toggles the visibility of the user profile dropdown.
+   */
   const toggleProfile = () => setShowProfile(!showProfile);
 
+  /**
+   * Handles navigation requests. If a special onNavigateAttempt handler is provided,
+   * it's used to allow checking for unsaved changes. Otherwise, it navigates directly.
+   * @param {string} path - The destination path.
+   * @param {object} [options] - Optional navigation options (e.g., state).
+   */
     const handleNavigation = (path, options) => {
     if (typeof onNavigateAttempt === 'function') {
       onNavigateAttempt(path, options);
@@ -46,7 +75,11 @@ const Navbar = ({
     }
   };
 
-
+  /**
+   * Handles the logout process. It prioritizes the onLogoutAttempt prop to check for
+   * unsaved changes. If not available, it uses the provided modal setters to confirm
+   * the logout action. As a fallback, it performs a direct logout.
+   */
   const handleLogout = () => {
     if (typeof onLogoutAttempt === 'function') {
       onLogoutAttempt();

@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import CustomTooltip from '../components/CustomTooltip.jsx';
+import CodeTooltip from '../code/CodeTooltip.jsx';
 import { FaStickyNote, FaTrashAlt } from 'react-icons/fa';
 import { RiStickyNoteAddFill } from "react-icons/ri";
 import { MdOutlineSwapHoriz } from "react-icons/md";
 import DocumentToolbar from './DocumentToolbar.jsx';
+import TranscriptEditor from './edit-mode/TranscriptEditor.jsx';
 
 /**
  * The primary component for displaying and interacting with document content.
@@ -57,7 +58,7 @@ import DocumentToolbar from './DocumentToolbar.jsx';
  * @param {() => void} props.handleViewerMouseUp - Mouse up event handler on the viewer to process text selections.
  * @param {boolean} props.isEditing - Flag indicating if the viewer is in text-editing mode.
  * @param {string} props.content - The content being edited in the textarea.
- * @param {(e: React.ChangeEvent<HTMLTextAreaElement>) => void} props.onContentChange - Handler for changes to the textarea content.
+ * @param {(newContent: string) => void} props.onContentChange - Handler for changes to the textarea content.
  * @param {() => void} props.onUndo - Callback for the undo action.
  * @param {() => void} props.onRedo - Callback for the redo action.
  * @param {boolean} props.canUndo - Flag indicating if an undo action is available.
@@ -129,7 +130,7 @@ const DocumentViewer = ({
   const hoverTimeoutRef = useRef(null);
   const [tooltipData, setTooltipData] = useState({ visible: false, codes: [] });
 
-  const transcriptLineRegex = /^(\[.+?\]\s+Speaker\s+[A-Z]:)/;
+  const transcriptLineRegex = /^(\[.+?\]\s*.+?:)/;
 
   const handleCodeMouseEnter = (codes) => {
     if (!showCodeTooltip) return;
@@ -380,7 +381,7 @@ const DocumentViewer = ({
       ...viewerSearchMatches.map(m => ({ ...m, type: 'search' }))
     ];
 
-    const blocks = selectedContent.split(/(?=\[[^\]]+\]\s+Speaker\s+[A-Z]:)/g).filter(block => block.trim() !== '');
+    const blocks = selectedContent.split(/(?=\[[^\]]+\]\s*.+?:)/g).filter(block => block.trim() !== '');
     const isTranscript = blocks.length > 0 && blocks.every(block => block.match(transcriptLineRegex));
 
     if (!isTranscript) {
@@ -475,62 +476,74 @@ const DocumentViewer = ({
 
   return (
     <div className={`flex flex-1 flex-col overflow-hidden rounded-xl shadow-md`}>
-      <CustomTooltip
+      <CodeTooltip
         visible={tooltipData.visible}
         codes={tooltipData.codes}
       />
-      <DocumentToolbar
-        isEditing={isEditing}
-        activeTool={activeTool}
-        setActiveTool={setActiveTool}
-        showCodeColors={showCodeColors}
-        setShowCodeColors={setShowCodeColors}
-        showCodeDropdown={showCodeDropdown}
-        setShowCodeDropdown={setShowCodeDropdown}
-        showHighlightColorDropdown={showHighlightColorDropdown}
-        setShowHighlightColorDropdown={setShowHighlightColorDropdown}
-        selectedHighlightColor={selectedHighlightColor}
-        setSelectedHighlightColor={setSelectedHighlightColor}
-        setActiveCodedSegmentId={setActiveCodedSegmentId}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        lineHeight={lineHeight}
-        setLineHeight={setLineHeight}
-        showLineHeightDropdown={showLineHeightDropdown}
-        setShowLineHeightDropdown={setShowLineHeightDropdown}
-        viewerSearchInputRef={viewerSearchInputRef}
-        viewerSearchQuery={viewerSearchQuery}
-        handleViewerSearchChange={handleViewerSearchChange}
-        viewerSearchMatches={viewerSearchMatches}
-        currentMatchIndex={currentMatchIndex}
-        goToPrevMatch={goToPrevMatch}
-        goToNextMatch={goToNextMatch}
-        handleClearViewerSearch={handleClearViewerSearch}
-        setShowFloatingToolbar={setShowFloatingToolbar}
-        setShowMemoModal={setShowMemoModal}
-        setShowFloatingAssignCode={setShowFloatingAssignCode}
-        setShowFloatingMemoInput={setShowFloatingMemoInput}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
+      {!isEditing && (
+        <DocumentToolbar
+          isEditing={isEditing}
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+          showCodeColors={showCodeColors}
+          setShowCodeColors={setShowCodeColors}
+          showCodeDropdown={showCodeDropdown}
+          setShowCodeDropdown={setShowCodeDropdown}
+          showHighlightColorDropdown={showHighlightColorDropdown}
+          setShowHighlightColorDropdown={setShowHighlightColorDropdown}
+          selectedHighlightColor={selectedHighlightColor}
+          setSelectedHighlightColor={setSelectedHighlightColor}
+          setActiveCodedSegmentId={setActiveCodedSegmentId}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          lineHeight={lineHeight}
+          setLineHeight={setLineHeight}
+          showLineHeightDropdown={showLineHeightDropdown}
+          setShowLineHeightDropdown={setShowLineHeightDropdown}
+          viewerSearchInputRef={viewerSearchInputRef}
+          viewerSearchQuery={viewerSearchQuery}
+          handleViewerSearchChange={handleViewerSearchChange}
+          viewerSearchMatches={viewerSearchMatches}
+          currentMatchIndex={currentMatchIndex}
+          goToPrevMatch={goToPrevMatch}
+          goToNextMatch={goToNextMatch}
+          handleClearViewerSearch={handleClearViewerSearch}
+          setShowFloatingToolbar={setShowFloatingToolbar}
+          setShowMemoModal={setShowMemoModal}
+          setShowFloatingAssignCode={setShowFloatingAssignCode}
+          setShowFloatingMemoInput={setShowFloatingMemoInput}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
+      )}
       <div
         ref={viewerRef}
-        onMouseUp={handleViewerMouseUp}
+        onMouseUp={isEditing && hasAudio ? null : handleViewerMouseUp}
         className="flex-1 overflow-y-auto bg-white p-6 pt-7 custom-scrollbar dark:bg-gray-800"
       >
         {isEditing ? (
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={onContentChange}
-            onClick={handleTextareaClick}
-            className="h-full w-full resize-none bg-transparent p-0 m-0 text-black focus:outline-none custom-scrollbar dark:text-gray-200"
-            style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
-            placeholder="You can edit the document here..."
-            title={hasAudio ? "Ctrl+Click (or ⌘+Click) on a line to seek audio" : ""}
-          />
+          hasAudio ? (
+            <TranscriptEditor
+              content={content}
+              onContentChange={onContentChange}
+              fontSize={fontSize}
+              lineHeight={lineHeight}
+              onTimestampClick={onTimestampClick}
+            />
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              onClick={handleTextareaClick}
+              className="h-full w-full resize-none bg-transparent p-0 m-0 text-black focus:outline-none custom-scrollbar dark:text-gray-200"
+              style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
+              placeholder="You can edit the document here..."
+              title={hasAudio ? "Ctrl+Click (or ⌘+Click) on a line to seek audio" : ""}
+            />
+          )
         ) : (
           <div
             className="text-black dark:text-gray-200"

@@ -61,7 +61,7 @@ const ChiSquareDistributionChart = ({ df, statistic, pValue }) => {
 
   return (
     <div>
-      <h5 className="mb-2 text-center font-semibold">Chi-Square Distribution (df={df})</h5>
+      <h5 className="no-export mb-2 text-center font-semibold">Chi-Square Distribution (df={df})</h5>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />

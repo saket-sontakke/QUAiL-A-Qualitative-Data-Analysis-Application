@@ -7,8 +7,8 @@ import { useTheme } from '../theme/ThemeContext.jsx';
 import TableView from './TableView.jsx';
 import VisualizationsView from './VisualizationsView.jsx';
 import StatsView from './StatsView.jsx';
-import { useStatsLogic } from './hooks/useStatsLogic.js';
-import { useTableData } from "./hooks/useTableData.js";
+import { useStatsLogic } from '../hooks/useStatsLogic.js';
+import { useTableData } from "../hooks/useTableData.js";
 
 const CodedSegmentsTableModal = ({
   show,
@@ -28,6 +28,7 @@ const CodedSegmentsTableModal = ({
   const [tableView, setTableView] = useState(isProjectOverview ? 'overall' : 'byDocument');
   const [showQualityPopup, setShowQualityPopup] = useState(false);
   const [statsResults, setStatsResults] = useState(null);
+  const [isChartAnimating, setIsChartAnimating] = useState(false);
 
   const visualizationsViewRef = useRef(null);
   const statsViewRef = useRef(null);
@@ -77,6 +78,7 @@ const CodedSegmentsTableModal = ({
                   codeDefinitions={codeDefinitions}
                   baseNameForDownload={baseNameForDownload}
                   isDarkMode={theme === 'dark'}
+                  setIsChartAnimating={setIsChartAnimating}
                 />;
       case "stats":
         return isProjectOverview ?
@@ -100,8 +102,6 @@ const CodedSegmentsTableModal = ({
     }
   };
 
-  const isChartAnimating = visualizationsViewRef.current?.getIsChartAnimating() ?? false;
-
   return (
     <AnimatePresence>
       {show && (
@@ -120,7 +120,6 @@ const CodedSegmentsTableModal = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 relative">
-              {/* --- MODIFICATION 3: Make the back button's visibility conditional and its action simpler. --- */}
               {isProjectOverview && activeTab === 'stats' && statsView !== 'summary' && (
                 <button
                   onClick={handleStatsBack}

@@ -9,7 +9,7 @@ import EditProjectModal from './EditProjectModal.jsx';
 import CreateProjectModal from './CreateProjectModal.jsx';
 import {
   FaSearch, FaTh, FaList, FaPlus, FaEdit, FaTrash, FaCalendarAlt,
-  FaSortAlphaDown, FaSortAlphaDownAlt, FaSortAmountDown, FaSortAmountDownAlt, FaCheck, FaTimes
+  FaSortAlphaDown, FaSortAlphaDownAlt, FaSortAmountDown, FaSortAmountDownAlt, FaCheck, FaTimes, FaCopy
 } from 'react-icons/fa';
 
 /**
@@ -29,7 +29,7 @@ const RenderSortIcon = ({ sortConfig }) => {
 
 /**
  * Renders the main projects dashboard, allowing users to view, create,
- * edit, delete, search, and sort their projects.
+ * edit, delete, copy, search, and sort their projects.
  * @returns {JSX.Element} The rendered projects dashboard component.
  */
 const Projects = () => {
@@ -43,6 +43,8 @@ const Projects = () => {
   const [projectToEdit, setProjectToEdit] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [projectToCopy, setProjectToCopy] = useState(null);
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutConfirmData, setLogoutConfirmData] = useState({});
@@ -172,6 +174,32 @@ const Projects = () => {
     }
   };
 
+  const handleCopyProject = async (includeAnnotations) => {
+    const token = user?.token;
+    if (!token || !projectToCopy) {
+      setError("Authentication error or no project selected.");
+      setShowCopyModal(false);
+      return;
+    }
+    
+    setShowCopyModal(false);
+
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToCopy._id}/copy`,
+        { includeAnnotations },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setProjects(prevProjects => [res.data, ...prevProjects]);
+      setProjectToCopy(null);
+
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to copy project.");
+      setProjectToCopy(null);
+    }
+  };
+
   const openEditModal = (project) => {
     setProjectToEdit(project);
     setShowEditModal(true);
@@ -180,6 +208,11 @@ const Projects = () => {
   const confirmDelete = (id) => {
     setProjectToDelete(id);
     setShowDeleteModal(true);
+  };
+
+  const openCopyModal = (project) => {
+    setProjectToCopy(project);
+    setShowCopyModal(true);
   };
 
   const handleSortChange = (key, direction) => {
@@ -217,10 +250,10 @@ const Projects = () => {
               )}
             </div>
             <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button onClick={() => setViewMode('tiles')} className={`p-2 rounded-md ${viewMode === 'tiles' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`} aria-label="Tile view">
+              <button onClick={() => setViewMode('tiles')} className={`p-2 rounded-md ${viewMode === 'tiles' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`} aria-label="Tile view" title="Tile View">
                 <FaTh className={viewMode === 'tiles' ? 'text-[#F05623]' : 'text-gray-500'} />
               </button>
-              <button onClick={() => setViewMode('list')} className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`} aria-label="List view">
+              <button onClick={() => setViewMode('list')} className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`} aria-label="List view" title="List View">
                 <FaList className={viewMode === 'list' ? 'text-[#F05623]' : 'text-gray-500'} />
               </button>
             </div>
@@ -268,7 +301,7 @@ const Projects = () => {
             <div className="flex-grow"></div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center justify-center gap-2 transform rounded-lg bg-[#F05623] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#d74918]"
+              className="flex items-center justify-center gap-2 transform rounded-lg bg-[#d34715] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#F05623]"
             >
               <FaPlus className="text-sm" />
               Create Project
@@ -295,7 +328,7 @@ const Projects = () => {
                 <Link to={`/project/${project._id}`} key={project._id} className="block">
                   <motion.div className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
                     <div>
-                      <h2 className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
+                      <h2 title={project.name} className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
                       {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
                       <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                         <div className="flex items-center"><FaCalendarAlt className="mr-1.5 flex-shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
@@ -304,6 +337,7 @@ const Projects = () => {
                     </div>
                     <div className="mt-6 flex items-center justify-end">
                       <div className="flex space-x-4">
+                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex items-center gap-1.5 text-sm text-blue-600 transition hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"><FaCopy />Copy</button>
                         <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"><FaEdit />Edit</button>
                         <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"><FaTrash />Delete</button>
                       </div>
@@ -322,7 +356,7 @@ const Projects = () => {
                     <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
+                          <h3 title={project.name} className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
                           {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
                           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
                             <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
@@ -330,6 +364,7 @@ const Projects = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-4 flex-shrink-0">
+                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex items-center gap-1.5 text-sm text-blue-600 transition hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200" title="Copy Project"><FaCopy /><span className="hidden sm:inline">Copy</span></button>
                           <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200" title="Edit Project"><FaEdit /><span className="hidden sm:inline">Edit</span></button>
                           <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200" title="Delete Project"><FaTrash /><span className="hidden sm:inline">Delete</span></button>
                         </div>
@@ -354,6 +389,21 @@ const Projects = () => {
         onClose={() => setShowEditModal(false)}
         onConfirm={handleUpdateProject}
         project={projectToEdit}
+      />
+
+      <ConfirmationModal
+        show={showCopyModal}
+        onClose={() => {
+          setShowCopyModal(false);
+          setProjectToCopy(null);
+        }}
+        onConfirm={handleCopyProject}
+        title={`Copy Project "${projectToCopy?.name || ''}"`}
+        shortMessage="By default, all existing work will be copied. Uncheck the box below to include only the original source files."
+        confirmText="Copy"
+        showCheckbox={true}
+        checkboxLabel="Copy codes and annotations"
+        defaultChecked={true}
       />
 
       <ConfirmationModal

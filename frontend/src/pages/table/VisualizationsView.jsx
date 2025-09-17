@@ -16,12 +16,13 @@ import { BsKanban } from "react-icons/bs";
  * @param {Array<object>} props.codeDefinitions - The array of code definitions for color mapping.
  * @param {string} props.baseNameForDownload - The base name for downloaded files.
  * @param {boolean} props.isDarkMode - Flag indicating if dark mode is active.
+ * @param {Function} props.setIsChartAnimating - State setter from the parent component.
  * @param {React.Ref} ref - The ref forwarded from the parent component.
  * @returns {JSX.Element} The rendered visualizations view component.
  */
-const VisualizationsView = memo(forwardRef(function VisualizationsView({ codedSegments, codeDefinitions, baseNameForDownload, isDarkMode }, ref) {
+const VisualizationsView = memo(forwardRef(function VisualizationsView({ codedSegments, codeDefinitions, baseNameForDownload, isDarkMode, setIsChartAnimating }, ref) {
   const [selectedChart, setSelectedChart] = useState("bar");
-  const [isChartAnimating, setIsChartAnimating] = useState(false);
+  
   const chartContainerRef = useRef(null);
 
   const chartData = useMemo(() => {
@@ -38,8 +39,8 @@ const VisualizationsView = memo(forwardRef(function VisualizationsView({ codedSe
   const totalFrequency = codedSegments.length;
 
   const handleDownloadChart = async (pixelRatio) => {
-    if (isChartAnimating || !chartContainerRef.current) {
-      alert(isChartAnimating ? "Please wait for the chart to finish rendering." : "Chart container not found.");
+    if (!chartContainerRef.current) {
+      alert("Chart container not found.");
       return;
     }
     try {
@@ -63,7 +64,6 @@ const VisualizationsView = memo(forwardRef(function VisualizationsView({ codedSe
     downloadChart: (pixelRatio) => {
       handleDownloadChart(pixelRatio);
     },
-    getIsChartAnimating: () => isChartAnimating,
   }));
 
   const chartTypes = [

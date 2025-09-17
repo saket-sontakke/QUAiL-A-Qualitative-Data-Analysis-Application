@@ -40,27 +40,21 @@ const ConfirmationModal = ({
   showCheckbox = false,
   checkboxLabel = 'I confirm and agree to proceed.',
   isCheckboxRequired = false,
+  showConfirmButton = true,
+  defaultChecked = false,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [showDetails, setShowDetails] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [isChecked, setIsChecked] = useState(defaultChecked);
 
-  /**
-   * Effect to reset the modal's internal state whenever it becomes visible.
-   */
   useEffect(() => {
     if (show) {
       setInputValue('');
       setShowDetails(false);
-      setIsChecked(false);
+      setIsChecked(defaultChecked);
     }
-  }, [show]);
+  }, [show, defaultChecked]);
 
-  /**
-   * Safely handles the confirmation action. It checks if `onConfirm` is a valid
-   * function before calling it. If not, it logs a warning and falls back to
-   * closing the modal to prevent application crashes.
-   */
   const handleConfirm = () => {
     if (typeof onConfirm === 'function') {
       onConfirm(isChecked);
@@ -116,7 +110,7 @@ const ConfirmationModal = ({
                     initial={{ opacity: 0, height: 0, marginTop: 0 }}
                     animate={{ opacity: 1, height: 'auto', marginTop: '16px' }}
                     exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                    className="overflow-hidden rounded-md bg-gray-100 p-3 text-left text-xs dark:bg-gray-700"
+                    className="overflow-hidden rounded-md bg-gray-100 p-3 text-justify text-xs dark:bg-gray-700"
                   >
                     {detailedMessage}
                   </motion.div>
@@ -161,16 +155,18 @@ const ConfirmationModal = ({
                   {button.text}
                 </button>
               ))}
-              <button
-                onClick={handleConfirm}
-                disabled={isConfirmDisabled}
-                className={`
-                  rounded-lg px-4 py-2 font-semibold text-white transition-all duration-200 ease-in-out
-                  ${isConfirmDisabled ? 'cursor-not-allowed bg-gray-400 dark:bg-gray-600' : 'transform bg-red-600 hover:scale-105 hover:bg-red-700'}
-                `}
-              >
-                {confirmText}
-              </button>
+              {showConfirmButton && confirmText && (
+                <button
+                  onClick={handleConfirm}
+                  disabled={isConfirmDisabled}
+                  className={`
+                    rounded-lg px-4 py-2 font-semibold text-white transition-all duration-200 ease-in-out
+                    ${isConfirmDisabled ? 'cursor-not-allowed bg-gray-400 dark:bg-gray-600' : 'transform bg-red-600 hover:scale-105 hover:bg-red-700'}
+                  `}
+                >
+                  {confirmText}
+                </button>
+              )}
               {showCancelButton && (
                 <button
                   onClick={onClose}
@@ -204,6 +200,8 @@ ConfirmationModal.defaultProps = {
   showCheckbox: false,
   checkboxLabel: 'I confirm and agree to proceed.',
   isCheckboxRequired: false,
+  showConfirmButton: true,
+  defaultChecked: false,
 };
 
 

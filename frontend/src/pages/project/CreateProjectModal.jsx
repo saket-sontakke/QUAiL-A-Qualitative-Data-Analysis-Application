@@ -102,7 +102,7 @@ const CreateProjectModal = ({ show, onClose, onConfirm }) => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#F05623] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#d74918]"
+                  className="rounded-lg bg-[#d34715] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#F05623]"
                 >
                   Create Project
                 </button>

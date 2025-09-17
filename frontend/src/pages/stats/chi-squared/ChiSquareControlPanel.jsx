@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import SearchableMultiSelectDropdown from '../dropdown/SearchableMultiSelectDropdown.jsx';
-import SearchableMultiCodeDropdown from '../dropdown/SearchableMultiCodeDropdown.jsx';
+import SearchableMultiSelectDropdown from '../../components/SearchableMultiSelectDropdown.jsx';
+import SearchableMultiCodeDropdown from '../../components/SearchableMultiCodeDropdown.jsx';
 import { FaInfoCircle } from 'react-icons/fa';
 
 /**

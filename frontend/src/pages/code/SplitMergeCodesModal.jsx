@@ -302,7 +302,7 @@ const SplitMergeCodesModal = ({ show, onClose, codeDefinitions, onMerge, onIniti
                     </AnimatePresence>
                   </div>
                   <div className="flex justify-end">
-                    <button type="submit" className="rounded-md bg-cyan-900 px-4 py-2 text-white hover:bg-cyan-800 dark:bg-[#F05623] dark:hover:bg-orange-700">Merge Codes</button>
+                    <button type="submit" className="rounded-md px-4 py-2 text-white bg-cyan-800 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623]">Merge Codes</button>
                   </div>
                 </div>
               </motion.form>
@@ -389,7 +389,7 @@ const SplitMergeCodesModal = ({ show, onClose, codeDefinitions, onMerge, onIniti
                     </AnimatePresence>
                   </div>
                   <div className="mt-3 flex justify-end">
-                    <button type="submit" className="rounded-md bg-cyan-900 px-4 py-2 text-white hover:bg-cyan-800 dark:bg-[#F05623] dark:hover:bg-orange-700">Start Splitting Review</button>
+                    <button type="submit" className="rounded-md px-4 py-2 text-white bg-cyan-800 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623]">Start Splitting Review</button>
                   </div>
                 </div>
               </motion.form>

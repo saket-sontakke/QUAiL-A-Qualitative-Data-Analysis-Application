@@ -277,6 +277,7 @@ const StatsModal = ({ show, onClose, project, codeDefinitions, projectId }) => {
                 onRunTest={handleRunTest}
                 isValidateDisabled={areInputsIncomplete || isValidationRunning}
                 isValidationPassed={isValidationPassed}
+                projectName={project.name}
               />
             </div>
           </div>

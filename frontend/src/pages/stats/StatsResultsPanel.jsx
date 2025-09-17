@@ -1,11 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { forwardRef } from 'react';
+import * as htmlToImage from "html-to-image";
+import { useTheme } from '../theme/ThemeContext.jsx';
 import ChiSquareDisplay from './chi-squared/ChiSquareDisplay.jsx';
 import ExpectedFrequencyDetails from './ExpectedFrequencyDetails.jsx';
 import ObservedFrequencyTable from './chi-squared/ObservedFrequencyTable.jsx';
 import ChiSquareDistributionChart from './chi-squared/ChiSquareDistributionChart.jsx';
 import CombineCategoriesModal from './CombineCategoriesModal.jsx';
 import { FaExclamationTriangle, FaCheckCircle, FaHourglassHalf, FaInfoCircle, FaTimesCircle } from 'react-icons/fa';
+import { PiExportBold } from 'react-icons/pi';
+
+/**
+ * A wrapper component that adds an "Export as PNG" button to any chart passed as a child.
+ * It handles the logic for capturing the chart as an image and providing quality options for download.
+ * @param {object} props - The component props.
+ * @param {JSX.Element} props.children - The chart component to be rendered and exported.
+ * @param {string} props.title - A unique title for the chart, used in the filename.
+ * @param {string} props.baseNameForDownload - The base name for the downloaded file.
+ * @returns {JSX.Element} The chart wrapped with export functionality.
+ */
+const ChartWithExport = ({ children, title, baseNameForDownload }) => {
+  const { theme } = useTheme();
+  const chartContainerRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const [showQualityPopup, setShowQualityPopup] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowQualityPopup(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDownloadChart = async (pixelRatio) => {
+    if (!chartContainerRef.current) return;
+    try {
+      const filter = (node) => !node.classList?.contains('no-export');
+      const dataUrl = await htmlToImage.toPng(chartContainerRef.current, {
+        backgroundColor: theme === 'dark' ? "#1f2937" : "#ffffff",
+        pixelRatio,
+        filter: filter,
+      });
+      const link = document.createElement("a");
+      link.download = `${baseNameForDownload}_${title}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Error exporting chart:", err);
+      alert("Failed to export chart.");
+    } finally {
+      setShowQualityPopup(false);
+    }
+  };
+
+  return (
+    <div className="relative rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setShowQualityPopup(p => !p)}
+          className="absolute -top-3 -right-3 z-20 rounded-full bg-gray-200 p-2 text-gray-600 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          title="Export Chart as PNG"
+        >
+          <PiExportBold size={18} />
+        </button>
+        {showQualityPopup && (
+          <div className="absolute right-0 top-8 z-30 w-36 rounded-lg border bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700">
+            <div className="border-b px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-600 dark:text-gray-300">Download Quality</div>
+            <button className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleDownloadChart(2)}>Normal (x2)</button>
+            <button className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleDownloadChart(4)}>High (x4)</button>
+            <button className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleDownloadChart(6)}>Very High (x6)</button>
+          </div>
+        )}
+      </div>
+      <div ref={chartContainerRef}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 
 /**
  * A simple presentational component for displaying a single statistic with a label.
@@ -186,6 +262,7 @@ const ActionButtons = ({ validationStatus, isValidateDisabled, isValidationRunni
  * @param {boolean} props.isValidateDisabled - A flag to disable the validation button.
  * @param {string} props.chiSquareSubtype - The specific subtype of the Chi-Square test.
  * @param {(groups: Array<object>) => void} props.onRevalidate - The callback to re-run validation after combining categories.
+ * @param {string} [props.projectName="Project"] - The name of the current project.
  * @param {React.Ref} ref - The ref passed by `forwardRef`.
  * @returns {JSX.Element} The rendered results panel.
  */
@@ -193,7 +270,7 @@ const StatsResultsPanel = forwardRef(({
   results, isLoading, error,
   validationStatus, isValidationRunning,
   onValidate, onRunTest, isValidateDisabled,
-  chiSquareSubtype, onRevalidate
+  chiSquareSubtype, onRevalidate, projectName = 'Project'
 }, ref) => {
   const [showCombineModal, setShowCombineModal] = useState(false);
 
@@ -259,7 +336,6 @@ const StatsResultsPanel = forwardRef(({
 
   keyStatsForTable.push({ label: "Sample Size (N)", value: results.sampleSize });
 
-
   return (
     <div ref={ref} className="space-y-6 p-4">
       <h3 className="text-center text-xl font-bold">{results.test} Results</h3>
@@ -284,8 +360,6 @@ const StatsResultsPanel = forwardRef(({
       </div>
       <h4 className="border-b-2 border-gray-200 pb-2 font-bold text-lg text-gray-700 dark:border-gray-700 dark:text-gray-300">Key Statistics</h4>
 
-      {/* --- MODIFIED SECTION --- */}
-      {/* This is the on-screen view, which we will hide during print/export */}
       <div className="hide-on-print">
         <div className={`grid grid-cols-2 gap-4 text-center ${isFisherTest ? 'md:grid-cols-3' : 'md:grid-cols-5'}`}>
           <StatDisplay label={isFisherTest ? "Odds Ratio" : "χ² Statistic"} value={results.statistic.toFixed(2)} />
@@ -298,7 +372,6 @@ const StatsResultsPanel = forwardRef(({
         </div>
       </div>
 
-      {/* This is the new, simplified table for print/export only. It's hidden on screen by default. */}
       <div className="show-on-print hidden">
         <table className="print-stats-table">
           <thead>
@@ -317,17 +390,30 @@ const StatsResultsPanel = forwardRef(({
           </tbody>
         </table>
       </div>
-      {/* --- END MODIFIED SECTION --- */}
-
+      
       <h4 className="border-b-2 border-gray-200 pb-2 font-bold text-lg text-gray-700 dark:border-gray-700 dark:text-gray-300">{frequencyHeading}</h4>
       <ObservedFrequencyTable results={results} />
+      
       <h4 className="border-b-2 border-gray-200 pb-2 font-bold text-lg text-gray-700 dark:border-gray-700 dark:text-gray-300">Visualizations</h4>
-      <ChiSquareDisplay results={results} />
+      
+      <ChartWithExport
+        title={results.subtype === 'Goodness-of-Fit' ? 'Observed_vs_Expected' : 'Frequencies_Chart'}
+        baseNameForDownload={`${projectName}_${results.test.replace(/\s+/g, '_')}`}
+      >
+        <ChiSquareDisplay results={results} />
+      </ChartWithExport>
+
       {!isFisherTest && (
         <div className="pt-4">
-          <ChiSquareDistributionChart df={results.df} statistic={results.statistic} pValue={results.pValue} />
+          <ChartWithExport
+            title="Distribution_Chart"
+            baseNameForDownload={`${projectName}_${results.test.replace(/\s+/g, '_')}`}
+          >
+            <ChiSquareDistributionChart df={results.df} statistic={results.statistic} pValue={results.pValue} />
+          </ChartWithExport>
         </div>
       )}
+
       <div className="rounded-lg bg-cyan-100 p-3 text-sm text-cyan-900 dark:bg-cyan-950 dark:text-cyan-100">
         <p><strong>Interpretation:</strong> {results.interpretation}</p>
       </div>

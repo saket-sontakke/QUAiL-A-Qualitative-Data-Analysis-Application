@@ -29,7 +29,6 @@ const highlightColors = [
  * A comprehensive toolbar for the document viewer interface. It provides a wide
  * range of functionalities including text searching, formatting controls (font size,
  * line spacing), undo/redo actions, and a set of mutually exclusive tools for
-
  * annotation (coding, memos, highlighting, erasing).
  *
  * @param {object} props - The component props.
@@ -257,7 +256,7 @@ const DocumentToolbar = ({
                         </div>
                       </div>
                     </div>
-                    <button onClick={handleSetCustomSpacing} className="w-full rounded-md bg-cyan-800 py-1 text-xs font-bold text-white hover:bg-cyan-700 dark:bg-[#F05623] dark:hover:bg-orange-700">
+                    <button onClick={handleSetCustomSpacing} className="w-full rounded-md py-1 text-xs font-bold text-white bg-cyan-800 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623]">
                       Set
                     </button>
                   </div>
@@ -293,7 +292,7 @@ const DocumentToolbar = ({
           </AnimatePresence>
         </div>
 
-        <div className={`relative flex gap-2 rounded-md ${isEditing ? 'pointer-events-none opacity-50' : ''}`}>
+        <div className="relative flex gap-2 rounded-md">
           <div className="flex items-center gap-1 rounded-md border border-gray-200 p-1 shadow-sm dark:border-gray-700">
             <button onClick={onUndo} disabled={!canUndo} className="rounded-sm p-1 text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-600" title="Undo (Ctrl+Z)">
               <FaUndo size={14} />
@@ -317,7 +316,7 @@ const DocumentToolbar = ({
                   <button onClick={() => { setShowCodeColors(true); setShowCodeDropdown(false); setActiveCodedSegmentId(null); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs ${showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Enable Colored Codes">
                     <MdCode size={18} /> <span className="truncate">Show Codes</span>
                   </button>
-                  <button onClick={() => { setShowCodeColors(false); setShowCodeDropdown(false); setActiveCodedSegmentId(null); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs ${!showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Disable Colored Codes">
+                  <button onClick={() => { setShowCodeColors(false); setShowCodeDropdown(false); setActiveCodedSegmentId(null); }} className={`flex w-full items-center gap-2 mt-1 rounded-md px-2 py-1 text-xs ${!showCodeColors ? 'bg-gray-200 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-600'}`} title="Disable Colored Codes">
                     <MdCodeOff size={18} /> <span className="truncate">Hide Codes</span>
                   </button>
                 </motion.div>
