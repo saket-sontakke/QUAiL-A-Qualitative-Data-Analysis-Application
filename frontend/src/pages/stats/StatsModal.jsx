@@ -178,7 +178,7 @@ const StatsModal = ({ show, onClose, project, codeDefinitions, projectId }) => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const testPayload = getChiSquarePayload();
       const payload = { ...testPayload, projectId, validateOnly: true };
-      const { data } = await axios.post('/api/stats/run', payload, config);
+      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/stats/run`, payload, config);
 
       setValidationStatus({
         ...data.validationResults,
@@ -202,7 +202,7 @@ const StatsModal = ({ show, onClose, project, codeDefinitions, projectId }) => {
       if (!token) throw new Error("Authentication token not found.");
       const config = { headers: { Authorization: `Bearer ${token}` } };
       const payload = { ...getChiSquarePayload(), projectId };
-      const { data } = await axios.post('/api/stats/run', payload, config);
+      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/stats/run`, payload, config);
       setResults(data);
       setValidationStatus(null);
     } catch (err) {
