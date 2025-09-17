@@ -1,0 +1,43 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://host.docker.internal:27017/QDA_DB 
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+  stats:
+    build: ./stats-microservice
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./stats-microservice/.env
+    volumes:
+      - ./stats-microservice:/app
+    command: python app.py
+    depends_on:
+      - backend  # or mongo if stats service needs DB
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

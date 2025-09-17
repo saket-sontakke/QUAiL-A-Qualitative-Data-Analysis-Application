@@ -1,0 +1,7 @@
+node_modules
+.env
+.env.docker
+.env.*
+.vs_code
+.DS_Stores
+.uploads
