@@ -2,6 +2,12 @@
 
 [![Website](https://img.shields.io/badge/Website-quail.edarts.online-blue)](https://quail.edarts.online)
 
+# QUAiL - A Qualitative Data Analysis Application
+
+<a href="https://quail.edarts.online" target="_blank" rel="noopener noreferrer">
+  <img src="https://img.shields.io/badge/Website-quail.edarts.online-blue" alt="Website">
+</a>
+
 ## Iterative Model Overview
 
 - No need to define a complete SRS (Software Requirements Specification) upfront  
