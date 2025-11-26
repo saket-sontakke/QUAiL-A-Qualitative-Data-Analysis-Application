@@ -1,8 +1,3 @@
-# [QUAiL - A Qualitative Data Analysis Application](https://quail.edarts.online)
-**Website:** [quail.edarts.online](https://quail.edarts.online)
-
-# QUAiL - A Qualitative Data Analysis Application ([Visit Website](https://quail.edarts.online))
-
 # QUAiL - A Qualitative Data Analysis Application
 
 [![Website](https://img.shields.io/badge/Website-quail.edarts.online-blue)](https://quail.edarts.online)
