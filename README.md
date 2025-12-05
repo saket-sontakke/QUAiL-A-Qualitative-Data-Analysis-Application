@@ -44,6 +44,7 @@
 
 ## Landing page
 
+https://github.com/user-attachments/assets/9f23100a-66cd-41a0-ac45-2774db130d15
 
 <img width="960" height="549" alt="Screenshot 2025-12-05 154002" src="https://github.com/user-attachments/assets/4e8e1195-25cc-4cae-8b22-75234b07a94d" />
 
