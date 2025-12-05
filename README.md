@@ -34,8 +34,10 @@
 ### Deployed Versions
 
 | Version No. | Deployment Date | Key Improvements/Fixes for next release | Status |
-| QUAiL Beta v1.0.0 | 17-Sep-25 |  • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | ![Status](https://img.shields.io/badge/Status-Inactive-red) |
+|:-------------:|:---------------|:----------------------------------------|:------:|
+| QUAiL Beta v1.0.0 | 17-Sep-25 | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | ![Status](https://img.shields.io/badge/Status-Inactive-red) |
 | QUAiL Beta v1.0.1 | | | |
+
 ---
 
 # Screenshots
