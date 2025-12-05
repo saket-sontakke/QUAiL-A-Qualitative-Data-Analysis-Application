@@ -34,8 +34,8 @@
 ### Deployed Versions
 
 | Version No. | Deployment Date | Key Improvements/Fixes for next release | Status |
-|:-------------:|:---------------|:----------------------------------------|:------:|
-| QUAiL Beta v1.0.0 | 17-Sep-25 | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | $\color{red}\text{Inactive}$ |
+|:-------------:|:---------------:|:----------------------------------------|:------:|
+| QUAiL Beta v1.0.0 | 17-Sep-25 | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | $\color{green}\text{Active}$ |
 | QUAiL Beta v1.0.1 | | | |
 
 ---
