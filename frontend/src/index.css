@@ -4,38 +4,40 @@
 @layer components {
   /*
    * Custom Scrollbar Utility
-   * Provides a consistent, minimal scrollbar style for WebKit browsers,
-   * with distinct appearances for light and dark themes.
+   * UPDATED: Added vertical margin (my-2) to track to prevent 
+   * overlapping with container's rounded corners.
    */
   .custom-scrollbar::-webkit-scrollbar {
-    @apply w-1;
+    @apply w-1.5; /* Slightly increased width for better grab usability */
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    @apply bg-transparent my-2; /* my-2 prevents the corner cut-off */
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 rounded-md;
+    @apply bg-gray-400 rounded-full;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500;
   }
 
+  /* Dark Mode Scrollbar Overrides */
   .dark .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-gray-700;
+    @apply bg-transparent my-2;
   }
 
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-500;
+    @apply bg-gray-600 rounded-full;
   }
 
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+    @apply bg-gray-500;
   }
 
-  /* Utility to hide native number input arrows */
+  /* * Utility to hide native number input arrows 
+   */
   .hide-number-arrows::-webkit-outer-spin-button,
   .hide-number-arrows::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -47,7 +49,6 @@
 
   /*
    * Font Utility: El Messiri Bold
-   * Applies the "El Messiri" font family with a bold (700) weight.
    */
   .el-messiri-bold {
     font-family: "El Messiri", sans-serif;
@@ -56,10 +57,36 @@
     font-style: normal;
   }
 
+  /*
+   * Font Utility: Julius Sans One
+   */
   .julius-sans-one-regular {
-  font-family: "Julius Sans One", sans-serif;
-  font-weight: 400;
-  font-style: normal;
+    font-family: "Julius Sans One", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
 }
 
+@layer utilities {
+  /* 1. Light Mode (Default) - Force White Background & Black Text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: black !important;
+    caret-color: black !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* 2. Dark Mode Override - Force Dark Gray Background & White Text */
+  /* This targets inputs only when the parent has the 'dark' class */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover, 
+  .dark input:-webkit-autofill:focus, 
+  .dark input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #374151 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+  }
 }

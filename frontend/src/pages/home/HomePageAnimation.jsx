@@ -21,7 +21,7 @@ import {
   ComposedChart, Line, Area, CartesianGrid, ReferenceLine, Label
 } from 'recharts';
 import Logo from "../theme/Logo";
-
+import { CURRENT_VERSION } from '../../../version.js';
 
 // ============================================================================
 //  CONFIGURATIONS & CONSTANTS
@@ -522,7 +522,7 @@ const HomePageAnimation = () => {
                     transition={{ duration: 0.5, delay: 0.1 }}
                     className="el-messiri-bold text-lg font-medium text-gray-500 self-end -mt-6"
                   >
-                    Beta v1.0.0
+                    {CURRENT_VERSION}
                   </motion.span>
                 </div>
               </motion.div>

@@ -20,7 +20,7 @@ const sendEmail = async (to, subject, text) => {
   });
 
   const mailOptions = {
-    from: `"<placeholder> Authentication" <${process.env.EMAIL_USER}>`,
+    from: `"QUAiL Authentication" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     text,

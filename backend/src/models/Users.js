@@ -1,19 +1,36 @@
 import mongoose from 'mongoose';
+import validator from 'validator';
 
 /**
- * Defines the schema for a User document in the database. This schema includes
- * essential user credentials for authentication and fields to support password
- * reset functionality.
- * @property {string} name - The user's full name.
- * @property {string} email - The user's email address, which must be unique and is used for login.
- * @property {string} password - The user's hashed password for authentication.
- * @property {string} resetToken - A temporary token generated for the password reset process.
- * @property {Date} resetTokenExpiry - The expiration date and time for the password reset token.
+ * Defines the schema for a User document in the database. 
  */
 const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
+  name: {
+    type: String,
+    required: [true, 'Please tell us your name']
+  },
+  email: { 
+    type: String, 
+    unique: true,
+    required: [true, 'Please provide an email'],
+    lowercase: true,
+    // --- LEVEL 1: Strict Backend Validation ---
+    validate: [validator.isEmail, 'Please provide a valid email']
+  },
+  password: {
+    type: String,
+    required: [true, 'Please provide a password']
+  },
+  
+  // --- LEVEL 2: Email Verification Fields ---
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  verificationTokenExpire: Date,
+  // ------------------------------------------
+
   resetToken: String,
   resetTokenExpiry: Date,
 }, { timestamps: true });

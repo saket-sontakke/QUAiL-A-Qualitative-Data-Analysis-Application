@@ -8,7 +8,14 @@
 
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QUAiL Beta v1.0.0</title>
+    
+    <title>QUAiL</title>
+    <script type="module">
+      // This imports the variable you created in the previous step
+      import { CURRENT_VERSION } from './version.js';
+      // This updates the browser tab title immediately
+      document.title = `QUAiL ${CURRENT_VERSION}`;
+    </script>
 
     <script>
       const stored = localStorage.getItem('theme');

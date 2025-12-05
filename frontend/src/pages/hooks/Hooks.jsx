@@ -566,7 +566,7 @@ const handleCommitNewFile = async (fileData) => {
     if (!token) return { success: false, error: 'You must be logged in to rename files.' };
     try {
       const res = await axios.put(
-        `/api/projects/${projectId}/files/${fileId}/rename`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}/rename`,
         { name: newName },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -616,7 +616,7 @@ const handleCommitNewFile = async (fileData) => {
         if (!token) throw new Error('Authentication required.');
 
         const response = await axios.get(
-          `/api/projects/${projectId}/files/${file._id}/export?format=${format}`, {
+          `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${file._id}/export?format=${format}`, {
             headers: { Authorization: `Bearer ${token}` },
             responseType: 'blob',
           }

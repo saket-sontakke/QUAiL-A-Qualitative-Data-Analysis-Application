@@ -18,6 +18,8 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
+import siteStatsRoutes from './routes/siteStatsRoutes.js';
 
 /**
  * Loads environment variables from a .env file into process.env.
@@ -57,6 +59,8 @@ app.use('/uploads', express.static(uploadsPath));
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/site-stats', siteStatsRoutes);
 
 /**
  * Conditionally connects to MongoDB and starts the Express server.

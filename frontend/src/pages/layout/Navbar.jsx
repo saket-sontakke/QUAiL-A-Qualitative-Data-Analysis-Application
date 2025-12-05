@@ -5,6 +5,7 @@ import { FaUserCircle, FaFolderOpen, FaFolderPlus, FaList, FaCog, FaBug, FaComme
 import ThemeToggle from '../theme/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import Logo from '../theme/Logo.jsx';
+import { CURRENT_VERSION } from '../../../version.js';
 
 /**
  * A responsive, fixed-position navigation bar for the application. It displays
@@ -122,9 +123,13 @@ const Navbar = ({
             <span className="el-messiri-bold leading-none text-4xl">
               QUAiL
             </span>
-            <span className="el-messiri-bold text-[10px] font-medium text-gray-400 -mt-1 self-end">
-              Beta v1.0.0
-            </span>
+            
+            {/* Only render this span if CURRENT_VERSION is not empty */}
+            {CURRENT_VERSION && CURRENT_VERSION.trim() !== "" && (
+              <span className="el-messiri-bold text-xs font-medium text-gray-400 -mt-2 self-end">
+                {CURRENT_VERSION}
+              </span>
+            )}
           </div>
         </div>
 

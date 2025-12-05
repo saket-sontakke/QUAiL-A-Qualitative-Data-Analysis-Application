@@ -700,7 +700,7 @@ const ProjectView = () => {
     if (!project || !user) return;
     try {
       const response = await axios.get(
-        `/api/projects/${projectId}/export-coded-segments?format=${viewType}`, {
+      `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-coded-segments?format=${viewType}`, {
         headers: { Authorization: `Bearer ${user.token}` },
         responseType: 'blob',
       });
@@ -771,7 +771,7 @@ const ProjectView = () => {
         </div>
       )}
 
-      <div className="h-[calc(100vh-theme(space.5))] px-2 pt-18">
+      <div className="h-[calc(100vh-theme(space.5))] px-2 pt-21">
         <div className="flex h-full gap-3">
           <LeftPanel
             width={leftPanelWidth}

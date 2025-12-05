@@ -1,18 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/Users.js';
 import sendEmail from '../utils/sendEmail.js';
 
-/**
- * Express middleware to protect routes by verifying a JWT token.
- * It expects a 'Bearer <token>' in the Authorization header. If the token is
- * valid, it fetches the corresponding user from the database (excluding the
- * password) and attaches it to the request object as `req.user`.
- *
- * @param {import('express').Request} req - The Express request object.
- * @param {import('express').Response} res - The Express response object.
- * @param {import('express').NextFunction} next - The next middleware function.
- */
 export const protect = async (req, res, next) => {
   let token;
 
@@ -38,58 +29,116 @@ export const protect = async (req, res, next) => {
 };
 
 /**
- * Registers a new user.
+ * Registers a new user and sends verification email.
  * @route POST /api/auth/register
- * @access Public
- * @param {import('express').Request} req - The Express request object, containing `name`, `email`, and `password` in the body.
- * @param {import('express').Response} res - The Express response object.
  */
 export const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-    res.status(201).json({ token: token, message: "User created successfully" });
+    
+    const verifyToken = crypto.randomBytes(20).toString('hex');
+
+    const user = await User.create({ 
+        name, 
+        email, 
+        password: hashedPassword,
+        verificationToken: verifyToken,
+        verificationTokenExpire: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    const verifyUrl = `${process.env.VITE_FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verifyToken}`;
+
+    const message = `
+      <h1>Email Verification</h1>
+      <p>Please verify your QUAiL account by clicking the link below:</p>
+      <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
+    `;
+
+    try {
+        await sendEmail(email, "Verify your email", message);
+        
+        res.status(201).json({ 
+            message: "Registration successful! Please check your email to verify your account." 
+        });
+    } catch (error) {
+        await User.findByIdAndDelete(user._id);
+        return res.status(500).json({ error: "Email could not be sent. Please try again." });
+    }
+
   } catch (err) {
-    res.status(400).json({ error: "User already exists" });
+    if (err.code === 11000) {
+        return res.status(400).json({ error: "User already exists" });
+    }
+    if (err.name === 'ValidationError') {
+         const messages = Object.values(err.errors).map(val => val.message);
+         return res.status(400).json({ error: messages.join(', ') });
+    }
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 /**
- * Authenticates an existing user and returns a JWT token.
+ * Authenticates user, checks verification status, returns JWT.
  * @route POST /api/auth/login
- * @access Public
- * @param {import('express').Request} req - The Express request object, containing `email` and `password` in the body.
- * @param {import('express').Response} res - The Express response object.
  */
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ error: "Invalid Credentials" });
-  }
+  try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ error: "Invalid Credentials" });
+      }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ error: "Invalid Credentials" });
-  }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ error: "Invalid Credentials" });
+      }
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-  res.json({
-    token,
-    user: { name: user.name, email: user.email }
-  });
+      if (!user.isVerified) {
+          return res.status(401).json({ error: "Please verify your email to log in." });
+      }
+
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+      res.json({
+        token,
+        user: { name: user.name, email: user.email }
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server Error" });
+  }
 };
 
 /**
- * Initiates the password reset process by generating a reset token and sending
- * a password reset link to the user's email.
- * @route POST /api/auth/forgot-password
- * @access Public
- * @param {import('express').Request} req - The Express request object, containing `email` in the body.
- * @param {import('express').Response} res - The Express response object.
+ * Verifies email based on token.
+ * @route GET /api/auth/verify-email/:token
  */
+export const verifyEmail = async (req, res) => {
+    const { token } = req.params;
+    
+    try {
+        const user = await User.findOne({
+            verificationToken: token,
+            verificationTokenExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: "Invalid or expired token" });
+        }
+
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpire = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "Email verified successfully. You can now login." });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server Error" });
+    }
+};
+
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -108,13 +157,6 @@ export const forgotPassword = async (req, res) => {
   res.status(200).json({ message: responseMessage });
 };
 
-/**
- * Resets a user's password using a valid token from a password reset link.
- * @route POST /api/auth/reset-password/:token
- * @access Public
- * @param {import('express').Request} req - The Express request object, containing the `token` in params and `password` in the body.
- * @param {import('express').Response} res - The Express response object.
- */
 export const resetPassword = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
