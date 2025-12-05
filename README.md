@@ -30,8 +30,12 @@
 | #6 | • Audio Support <br> • Sentence-wise/Turn-wise Splitting <br> • Integrated statistical tests <br> • Dynamic codebook <br> • Attractive Landing page | • Lacks an interactive Code Matrix <br> • No feature to pin/rename/export document viewer files <br> • Lacks find and replace functionality in the edit mode |
 | #7 | • Export Code Matrix <br> • Pin, rename, and export files from document viewer <br> • Find and Replace functionality in edit mode <br> | • Poor audio file edit mode (Integrity Issues) <br> • No feature to make Copy of Project <br> • Lacks an Admin Dashboard <br> |
 | #8 | • Enhanced Edit Mode <br> • Copy of project feature <br> • SOC, Code reorganization <br> | • Prop Drilling in ProjectView.jsx <br> • Poor SOC of project hooks due to singular Hooks.jsx <br> |
-| QUAiL Beta v1.0.0 |  |  |****
 
+### Deployed Versions
+
+| Version No. | Deployment Date | Key Improvements/Fixes for next release | Status |
+| QUAiL Beta v1.0.0 | 17-Sep-25 |  • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | ![Status](https://img.shields.io/badge/Status-Inactive-red) |
+| QUAiL Beta v1.0.1 | | | |
 ---
 
 # Screenshots
