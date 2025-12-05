@@ -44,11 +44,10 @@
 
 ## Landing page
 
-https://github.com/user-attachments/assets/61d2f078-23f1-456c-9890-b504e1b1734c
 
 <img width="960" height="549" alt="Screenshot 2025-12-05 154002" src="https://github.com/user-attachments/assets/4e8e1195-25cc-4cae-8b22-75234b07a94d" />
+
 <img width="960" height="600" alt="Screenshot 2025-12-05 154009" src="https://github.com/user-attachments/assets/baeff84b-9323-4e53-9536-7cb09a681763" />
-<img width="960" height="600" alt="Screenshot 2025-12-05 153935" src="https://github.com/user-attachments/assets/66c839e2-a89d-4a29-a2e5-f1432aba32a7" />
 
 
 ## Projects
