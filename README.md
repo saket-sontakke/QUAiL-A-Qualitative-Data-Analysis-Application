@@ -32,7 +32,6 @@
 | #8 | • Enhanced Edit Mode <br> • Copy of project feature <br> • SOC, Code reorganization <br> | • Prop Drilling in ProjectView.jsx <br> • Poor SOC of project hooks due to singular Hooks.jsx <br> |
 
 <br> 
-<br> 
 
 ### Deployed Versions
 
