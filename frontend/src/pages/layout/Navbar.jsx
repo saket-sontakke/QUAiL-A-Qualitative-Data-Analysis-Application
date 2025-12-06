@@ -1,31 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUserCircle, FaFolderOpen, FaFolderPlus, FaList, FaCog, FaBug, FaCommentAlt } from 'react-icons/fa';
+import { FaUserCircle, FaFolderOpen, FaFolderPlus, FaList, FaCog, FaBug, FaCommentAlt, FaDownload, FaFileImport } from 'react-icons/fa'; // Added FaFileImport
+import axios from 'axios'; 
+import FileSaver from 'file-saver'; 
 import ThemeToggle from '../theme/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import Logo from '../theme/Logo.jsx';
 import { CURRENT_VERSION } from '../../../version.js';
 
 /**
- * A responsive, fixed-position navigation bar for the application. It displays
- * the app logo, contextual project controls, a theme toggler, and a user profile
- * dropdown for authenticated users. It also handles navigation interception for
- * unsaved changes.
+ * A responsive, fixed-position navigation bar for the application.
  *
  * @param {object} props - The component props.
- * @param {string} [props.projectName] - The name of the current project, displayed only on project views.
+ * @param {string} [props.projectName] - The name of the current project.
+ * @param {boolean} [props.isImported] - NEW: Flag indicating if the project was imported via .quail file.
  * @param {() => void} props.onOpenProjectOverviewModal - Callback to open the project overview modal.
  * @param {() => void} props.onOpenPreferencesModal - Callback to open the user preferences modal.
- * @param {boolean} props.isEditing - Flag indicating if there are unsaved changes, used to disable certain actions.
- * @param {(path: string, options?: object) => void} [props.onNavigateAttempt] - Optional callback to intercept navigation, allowing for "unsaved changes" warnings.
- * @param {() => void} [props.onLogoutAttempt] - Optional callback to intercept logout, for the same reason as onNavigateAttempt.
+ * @param {boolean} props.isEditing - Flag indicating if there are unsaved changes.
+ * @param {(path: string, options?: object) => void} [props.onNavigateAttempt] - Optional callback to intercept navigation.
+ * @param {() => void} [props.onLogoutAttempt] - Optional callback to intercept logout.
  * @param {(show: boolean) => void} [props.setShowConfirmModal] - State setter to show a generic confirmation modal.
- * @param {(data: object) => void} [props.setConfirmModalData] - State setter to configure the confirmation modal's content and actions.
+ * @param {(data: object) => void} [props.setConfirmModalData] - State setter to configure the confirmation modal.
  * @returns {JSX.Element} The rendered navigation bar component.
  */
 const Navbar = ({
   projectName,
+  isImported, // <--- NEW PROP
   onOpenProjectOverviewModal,
   onOpenPreferencesModal,
   isEditing,
@@ -36,6 +37,7 @@ const Navbar = ({
 }) => {
   const { isAuthenticated, user, logout } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false); 
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
@@ -63,10 +65,7 @@ const Navbar = ({
   const toggleProfile = () => setShowProfile(!showProfile);
 
   /**
-   * Handles navigation requests. If a special onNavigateAttempt handler is provided,
-   * it's used to allow checking for unsaved changes. Otherwise, it navigates directly.
-   * @param {string} path - The destination path.
-   * @param {object} [options] - Optional navigation options (e.g., state).
+   * Handles navigation requests. 
    */
     const handleNavigation = (path, options) => {
     if (typeof onNavigateAttempt === 'function') {
@@ -77,9 +76,7 @@ const Navbar = ({
   };
 
   /**
-   * Handles the logout process. It prioritizes the onLogoutAttempt prop to check for
-   * unsaved changes. If not available, it uses the provided modal setters to confirm
-   * the logout action. As a fallback, it performs a direct logout.
+   * Handles the logout process. 
    */
   const handleLogout = () => {
     if (typeof onLogoutAttempt === 'function') {
@@ -110,6 +107,46 @@ const Navbar = ({
     }
   };
 
+  /**
+   * triggers the backup of the current project.
+   */
+  const handleBackup = async () => {
+    if (isBackingUp) return;
+    
+    // Extract Project ID from URL: /project/:id
+    const pathParts = location.pathname.split('/');
+    const projectId = pathParts[2];
+    
+    if (!projectId || !user?.token) return;
+
+    setIsBackingUp(true);
+
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-quail`, 
+        { 
+          headers: { Authorization: `Bearer ${user.token}` },
+          responseType: 'blob' 
+        }
+      );
+      FileSaver.saveAs(res.data, `${projectName || 'project'}.quail`);
+    } catch (err) {
+      console.error("Backup failed", err);
+      if (setConfirmModalData && setShowConfirmModal) {
+        setConfirmModalData({
+          title: 'Backup Failed',
+          shortMessage: 'Could not create project backup.',
+          onConfirm: () => setShowConfirmModal(false),
+          confirmText: 'OK',
+          showCancelButton: false
+        });
+        setShowConfirmModal(true);
+      }
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between bg-cyan-800 px-6 py-3 shadow-lg transition-colors duration-300 dark:bg-gray-800">
@@ -136,9 +173,24 @@ const Navbar = ({
         {isProjectView && (
           <>
             {projectName && (
-              <span className="ml-3 text-lg font-semibold text-white">{projectName}</span>
+              <div className="ml-3 flex items-center gap-2">
+                <span className="text-lg font-semibold text-white">{projectName}</span>
+                
+                {/* --- IMPORTED BADGE START --- */}
+                {isImported && (
+                  <span 
+                    title="This project was imported" 
+                    className="flex items-center gap-1 rounded-full bg-blue-900/40 px-2 py-0.5 text-[10px] font-medium text-blue-100 border border-blue-400/30 shadow-sm translate-y-[2px]"
+                  >
+                    <FaFileImport />
+                    Imported
+                  </span>
+                )}
+                {/* --- IMPORTED BADGE END --- */}
+              </div>
             )}
-              <div className="ml-3 flex items-center space-x-4">
+            
+            <div className="ml-3 flex items-center space-x-4">
               <button onClick={() => handleNavigation('/projects', { state: { openCreateModal: true } })} className="text-white transition-colors duration-200 hover:text-[#F05623]" title="New Project">
                 <FaFolderPlus className="text-xl" />
               </button>
@@ -146,6 +198,21 @@ const Navbar = ({
               <button onClick={() => handleNavigation('/projects')} className="text-white transition-colors duration-200 hover:text-[#F05623]" title="Open Project">
                 <FaFolderOpen className="text-xl" />
               </button>
+
+              {/* BACKUP BUTTON */}
+              <button
+                onClick={handleBackup}
+                className="text-white transition-colors duration-200 hover:text-[#F05623] disabled:cursor-not-allowed disabled:opacity-50"
+                title="Download Project (.quail)"
+                disabled={isEditing || isBackingUp}
+              >
+                {isBackingUp ? (
+                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <FaDownload className="text-lg" />
+                )}
+              </button>
+
               <button
                 onClick={onOpenProjectOverviewModal}
                 className="text-white transition-colors duration-200 hover:text-[#F05623] disabled:cursor-not-allowed disabled:opacity-50"

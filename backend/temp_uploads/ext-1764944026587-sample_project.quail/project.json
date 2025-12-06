@@ -1,0 +1,1504 @@
+{
+  "name": "sample_project",
+  "importedFiles": [
+    {
+      "name": "Administrator (Digital Divide).docx",
+      "content": "Interviewer: Thank you for speaking with me. Your district was an early adopter of the one-to-one device initiative. From your perspective, how has that program truly impacted student learning?\n\nInterviewee: On the surface, it was a massive success. Every student had a device. But the real challenge wasn't the device in their hands; it was the connection in their homes. The pandemic laid that bare for everyone to see.\n\nInterviewer: So the primary issue became home internet access rather than device access?\n\nInterviewee: Exactly. We can't mandate that families purchase high-speed internet. We distributed hundreds of Wi-Fi hotspots, but those are a temporary fix. They have data caps, they can be unreliable, and a single hotspot doesn't work well when you have three children trying to attend live video classes at the same time.\n\nInterviewer: That paints a clear picture of the infrastructure challenge. How did this inequity affect teachers and their curriculum?\n\nInterviewee: It forced them to design for the lowest common denominator. A teacher can't assign a project that requires streaming high-definition video if 20% of their students can't reliably do that. It stifles innovation and limits the very potential the technology was supposed to unlock.\n\nInterviewer: Did you notice a similar divide among your teaching staff in terms of their own tech literacy?\n\nInterviewee: Absolutely. Some teachers were ready to build virtual reality lessons, while others were still struggling with the basics of the learning management system. Professional development is key, but it's hard to create a one-size-fits-all training program for such a wide range of skills.\n\nInterviewer: How does this ongoing issue of the digital divide shape your strategic planning for the next five years?\n\nInterviewee: Our focus has shifted from \"access\" to \"equity of experience.\" It's not enough to give a child a laptop. We need to work with community partners and local government to treat internet access as a public utility, just like water or electricity. The school can't solve this problem alone.\n\nInterviewer: That's a powerful statement. Finally, what is the one aspect of the digital divide that you think is most often overlooked?\n\nInterviewee: The \"homework gap\" is what people talk about, but I'd also point to the \"participation gap.\" When a student has a poor connection, they can't participate in real-time discussions, their video is off, and they become invisible. That lack of presence has a profound impact on their sense of belonging and their engagement with the class.\n\n\n\n",
+      "sourceType": "text",
+      "_id": "68a52385b63a3708014e822d"
+    },
+    {
+      "name": "Teacher (Classroom Integration).docx",
+      "content": "Interviewer: Thank you for your time. You've seen technology in the classroom evolve dramatically over your career. What is your general feeling about the tools you're being asked to use today?\n\nInterviewee: It's a double-edged sword. Some tools are genuinely transformative and allow me to do things I never could have done before. But many others feel like solutions in search of a problem, adding more to my workload without a clear pedagogical benefit.\n\nInterviewer: Could you give me an example of a technology that you feel has been truly transformative?\n\nInterviewee: The interactive science simulations we use are fantastic. They allow students to visualize abstract concepts in chemistry and physics in a way a textbook never could. They can run experiments safely and see the immediate consequences of changing a variable. That's a genuine enhancement to learning.\n\nInterviewer: And on the flip side, what's an example of a frustration?\n\nInterviewee: The pressure to use the latest, trendiest app. Last year, it was one platform for gamified quizzes, this year it's another. Each one requires time to learn, time to set up my classes, and time to teach the students how to use it. The lack of consistency is exhausting.\n\nInterviewer: How has technology impacted your ability to connect with students on a personal level?\n\nInterviewee: Again, it's mixed. The data dashboards on our learning platform can help me quickly identify a student who is falling behind. But the screen can also be a barrier. It's much harder to read body language and build rapport through a video call than it is in person.\n\nInterviewer: What about professional development? Do you feel adequately supported in learning these new tools?\n\nInterviewee: The district offers workshops, but they're often led by tech specialists who don't have recent classroom experience. They show you which buttons to click, but not how to manage a class of 30 teenagers while trying to use the tool. We need more teacher-led, pedagogy-focused training.\n\nInterviewer: If you could give one piece of advice to developers creating educational software, what would it be?\n\nInterviewee: Spend a week in a real classroom. See how chaotic it can be. See how little time we have. Design tools that are simple, robust, and solve a real problem for us, rather than just adding bells and whistles. Flexibility is more important than a hundred features we'll never use.\n\nInterviewer: That's incredibly valuable feedback. As a final thought, where do you see the ideal balance between traditional teaching methods and technology?\n\nInterviewee: The ideal balance is when technology becomes invisible. It shouldn't be the focus of the lesson. It should be a seamless tool, like a pencil or a whiteboard, that helps us achieve a learning objective. The focus must always remain on the students and the content, not on the tech itself.\n\n\n\n",
+      "sourceType": "text",
+      "_id": "68a523a0b63a3708014e8236"
+    },
+    {
+      "name": "AI Expert (AI in Education) (Transcript).txt",
+      "content": "[00:00:00] Speaker A: Welcome. Today we're exploring a topic that is rapidly changing landscapes across every industry, including the classroom. Artificial intelligence. We have an expert in educational technology with us to discuss the real world impact of AI in education. Thank you for being here.\n\n[00:00:18] Speaker B: It's a pleasure. It's a crucial conversation to be having right now.\n\n[00:00:23] Speaker A: To start, when people hear AI in education, they might imagine robot teachers. Beyond that science fiction trope, what does the integration of AI into learning environments actually look like today?\n\n[00:00:36] Speaker B: That's the perfect place to begin. The reality is far more subtle and frankly, more powerful than a robot at the front of the class. The biggest application right now is personalized learning. Imagine a digital platform that acts like a personal tutor for every student. It analyzes a student's answers on quizzes and assignments in real time. If a student is struggling with a specific concept like fractions, the AI can automatically provide them with supplementary videos, different types of practice problems, or foundational exercises. Conversely, if a student masters a topic quickly, the AI can challenge them with more advanced material so they never feel bored or held back. It's about creating a unique educational path for each learner.\n\n[00:01:25] Speaker A: So it's less about replacing the teacher and more about providing a highly customized tool for the student.\n\n[00:01:31] Speaker B: Exactly. This leads to the second major benefit. Empowering the educator. Think about the amount of time teachers spend on grading routine assignments. AI tools can automate the grading of multiple choice tests, fill in the blank questions and even some short answer responses. This isn't to make the teacher's job obsolete, it's to free them from administrative burdens.\n\n[00:01:55] Speaker A: And what do they do with that reclaimed time?\n\n[00:01:58] Speaker B: That's the critical part. They can now dedicate that time to what humans do best. Mentoring, facilitating group projects, providing one on one support to struggling students, and teaching complex nuanced subjects like critical thinking and ethics. The AI handles the data driven repetition, while the teacher handles the high impact human centric instruction. It shifts the teacher's role from a sage on the stage to a guide on the side.\n\n[00:02:27] Speaker A: This sounds incredibly promising, but with any powerful technology, there must be challenges and ethical considerations. What are the main concerns we need to address?\n\n[00:02:38] Speaker B: Absolutely. This is not a magic bullet and we must proceed with caution. The first major concern is data privacy and security. These personalized learning platforms collect a, uh, vast amount of data on how a student learns. Every right answer, every wrong answer, how long they spend on a problem. We must have robust regulations to ensure this data is used, ethically, protected from breaches, and that parents and students have control over it.\n\n[00:03:07] Speaker A: And what about the algorithms themselves. Is there a risk of bias?\n\n[00:03:12] Speaker B: A huge risk. This is the second major challenge. Algorithmic bias AI systems are trained on existing data. If the data used to train an AI reflects existing societal or educational biases, the AI will not only replicate but potentially amplify those biases. For example, if an AI grading system for essays is trained primarily on papers written in a specific cultural or dialectical style, it might unfairly penalize students who write differently, Stifling diverse voices Ensuring fairness and equity in these systems is a monumental task. A final concern is the risk of over reliance. We don't want students to lose the ability to struggle with a problem, to think creatively, or to learn from failure. If an AI is always there to immediately provide the answer or the next step, it could undermine the development of resilience and critical thinking skills. The human element of collaborative problem solving and peer to peer learning remains irreplaceable.\n\n[00:04:16] Speaker A: Assuming we can navigate those very serious challenges, what does the future of AI in education look like? What's on the horizon for the next decade?\n\n[00:04:25] Speaker B: The future is moving beyond simple personalization and towards AI as a creative and collaborative partner. Imagine a student working on a history project. An AI could act as a sophisticated research assistant, helping them find and evaluate primary sources, generate different thesis statements to consider, and even create data visualizations for a student learning to code. An AI could be a co pilot, suggesting improvements to their code and helping them debug problems in real time.\n\n[00:04:56] Speaker A: So it becomes more of a tool for creation rather than just for consumption of information.\n\n[00:05:02] Speaker B: Precisely. Furthermore, we'll see AI powering much more immersive and interactive learning experiences. Think of virtual reality science labs where students can conduct dangerous experiments in a safe environment. Or AI driven simulations that allow students to practice public speaking in front of a virtual audience that provides real time feedback. It can make abstract concepts tangible. Finally, I envision the development of lifelong learning companions. An AI that stays with you from primary school through university and into your professional life, understanding your learning style, tracking your skill development, and recommending new courses or skills to learn as your career evolves.\n\n[00:05:46] Speaker A: That's a fascinating vision of the future. So to summarize, AI is already personalizing learning and empowering teachers, but we face significant hurdles regarding data privacy and algorithmic bias. The future points towards a more collaborative and immersive educational experience. As a final thought, what is the single most important thing for parents, students and educators to remember as we embrace this technology?\n\n[00:06:13] Speaker B: The most important thing is that technology is a tool, not a replacement for great teaching. The core of education will always be the human connection, the curiosity a passionate teacher inspires, the confidence a mentor builds and the collaborative spirit among students. The goal of AI should be to augment and enhance those human qualities, to handle the tasks that machines do well so that humans can focus on what we do best. It should be a partnership with human values firmly in the lead.\n\n[00:06:45] Speaker A: A perfect place to end. Thank you for your invaluable insights today.\n\n[00:06:49] Speaker B: Thank you for having me.",
+      "sourceType": "audio",
+      "audioUrl": "assets/68a523ceb63a3708014e823f.mp3",
+      "_id": "68a523ceb63a3708014e823f"
+    },
+    {
+      "name": "Student (Online Learning).docx",
+      "content": "Interviewer: Thanks for participating. You've been in a fully online program for two years now. What has been the single biggest advantage for you?\n\nInterviewee: The flexibility, without a doubt. I can work a part-time job and schedule my studies around it. Being able to watch recorded lectures at my own pace, pause them, and rewind them has been a game-changer for how I absorb complex information.\n\nInterviewer: That makes sense. Now, what has been the biggest challenge or disadvantage?\n\nInterviewee: The isolation. It's incredibly difficult to feel connected to your classmates or the university itself. You don't have those casual conversations after class where you really break down a topic or form study groups. Everything feels very formal and transactional.\n\nInterviewer: Can you elaborate on that \"transactional\" feeling in your interactions?\n\nInterviewee: Well, communication is almost entirely through discussion forums and email. You post your required two responses a week, and that's it. You don't build a real rapport. It feels like you're just submitting assignments into a void sometimes.\n\nInterviewer: How do you find the motivation to stay on track without the structure of a physical campus and in-person classes?\n\nInterviewee: It's tough. You have to be extremely self-disciplined. Procrastination is a constant battle when your bedroom is also your lecture hall. I rely heavily on my digital calendar and setting personal deadlines to keep myself from falling behind.\n\nInterviewer: What about the technology itself—the learning management system or other required platforms? Have they been easy to use?\n\nInterviewee: It varies wildly between courses. Some professors design beautiful, intuitive course pages. Others are just a chaotic list of files and links. A poorly designed site adds a whole extra layer of stress to the learning process.\n\nInterviewer: Have you had opportunities for collaborative work, and how has that gone in an online environment?\n\nInterviewee: We've had a few group projects. They're always a challenge. Coordinating schedules across different time zones and relying on video calls can be awkward. It lacks the creative energy you get when you're all in the same room brainstorming around a whiteboard.\n\nInterviewer: If you could ask your professors to change one thing about how they teach online, what would it be?\n\nInterviewee: I'd ask for more low-stakes, optional live sessions. Not mandatory lectures, but just an open \"office hours\" on video where we can show up and have a real, unscripted conversation, ask questions, and see our classmates' faces.\n\nInterviewer: That's a great suggestion. Finally, would you recommend a fully online program to an incoming first-year student?\n\nInterviewee: I'd say it depends entirely on their personality. If you're an independent, self-motivated learner who values flexibility above all else, it can be perfect. But if you thrive on social interaction and the structure of a campus environment, you might find it a very lonely experience.\n\n",
+      "sourceType": "text",
+      "_id": "68a523fcb63a3708014e8261"
+    }
+  ],
+  "codeDefinitions": [
+    {
+      "name": "Technical & Logistical Issues",
+      "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+      "color": "#E57373",
+      "owner": "688070993462e9d38070793b",
+      "_id": "68a52508b63a3708014e8273",
+      "createdAt": "2025-08-20T01:29:44.730Z"
+    },
+    {
+      "name": "Pedagogical Strategy",
+      "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+      "color": "#64B5F6",
+      "owner": "688070993462e9d38070793b",
+      "_id": "68a52c1eb63a3708014e8320",
+      "createdAt": "2025-08-20T01:59:58.759Z"
+    },
+    {
+      "name": "Future & Ethical Dimensions",
+      "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+      "color": "#BA68C8",
+      "owner": "688070993462e9d38070793b",
+      "_id": "68a5312fb63a3708014e9065",
+      "createdAt": "2025-08-20T02:21:35.781Z"
+    },
+    {
+      "name": "Educator & Institutional Support",
+      "description": "Split from original code.",
+      "color": "#00ffe1",
+      "owner": "688070993462e9d38070793b",
+      "_id": "68a53cb5b63a3708014ea5ff",
+      "createdAt": "2025-08-20T03:10:45.586Z"
+    },
+    {
+      "name": "Social & Emotional Engagement",
+      "description": "Merged from codes.",
+      "color": "#81C784",
+      "owner": "688070993462e9d38070793b",
+      "_id": "68a53d9db63a3708014ea673",
+      "createdAt": "2025-08-20T03:14:37.650Z"
+    }
+  ],
+  "codedSegments": [
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "the real challenge wasn't the device in their hands; it was the connection in their homes.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 282,
+      "endIndex": 372,
+      "_id": "68a525bbb63a3708014e8297"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "the primary issue became home internet access rather than device access?",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 439,
+      "endIndex": 511,
+      "_id": "68a525d8b63a3708014e82a0"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "We distributed hundreds of Wi-Fi hotspots, but those are a temporary fix.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 596,
+      "endIndex": 669,
+      "_id": "68a525e9b63a3708014e82aa"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "They have data caps, they can be unreliable",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 670,
+      "endIndex": 713,
+      "_id": "68a525feb63a3708014e82b5"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "a single hotspot doesn't work well when you have three children trying to attend live video classes at the same time.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 719,
+      "endIndex": 836,
+      "_id": "68a52bb2b63a3708014e82c3"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "A teacher can't assign a project that requires streaming high-definition video if 20% of their students can't reliably do that.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1046,
+      "endIndex": 1173,
+      "_id": "68a52bc0b63a3708014e82d0"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "others were still struggling with the basics of the learning management system.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1465,
+      "endIndex": 1544,
+      "_id": "68a52bccb63a3708014e82de"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "treat internet access as a public utility, just like water or electricity.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1974,
+      "endIndex": 2048,
+      "_id": "68a52be7b63a3708014e82ed"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "When a student has a poor connection, they can't participate in real-time discussions, their video is off, and they become invisible.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 2337,
+      "endIndex": 2470,
+      "_id": "68a52c01b63a3708014e830e"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "On the surface, it was a massive success. Every student had a device.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 208,
+      "endIndex": 277,
+      "_id": "68a52c32b63a3708014e8333"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "It forced them to design for the lowest common denominator.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 986,
+      "endIndex": 1045,
+      "_id": "68a52c43b63a3708014e8347"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "It stifles innovation and limits the very potential the technology was supposed to unlock.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 1174,
+      "endIndex": 1264,
+      "_id": "68a52c5db63a3708014e8384"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "Some teachers were ready to build virtual reality lessons, while \n\nothers were still struggling",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1400,
+      "endIndex": 1493,
+      "_id": "68a52c94b63a3708014e83b1"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "Professional development is key",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1545,
+      "endIndex": 1576,
+      "_id": "68a52cb4b63a3708014e83c9"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "it's hard to create a one-size-fits-all training program for such a wide range of skills.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1582,
+      "endIndex": 1671,
+      "_id": "68a52cbfb63a3708014e83e2"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "The school can't solve this problem alone.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 2049,
+      "endIndex": 2091,
+      "_id": "68a52cccb63a3708014e83fc"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "profound impact on their sense of belonging and their engagement with the class.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2499,
+      "endIndex": 2579,
+      "_id": "68a52cddb63a3708014e8433"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "their sense of belonging and their engagement with the class.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2518,
+      "endIndex": 2579,
+      "_id": "68a52d26b63a3708014e846e"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The pressure to use the latest, trendiest app.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 961,
+      "endIndex": 1007,
+      "_id": "68a52d6cb63a3708014e848d"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Last year, it was one platform for gamified quizzes, this year it's another.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1008,
+      "endIndex": 1084,
+      "_id": "68a52d78b63a3708014e84ad"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Design tools that are simple, robust, and solve a real problem for us",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 2239,
+      "endIndex": 2308,
+      "_id": "68a52d91b63a3708014e84f0"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "rather than just adding bells and whistles.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 2310,
+      "endIndex": 2353,
+      "_id": "68a52dacb63a3708014e8513"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Some tools are genuinely transformative and allow me to do things I never could have done before.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 235,
+      "endIndex": 332,
+      "_id": "68a52dc0b63a3708014e8537"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "adding more to my workload without a clear pedagogical benefit.\n",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 393,
+      "endIndex": 457,
+      "_id": "68a52dd8b63a3708014e8580"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The interactive science simulations we use are fantastic.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 575,
+      "endIndex": 632,
+      "_id": "68a52de5b63a3708014e85a6"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "They allow students to visualize abstract concepts",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 633,
+      "endIndex": 683,
+      "_id": "68a52df0b63a3708014e85cd"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "a genuine enhancement to learning.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 840,
+      "endIndex": 874,
+      "_id": "68a52df8b63a3708014e85f5"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The data dashboards on our learning platform can help me quickly identify a student who is falling behind.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 1364,
+      "endIndex": 1470,
+      "_id": "68a52e05b63a3708014e861e"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The ideal balance is when technology becomes invisible.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 2598,
+      "endIndex": 2653,
+      "_id": "68a52e16b63a3708014e8648"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The focus must always remain on the students and the content, not on the tech itself.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 2800,
+      "endIndex": 2885,
+      "_id": "68a52e20b63a3708014e8673"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "It's a double-edged sword.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 208,
+      "endIndex": 234,
+      "_id": "68a52e2fb63a3708014e869f"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "adding more to my workload",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 393,
+      "endIndex": 419,
+      "_id": "68a52e3bb63a3708014e86cc"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Each one requires time to learn, time to set up my classes, and time to teach the students how to use it.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1085,
+      "endIndex": 1190,
+      "_id": "68a52e61b63a3708014e86fa"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The lack of consistency is exhausting.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1191,
+      "endIndex": 1229,
+      "_id": "68a52e68b63a3708014e8729"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "The district offers workshops, but they're often led by tech specialists who don't have recent classroom experience.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1736,
+      "endIndex": 1852,
+      "_id": "68a52e78b63a3708014e8759"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "We need more teacher-led, pedagogy-focused training.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1967,
+      "endIndex": 2019,
+      "_id": "68a52e81b63a3708014e878a"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Spend a week in a real classroom. See how chaotic it can be.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 2149,
+      "endIndex": 2209,
+      "_id": "68a52e8db63a3708014e87bc"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "it's mixed.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1352,
+      "endIndex": 1363,
+      "_id": "68a52ea5b63a3708014e8823"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "It's much harder to read body language and build rapport through a video call than it is in person.\n",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1509,
+      "endIndex": 1609,
+      "_id": "68a52eb0b63a3708014e8858"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "not how to manage a class of 30 teenagers while trying to use the tool.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1895,
+      "endIndex": 1966,
+      "_id": "68a52ebdb63a3708014e888e"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Flexibility is more important than a hundred features we'll never use.\n",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2354,
+      "endIndex": 2425,
+      "_id": "68a52ec5b63a3708014e88c5"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "It varies wildly between courses.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1643,
+      "endIndex": 1676,
+      "_id": "68a52f54b63a3708014e88fd"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Some professors design beautiful, intuitive course pages. Others are just a chaotic list of files and links.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1677,
+      "endIndex": 1785,
+      "_id": "68a52f61b63a3708014e8936"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "A poorly designed site adds a whole extra layer of stress to the learning process.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 1786,
+      "endIndex": 1868,
+      "_id": "68a52f6ab63a3708014e8970"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "The flexibility, without a doubt. I can work a part-time job and schedule my studies around it. Being able to watch recorded lectures at my own pace, pause them, and rewind them has been a game-changer",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 162,
+      "endIndex": 363,
+      "_id": "68a52f9ab63a3708014e8a1f"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "a game-changer for how I absorb complex information.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 349,
+      "endIndex": 401,
+      "_id": "68a52fa5b63a3708014e8a5b"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "The isolation.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 506,
+      "endIndex": 520,
+      "_id": "68a52fb1b63a3708014e8a98"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "It's tough. You have to be extremely self-disciplined.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1252,
+      "endIndex": 1306,
+      "_id": "68a52fc5b63a3708014e8ad6"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Procrastination is a constant battle when your bedroom is also your lecture hall.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1307,
+      "endIndex": 1388,
+      "_id": "68a52fccb63a3708014e8b15"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "I rely heavily on my digital calendar and setting personal deadlines to keep myself from falling behind.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1389,
+      "endIndex": 1493,
+      "_id": "68a52fd6b63a3708014e8b55"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "They're always a challenge.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2028,
+      "endIndex": 2055,
+      "_id": "68a52fe9b63a3708014e8b96"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "I'd say it depends entirely on their personality.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2752,
+      "endIndex": 2801,
+      "_id": "68a53000b63a3708014e8bd8"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "you might find it a very lonely experience.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2992,
+      "endIndex": 3035,
+      "_id": "68a5300cb63a3708014e8c1b"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "the biggest challenge or disadvantage?",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 453,
+      "endIndex": 491,
+      "_id": "68a53020b63a3708014e8c5f"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "It's incredibly difficult to feel connected to your classmates or the university itself.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 521,
+      "endIndex": 609,
+      "_id": "68a5303fb63a3708014e8d2c"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "You don't have those casual conversations after class",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 610,
+      "endIndex": 663,
+      "_id": "68a5307eb63a3708014e8d72"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Everything feels very formal and transactional.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 722,
+      "endIndex": 769,
+      "_id": "68a53086b63a3708014e8db9"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Well, communication is almost entirely through discussion forums and email.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 870,
+      "endIndex": 945,
+      "_id": "68a5308fb63a3708014e8e01"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "You don't build a real rapport.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1006,
+      "endIndex": 1037,
+      "_id": "68a5309ab63a3708014e8e4a"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "It feels like you're just submitting assignments into a void sometimes.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1038,
+      "endIndex": 1109,
+      "_id": "68a530bcb63a3708014e8e94"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Have you had opportunities for collaborative work, and how has that gone in an online environment?",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 1883,
+      "endIndex": 1981,
+      "_id": "68a530d4b63a3708014e8edf"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "Coordinating schedules across different time zones and relying on video calls can be awkward.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2056,
+      "endIndex": 2149,
+      "_id": "68a530deb63a3708014e8f2b"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "It lacks the creative energy you get when you're all in the same room brainstorming around a whiteboard.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2150,
+      "endIndex": 2254,
+      "_id": "68a530e5b63a3708014e8f78"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "an open \"office hours\" on video where we can show up and have a real, unscripted conversation, ask questions, and see our classmates' faces.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2469,
+      "endIndex": 2609,
+      "_id": "68a53107b63a3708014e9015"
+    },
+    {
+      "fileName": "Student (Online Learning).docx",
+      "fileId": "68a523fcb63a3708014e8261",
+      "text": "I'd say it depends entirely on their personality. If you're an independent, self-motivated learner who values flexibility above all else, it can be perfect. But if you thrive on social interaction and the structure of a campus environment, \n\nyou might find it a very lonely experience.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 2752,
+      "endIndex": 3035,
+      "_id": "68a531c3b63a3708014e90b6"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "It's about creating a unique educational path for each learner.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 1322,
+      "endIndex": 1385,
+      "_id": "68a531f0b63a3708014e915b"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "it's less about replacing the teacher and more about providing a highly customized tool for the student.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 1412,
+      "endIndex": 1516,
+      "_id": "68a53204b63a3708014e9255"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "AI tools can automate the grading of multiple choice tests, fill in the blank questions and even some short answer responses.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 1692,
+      "endIndex": 1817,
+      "_id": "68a53211b63a3708014e92aa"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "teacher handles the high impact human centric instruction.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 2305,
+      "endIndex": 2363,
+      "_id": "68a5321eb63a3708014e9300"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "It shifts the teacher's role from a sage on the stage to a guide on the side.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 2364,
+      "endIndex": 2441,
+      "_id": "68a53226b63a3708014e9357"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "An AI could act as a sophisticated research assistant",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 4529,
+      "endIndex": 4582,
+      "_id": "68a53245b63a3708014e93af"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "a tool for creation rather than just for consumption of information.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 4906,
+      "endIndex": 4974,
+      "_id": "68a53258b63a3708014e9408"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "powering much more immersive and interactive learning experiences.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 5035,
+      "endIndex": 5101,
+      "_id": "68a5326cb63a3708014e9462"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The goal of AI should be to augment and enhance those human qualities, to handle the tasks that machines do well so that humans can focus on what we do best.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 6439,
+      "endIndex": 6596,
+      "_id": "68a53291b63a3708014e94bd"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "Empowering the educator.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1589,
+      "endIndex": 1613,
+      "_id": "68a532a0b63a3708014e9519"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "free them from administrative burdens.",
+      "codeDefinition": {
+        "_id": "68a53cb5b63a3708014ea5ff",
+        "name": "Educator & Institutional Support",
+        "description": "Split from original code.",
+        "color": "#00ffe1"
+      },
+      "startIndex": 1873,
+      "endIndex": 1911,
+      "_id": "68a532a9b63a3708014e9576"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "We don't want students to lose the ability to struggle with a problem, to think creatively, or to learn from failure.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 3804,
+      "endIndex": 3921,
+      "_id": "68a532b8b63a3708014e95d4"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "dedicate that time to what humans do best. Mentoring, facilitating group projects, providing one on one support to struggling students, and teaching complex nuanced subjects like critical thinking and ethics.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2043,
+      "endIndex": 2251,
+      "_id": "68a532ddb63a3708014e9633"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The human element of collaborative problem solving and peer to peer learning remains irreplaceable.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 4078,
+      "endIndex": 4177,
+      "_id": "68a532f3b63a3708014e97b0"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The core of education will always be the human connection, the curiosity a passionate teacher inspires, the confidence a mentor builds and the collaborative spirit among students.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 6259,
+      "endIndex": 6438,
+      "_id": "68a53323b63a3708014e9873"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "It should be a partnership with human values firmly in the lead.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 6597,
+      "endIndex": 6661,
+      "_id": "68a5332fb63a3708014e98d6"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The first major concern is data privacy and security.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 2729,
+      "endIndex": 2782,
+      "_id": "68a5333fb63a3708014e993a"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "We must have robust regulations to ensure this data is used, ethically, protected from breaches",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 2955,
+      "endIndex": 3050,
+      "_id": "68a53352b63a3708014e999f"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "we face significant hurdles regarding data privacy and algorithmic bias.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 5846,
+      "endIndex": 5918,
+      "_id": "68a5336db63a3708014e9a05"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "AI will not only replicate but potentially amplify those biases.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 3410,
+      "endIndex": 3474,
+      "_id": "68a5337bb63a3708014e9a6c"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "Ensuring fairness and equity in these systems is a monumental task.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 3690,
+      "endIndex": 3757,
+      "_id": "68a53387b63a3708014e9ad4"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "A final concern is the risk of over reliance.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 3758,
+      "endIndex": 3803,
+      "_id": "68a533a2b63a3708014e9b3d"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "what does the future of AI in education look like?",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 4257,
+      "endIndex": 4307,
+      "_id": "68a533aeb63a3708014e9ba7"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The future is moving beyond simple personalization and towards AI as a creative and collaborative partner.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 4374,
+      "endIndex": 4480,
+      "_id": "68a533c6b63a3708014e9c12"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "Think of virtual reality science labs where students can conduct dangerous experiments in a safe environment.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 5102,
+      "endIndex": 5211,
+      "_id": "68a533d5b63a3708014e9c7e"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "AI driven simulations that allow students to practice public speaking in front of a virtual audience that provides real time feedback.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 5215,
+      "endIndex": 5349,
+      "_id": "68a533e0b63a3708014e9ceb"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "I envision the development of lifelong learning companions.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 5399,
+      "endIndex": 5458,
+      "_id": "68a533ecb63a3708014e9d59"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "technology is a tool, not a replacement for great teaching.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 6199,
+      "endIndex": 6258,
+      "_id": "68a533ffb63a3708014e9dc8"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "The biggest application right now is personalized learning.",
+      "codeDefinition": {
+        "_id": "68a52c1eb63a3708014e8320",
+        "name": "Pedagogical Strategy",
+        "description": "Refers to the methods and purpose behind using technology for teaching and learning, including instructional design and learning goals.",
+        "color": "#64B5F6"
+      },
+      "startIndex": 771,
+      "endIndex": 830,
+      "_id": "68a53432b63a3708014e9ea4"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "Think of virtual reality science labs where students can conduct dangerous experiments in a safe environment.",
+      "codeDefinition": {
+        "_id": "68a52508b63a3708014e8273",
+        "name": "Technical & Logistical Issues",
+        "description": "Catches mentions of concrete barriers related to technology, like internet access, device problems, or platform usability.",
+        "color": "#E57373"
+      },
+      "startIndex": 5102,
+      "endIndex": 5211,
+      "_id": "68a53817b63a3708014e9fef"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "Imagine a student working on a history project. \n\nAn AI could act as a sophisticated research assistant",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 4481,
+      "endIndex": 4582,
+      "_id": "68a5386cb63a3708014ea133"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "they become invisible.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2448,
+      "endIndex": 2470,
+      "_id": "68a538e6b63a3708014ea210"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "See how little time we have.",
+      "codeDefinition": {
+        "_id": "68a53d9db63a3708014ea673",
+        "name": "Social & Emotional Engagement",
+        "description": "Merged from codes.",
+        "color": "#81C784"
+      },
+      "startIndex": 2210,
+      "endIndex": 2238,
+      "_id": "68a538f9b63a3708014ea280"
+    },
+    {
+      "fileName": "AI Expert (AI in Education) (Transcript).txt",
+      "fileId": "68a523ceb63a3708014e823f",
+      "text": "An AI that stays with you from primary school through university and into your professional life, understanding your learning style, tracking your skill development, and recommending new courses or skills to learn as your career evolves.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 5459,
+      "endIndex": 5696,
+      "_id": "68a53926b63a3708014ea435"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "treat internet access as a public utility, just like water or electricity.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 1974,
+      "endIndex": 2048,
+      "_id": "68a53972b63a3708014ea4a4"
+    },
+    {
+      "fileName": "Teacher (Classroom Integration).docx",
+      "fileId": "68a523a0b63a3708014e8236",
+      "text": "Flexibility is more important than a hundred features we'll never use.",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 2354,
+      "endIndex": 2424,
+      "_id": "68a53984b63a3708014ea514"
+    },
+    {
+      "fileName": "Administrator (Digital Divide).docx",
+      "fileId": "68a52385b63a3708014e822d",
+      "text": "Our focus has shifted from \"access\" to \"equity of experience.\"",
+      "codeDefinition": {
+        "_id": "68a5312fb63a3708014e9065",
+        "name": "Future & Ethical Dimensions",
+        "description": "Covers forward-looking predictions about technology's potential, as well as critical concerns like data privacy, security, and algorithmic bias.",
+        "color": "#BA68C8"
+      },
+      "startIndex": 1805,
+      "endIndex": 1867,
+      "_id": "68a53a06b63a3708014ea585"
+    }
+  ],
+  "inlineHighlights": [],
+  "memos": []
+}

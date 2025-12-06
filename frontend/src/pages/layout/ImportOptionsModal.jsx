@@ -32,7 +32,8 @@ const ImportOptionsModal = ({
   const MAX_TEXT_SIZE_MB = MAX_TEXT_SIZE_BYTES / 1024 / 1024;
   const MAX_AUDIO_SIZE_MB = MAX_AUDIO_SIZE_BYTES / 1024 / 1024;
 
-  const textFormats = '.txt, .docx';
+  // --- UPDATE HERE: Added .pdf to textFormats ---
+  const textFormats = '.txt, .docx, .pdf'; 
   const audioFormats = '.mp3, .wav, .ogg, .m4a, .aac';
 
   const handleAudioOptionClick = (option) => {

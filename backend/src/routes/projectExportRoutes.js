@@ -3,6 +3,8 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import archiver from 'archiver';
 import Project from '../models/Project.js';
 
 const router = express.Router();
@@ -812,4 +814,71 @@ router.get('/:projectId/files/:fileId/export', async (req, res) => {
     }
 });
   
+/**
+ * Exports the entire project as a .quail (ZIP) archive.
+ */
+router.get('/:projectId/export-quail', async (req, res) => {
+  const { projectId } = req.params;
+  const userId = req.userId;
+
+  try {
+    const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+
+    const filename = `${project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.quail`;
+    res.attachment(filename);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    archive.on('error', function(err) {
+      console.error('Archiver error:', err);
+      res.status(500).send({error: err.message});
+    });
+
+    const projectData = { ...project };
+
+    // 1. Process Files for Audio Assets
+    // We KEEP the _id here because we need it for mapping relationships on import
+    if (projectData.importedFiles) {
+      projectData.importedFiles = projectData.importedFiles.map(file => {
+        if (file.sourceType === 'audio' && file.audioUrl) {
+          let relativePath = file.audioUrl.startsWith('/') ? file.audioUrl.substring(1) : file.audioUrl;
+          const absolutePath = path.resolve(relativePath);
+
+          if (fs.existsSync(absolutePath)) {
+            const ext = path.extname(relativePath);
+            // Use the ID in the filename to prevent collisions inside the zip
+            const zipAssetName = `assets/${file._id}${ext}`;
+            archive.file(absolutePath, { name: zipAssetName });
+
+            // Point the URL to the internal zip path
+            return { ...file, audioUrl: zipAssetName };
+          }
+        }
+        return file;
+      });
+    }
+
+    // REMOVED: The block that deleted _ids from codeDefinitions, codedSegments, etc.
+    // We strictly need these IDs to exist in project.json to reconstruct the web of references.
+
+    // Remove only top-level system fields
+    delete projectData._id;
+    delete projectData.owner;
+    delete projectData.createdAt;
+    delete projectData.updatedAt;
+    delete projectData.__v;
+
+    archive.append(JSON.stringify(projectData, null, 2), { name: 'project.json' });
+    await archive.finalize();
+
+  } catch (err) {
+    console.error('Project export failed:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Export failed' });
+  }
+});
+
 export default router;

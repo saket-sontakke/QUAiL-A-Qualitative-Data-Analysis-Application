@@ -107,6 +107,8 @@ const ContactSection = () => {
   const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_FORM_URL;
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
   const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL;
+  const CONTACT_EMAIL_2 = import.meta.env.VITE_CONTACT_EMAIL_2;
+
 
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState("idle"); 
@@ -191,6 +193,9 @@ const ContactSection = () => {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-200">Email Us</h3>
                 <a href={`mailto:${CONTACT_EMAIL}`} className="text-base text-gray-500 dark:text-gray-400 hover:text-[#FF7E39] block transition-colors mt-1 break-all">
                   {CONTACT_EMAIL}
+                </a>
+                <a href={`mailto:${CONTACT_EMAIL_2}`} className="text-base text-gray-500 dark:text-gray-400 hover:text-[#FF7E39] block transition-colors mt-1 break-all">
+                  {CONTACT_EMAIL_2}
                 </a>
               </div>
             </motion.div>

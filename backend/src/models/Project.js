@@ -124,6 +124,8 @@ const memoSchema = new mongoose.Schema({
  */
 const projectSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  description: { type: String, default: '' },
+  isImported: { type: Boolean, default: false },
   data: { type: Object, default: {} },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   importedFiles: [importedFileSchema],

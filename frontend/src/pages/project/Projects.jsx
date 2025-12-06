@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import FileSaver from 'file-saver';
 import Navbar from '../layout/Navbar.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
@@ -9,13 +10,12 @@ import EditProjectModal from './EditProjectModal.jsx';
 import CreateProjectModal from './CreateProjectModal.jsx';
 import {
   FaSearch, FaTh, FaList, FaPlus, FaEdit, FaTrash, FaCalendarAlt,
-  FaSortAlphaDown, FaSortAlphaDownAlt, FaSortAmountDown, FaSortAmountDownAlt, FaCheck, FaTimes, FaCopy
+  FaSortAlphaDown, FaSortAlphaDownAlt, FaSortAmountDown, FaSortAmountDownAlt,
+  FaCheck, FaTimes, FaCopy, FaFileImport, FaDownload
 } from 'react-icons/fa';
 
 /**
  * Renders an icon indicating the current sort configuration.
- * @param {{sortConfig: {key: string, direction: string}}} props - The component props.
- * @returns {JSX.Element|null} The rendered sort icon.
  */
 const RenderSortIcon = ({ sortConfig }) => {
   const { key, direction } = sortConfig;
@@ -27,16 +27,12 @@ const RenderSortIcon = ({ sortConfig }) => {
   return null;
 };
 
-/**
- * Renders the main projects dashboard, allowing users to view, create,
- * edit, delete, copy, search, and sort their projects.
- * @returns {JSX.Element} The rendered projects dashboard component.
- */
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -58,6 +54,7 @@ const Projects = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const sortMenuRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (location.state?.openCreateModal) {
@@ -118,12 +115,11 @@ const Projects = () => {
     setFilteredProjects(result);
   }, [projects, searchQuery, sortConfig]);
 
+  // --- Handlers ---
+
   const handleCreateProject = async (newProjectData) => {
     const token = user?.token;
-    if (!token) {
-      setError("You must be logged in to create a project.");
-      return;
-    }
+    if (!token) return;
     try {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/create`, newProjectData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -137,10 +133,7 @@ const Projects = () => {
 
   const handleUpdateProject = async (updatedData) => {
     const token = user?.token;
-    if (!token) {
-      setError("Authentication error. Please log in again.");
-      return;
-    }
+    if (!token) return;
     try {
       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToEdit._id}`, updatedData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -156,11 +149,7 @@ const Projects = () => {
 
   const handleDeleteProject = async () => {
     const token = user?.token;
-    if (!token) {
-      setError("Authentication error. Please log in again.");
-      setShowDeleteModal(false);
-      return;
-    }
+    if (!token) return;
     try {
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToDelete}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -176,12 +165,7 @@ const Projects = () => {
 
   const handleCopyProject = async (includeAnnotations) => {
     const token = user?.token;
-    if (!token || !projectToCopy) {
-      setError("Authentication error or no project selected.");
-      setShowCopyModal(false);
-      return;
-    }
-    
+    if (!token || !projectToCopy) return;
     setShowCopyModal(false);
 
     try {
@@ -190,15 +174,74 @@ const Projects = () => {
         { includeAnnotations },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
       setProjects(prevProjects => [res.data, ...prevProjects]);
       setProjectToCopy(null);
-
     } catch (err) {
       setError(err.response?.data?.error || "Failed to copy project.");
       setProjectToCopy(null);
     }
   };
+
+  // --- Import / Export Handlers ---
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = null;
+
+    if (!file.name.endsWith('.quail')) {
+      setError("Please select a valid .quail file.");
+      return;
+    }
+
+    setIsImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const token = user?.token;
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/import-quail`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setProjects(prev => [res.data, ...prev]);
+      setError('');
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || "Failed to import project.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleExportQuail = async (e, projectId, projectName) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const token = user?.token;
+    if (!token) return;
+
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-quail`, 
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob' 
+        }
+      );
+      FileSaver.saveAs(res.data, `${projectName}.quail`);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to export project.");
+    }
+  };
+
+  // --- Modal Helpers ---
 
   const openEditModal = (project) => {
     setProjectToEdit(project);
@@ -232,6 +275,7 @@ const Projects = () => {
       <main className="container mx-auto flex flex-col flex-grow p-6 pt-22 overflow-hidden">
         <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-6 z-10">
           <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+            {/* Search Bar */}
             <div className="relative flex-grow md:max-w-sm">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaSearch className="text-gray-400" />
@@ -249,6 +293,8 @@ const Projects = () => {
                 </button>
               )}
             </div>
+
+            {/* View Toggles */}
             <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button onClick={() => setViewMode('tiles')} className={`p-2 rounded-md ${viewMode === 'tiles' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`} aria-label="Tile view" title="Tile View">
                 <FaTh className={viewMode === 'tiles' ? 'text-[#F05623]' : 'text-gray-500'} />
@@ -257,6 +303,8 @@ const Projects = () => {
                 <FaList className={viewMode === 'list' ? 'text-[#F05623]' : 'text-gray-500'} />
               </button>
             </div>
+
+            {/* Sort Menu */}
             <div className="relative" ref={sortMenuRef}>
               <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="p-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center bg-gray-100 dark:bg-gray-700" title="Sort Projects">
                 <RenderSortIcon sortConfig={sortConfig} />
@@ -284,7 +332,7 @@ const Projects = () => {
                         <span className="w-4">{sortConfig.key === 'created' && sortConfig.direction === 'asc' && <FaCheck />}</span>
                         <span>Date Created (Oldest)</span>
                       </button>
-                       <hr className="my-1 border-gray-200 dark:border-gray-600" />
+                        <hr className="my-1 border-gray-200 dark:border-gray-600" />
                       <button onClick={() => handleSortChange('modified', 'desc')} className="w-full text-left px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
                         <span className="w-4">{sortConfig.key === 'modified' && sortConfig.direction === 'desc' && <FaCheck />}</span>
                         <span>Date Modified (Newest)</span>
@@ -299,8 +347,37 @@ const Projects = () => {
               </AnimatePresence>
             </div>
             <div className="flex-grow"></div>
+
+            {/* IMPORT PROJECT BUTTON */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              accept=".quail" 
+              onChange={handleFileChange} 
+            />
+            <button
+              onClick={handleImportClick}
+              disabled={isImporting}
+              title="Import Project (.quail files only)"
+              className={`flex items-center justify-center gap-2 transform rounded-lg border-2 border-[#d34715] py-2.5 px-5 font-bold text-[#d34715] shadow-md transition duration-300 
+                hover:scale-105 hover:bg-[#d34715]/10 
+                dark:text-[#F05623] dark:border-[#F05623] 
+                dark:hover:bg-[#F05623]/10 
+                ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isImporting ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <FaFileImport className="text-lg" />
+              )}
+              {isImporting ? 'Importing...' : 'Import Project'}
+            </button>
+
+            {/* CREATE PROJECT BUTTON */}
             <button
               onClick={() => setShowCreateModal(true)}
+              title="Create New Project"
               className="flex items-center justify-center gap-2 transform rounded-lg bg-[#d34715] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#F05623]"
             >
               <FaPlus className="text-sm" />
@@ -322,59 +399,126 @@ const Projects = () => {
             </div>
           )}
 
-          {!isLoading && filteredProjects.length > 0 && viewMode === 'tiles' && (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredProjects.map((project) => (
-                <Link to={`/project/${project._id}`} key={project._id} className="block">
-                  <motion.div className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
-                    <div>
-                      <h2 title={project.name} className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
-                      {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
-                      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                        <div className="flex items-center"><FaCalendarAlt className="mr-1.5 flex-shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
-                        <div className="flex items-center"><FaEdit className="mr-1.5 flex-shrink-0" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
-                      </div>
-                    </div>
-                    <div className="mt-6 flex items-center justify-end">
-                      <div className="flex space-x-4">
-                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex items-center gap-1.5 text-sm text-blue-600 transition hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"><FaCopy />Copy</button>
-                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"><FaEdit />Edit</button>
-                        <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"><FaTrash />Delete</button>
-                      </div>
-                    </div>
-                  </motion.div>
-                </Link>
-              ))}
+          {/* TILES VIEW */}
+{!isLoading && filteredProjects.length > 0 && viewMode === 'tiles' && (
+  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {filteredProjects.map((project) => (
+      <Link to={`/project/${project._id}`} key={project._id} className="block">
+        <motion.div 
+          className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          whileHover={{ y: -5 }} 
+          transition={{ duration: 0.3 }}
+        >
+          <div>
+            {/* --- BADGE REMOVED FROM HERE --- */}
+            
+            <h2 title={project.name} className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
+            {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
+            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+              <div className="flex items-center"><FaCalendarAlt className="mr-1.5 flex-shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+              <div className="flex items-center"><FaEdit className="mr-1.5 flex-shrink-0" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
             </div>
-          )}
+          </div>
 
-          {!isLoading && filteredProjects.length > 0 && viewMode === 'list' && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredProjects.map((project) => (
-                  <Link to={`/project/${project._id}`} key={project._id} className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
-                    <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h3 title={project.name} className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
-                          {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
-                          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
-                            <div className="flex items-center"><FaEdit className="mr-1.5" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4 flex-shrink-0">
-                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex items-center gap-1.5 text-sm text-blue-600 transition hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200" title="Copy Project"><FaCopy /><span className="hidden sm:inline">Copy</span></button>
-                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex items-center gap-1.5 text-sm text-green-600 transition hover:text-green-800 dark:text-green-400 dark:hover:text-green-200" title="Edit Project"><FaEdit /><span className="hidden sm:inline">Edit</span></button>
-                          <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex items-center gap-1.5 text-sm text-red-600 transition hover:text-red-800 dark:text-red-400 dark:hover:text-red-200" title="Delete Project"><FaTrash /><span className="hidden sm:inline">Delete</span></button>
-                        </div>
-                      </div>
-                    </motion.li>
-                  </Link>
-                ))}
-              </ul>
+          {/* --- FOOTER SECTION UPDATED --- */}
+          {/* Changed 'justify-end' to just 'flex items-center' to allow left and right content */}
+          <div className="mt-6 flex items-center">
+            
+            {/* 1. Badge placed here (Bottom Left) */}
+            {project.isImported && (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                <FaFileImport className="text-[10px]" />
+                Imported
+              </div>
+            )}
+
+            {/* 2. Action Buttons (Added 'ml-auto' to push them to the right) */}
+            <div className="ml-auto flex items-center gap-1">
+              <button 
+                title="Download Project"
+                onClick={(e) => handleExportQuail(e, project._id, project.name)} 
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              >
+                <FaDownload size={14} />
+              </button>
+              <button 
+                title="Duplicate Project"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} 
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              >
+                <FaCopy size={14} />
+              </button>
+              <button 
+                title="Edit Project"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} 
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              >
+                <FaEdit size={14} />
+              </button>
+              <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+              <button 
+                title="Delete Project"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} 
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              >
+                <FaTrash size={14} />
+              </button>
             </div>
-          )}
+          </div>
+        </motion.div>
+      </Link>
+    ))}
+  </div>
+)}
+
+{/* LIST VIEW */}
+{!isLoading && filteredProjects.length > 0 && viewMode === 'list' && (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+      {filteredProjects.map((project) => (
+        <Link to={`/project/${project._id}`} key={project._id} className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+          <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                   
+                   {/* 1. Name First */}
+                   <h3 title={project.name} className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
+                   
+                   {/* 2. Badge Second (After Name) */}
+                   {project.isImported && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                        <FaFileImport className="text-[10px]" />
+                        Imported
+                      </span>
+                    )}
+
+                </div>
+                {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
+                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+                  <div className="flex items-center"><FaEdit className="mr-1.5" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
+                </div>
+              </div>
+
+              {/* ... (Actions section remains unchanged) ... */}
+              <div className="flex items-center gap-1 flex-shrink-0 ml-4">
+                  {/* ... buttons ... */}
+                  <button onClick={(e) => handleExportQuail(e, project._id, project.name)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaDownload size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaCopy size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaEdit size={14} /></button>
+                  <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"><FaTrash size={14} /></button>
+              </div>
+            </div>
+          </motion.li>
+        </Link>
+      ))}
+    </ul>
+  </div>
+)}
         </div>
       </main>
 

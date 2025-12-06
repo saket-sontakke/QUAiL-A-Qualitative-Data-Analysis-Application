@@ -623,7 +623,10 @@ const handleCommitNewFile = async (fileData) => {
         );
 
         const contentDisposition = response.headers['content-disposition'];
-        let filename = `${file.name}.${format}`;
+        
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        let filename = `${baseName}.${format}`;
+
         if (contentDisposition) {
             const filenameMatch = contentDisposition.match(/filename="(.+)"/);
             if (filenameMatch && filenameMatch[1]) {

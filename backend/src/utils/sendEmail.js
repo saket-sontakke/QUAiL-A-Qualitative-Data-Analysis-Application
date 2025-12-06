@@ -1,16 +1,13 @@
 import nodemailer from 'nodemailer';
 
 /**
- * Sends an email using a pre-configured Nodemailer transporter for Gmail.
- * This utility relies on EMAIL_USER and EMAIL_PASS environment variables
- * for authentication with the email service.
- *
- * @param {string} to - The recipient's email address.
- * @param {string} subject - The subject line for the email.
- * @param {string} text - The plain text body of the email.
- * @returns {Promise<void>} A promise that resolves upon successful dispatch of the email.
+ * Sends an email with both HTML and Text versions.
+ * * @param {string} to - The recipient's email address.
+ * @param {string} subject - The subject line.
+ * @param {string} htmlContent - The HTML string (with tags).
+ * @returns {Promise<void>}
  */
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, htmlContent) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -19,11 +16,18 @@ const sendEmail = async (to, subject, text) => {
     },
   });
 
+  const textContent = htmlContent
+    .replace(/<br\s*\/?>/gi, '\n')     // Replace <br> with newline
+    .replace(/<\/p>/gi, '\n\n')        // Replace </p> with double newline
+    .replace(/<[^>]+>/g, '')           // Strip all other HTML tags
+    .trim();                           // Remove leading/trailing whitespace
+
   const mailOptions = {
     from: `"QUAiL Authentication" <${process.env.EMAIL_USER}>`,
     to,
     subject,
-    text,
+    html: htmlContent,
+    text: textContent,
   };
 
   await transporter.sendMail(mailOptions);

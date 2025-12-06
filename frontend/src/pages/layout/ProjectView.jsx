@@ -732,6 +732,7 @@ const ProjectView = () => {
     <div className="min-h-screen bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white">
       <Navbar
         projectName={projectName}
+        isImported={project?.isImported}
         onOpenProjectOverviewModal={() => setShowProjectOverviewModal(true)}
         onOpenPreferencesModal={() => setShowPreferencesModal(true)}
         isEditing={isEditing}
