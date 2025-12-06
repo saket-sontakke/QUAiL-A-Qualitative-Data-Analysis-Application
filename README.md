@@ -31,7 +31,8 @@
 | #7 | • Export Code Matrix <br> • Pin, rename, and export files from document viewer <br> • Find and Replace functionality in edit mode <br> | • Poor audio file edit mode (Integrity Issues) <br> • No feature to make Copy of Project <br> • Lacks an Admin Dashboard <br> |
 | #8 | • Enhanced Edit Mode <br> • Copy of project feature <br> • SOC, Code reorganization <br> | • Prop Drilling in ProjectView.jsx <br> • Poor SOC of project hooks due to singular Hooks.jsx <br> |
 
-
+<br> 
+<br> 
 
 ### Deployed Versions
 
