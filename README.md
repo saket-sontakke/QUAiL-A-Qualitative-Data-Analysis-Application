@@ -35,7 +35,7 @@
 
 ### Deployed Versions
 
-| Version No. | Deployment Date | <div align="center">Conmments</div> | Status |
+| Version No. | Deployment Date | <div align="center">Comments</div> | Status |
 | :---: | :---: | :--- | :---: |
 | **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | - Initial Release | $\color{green}\text{Active}$  |
 | | | | |
