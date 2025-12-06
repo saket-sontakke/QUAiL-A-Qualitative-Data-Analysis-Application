@@ -34,10 +34,10 @@
 ### Deployed Versions
 
 | Version No. | Deployment Date | Comments | Status |
-|:-------------:|:---------------:|:----------------------------------------|:------:|
-| **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | Initial Release | $\color{green}\text{Active}$ |
-| QUAiL Beta v1.0.1 | Unreleased | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | Unreleased |
-| QUAiL Beta v1.1.0 | Unreleased | • Download project feature <br> • Added .pdf support <br> • Fixed "Shallow Copy"/"Broken Reference" issue | Unreleased |
+|:-------------:|:---------------:|:----------------------------------------:|:------:|
+| **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | • Initial Release | $\color{green}\text{Active}$ |
+| QUAiL Beta v1.0.1 | Unreleased | • Added Show/Hide password icon for improved UX <br> • Implemented Email Verification for Sign Up security <br> • Home Page updated with Contact Us info and Site Stats | Unreleased |
+| QUAiL Beta v1.1.0 | Unreleased | • Added Download Project (as .quail file) feature <br> • Updated Import Modal to support .pdf documents <br> • Fixed the "Shallow Copy"/"Broken Reference" issue for project duplication | Unreleased |
 
 ---
 
