@@ -33,10 +33,11 @@
 
 ### Deployed Versions
 
-| Version No. | Deployment Date | Key Improvements/Fixes for next release | Status |
+| Version No. | Deployment Date | Comments | Status |
 |:-------------:|:---------------:|:----------------------------------------|:------:|
-| QUAiL Beta v1.0.0 | 17-Sep-25 | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | $\color{green}\text{Active}$ |
-| QUAiL Beta v1.0.1 | | | |
+| **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | Initial Release | $\color{green}\text{Active}$ |
+| QUAiL Beta v1.0.1 | Unreleased | • Show/Hide password icon <br> • Verify Email for Sign Up <br> • Home Page - Contact Us info & Site Stats | Unreleased |
+| QUAiL Beta v1.1.0 | Unreleased | • Download project feature <br> • Added .pdf support <br> • Fixed "Shallow Copy"/"Broken Reference" issue | Unreleased |
 
 ---
 
