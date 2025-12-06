@@ -31,13 +31,15 @@
 | #7 | • Export Code Matrix <br> • Pin, rename, and export files from document viewer <br> • Find and Replace functionality in edit mode <br> | • Poor audio file edit mode (Integrity Issues) <br> • No feature to make Copy of Project <br> • Lacks an Admin Dashboard <br> |
 | #8 | • Enhanced Edit Mode <br> • Copy of project feature <br> • SOC, Code reorganization <br> | • Prop Drilling in ProjectView.jsx <br> • Poor SOC of project hooks due to singular Hooks.jsx <br> |
 
+
+
 ### Deployed Versions
 
-| Version No. | Deployment Date | <div align="center">Key Improvements/Features</div> | Status |
+| Version No. | Deployment Date | <div align="center">Conmments</div> | Status |
 | :---: | :---: | :--- | :---: |
 | **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | - Initial Release | $\color{green}\text{Active}$  |
 | | | | |
-| **QUAiL Beta v1.0.1** | *Unreleased* | - Added **Show/Hide password icon** for improved UX <br> - Implemented **Email Verification** for Sign Up security <br> - Home Page updated with **Contact Us info** and **Site Stats** | **Planned** |
+| **QUAiL Beta v1.0.1** | *Intermediate Build* | - Added **Show/Hide password icon** for improved UX <br> - Implemented **Email Verification** for Sign Up security <br> - Home Page updated with **Contact Us info** and **Site Stats** | N/A |
 | **QUAiL Beta v1.1.0** | *Unreleased* | - Added **Download Project (as .quail file)** feature <br> - Updated Import Modal to support **.pdf** documents <br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication | **Planned** |
 
 ---
