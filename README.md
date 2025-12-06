@@ -34,7 +34,7 @@
 ### Deployed Versions
 
 | Version No. | Deployment Date | <div align="center">Key Improvements/Features</div> | Status |
-| :--- | :---: | :--- | :---: |
+| :---: | :---: | :--- | :---: |
 | **[QUAiL Beta v1.0.0](https://quail.edarts.online/)** | 17-Sep-25 | - Initial Release | $\color{green}\text{Active}$  |
 | | | | |
 | **QUAiL Beta v1.0.1** | *Unreleased* | - Added **Show/Hide password icon** for improved UX <br> - Implemented **Email Verification** for Sign Up security <br> - Home Page updated with **Contact Us info** and **Site Stats** | **Planned** |
