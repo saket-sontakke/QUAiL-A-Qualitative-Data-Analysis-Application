@@ -18,7 +18,7 @@
 
 ---
 
-# **Iteration Plan**
+## **Iteration Plan**
 
 | Iteration No. | Iteration Plan | Limitations of the Iteration |
 |:-------------:|:---------------|:-----------------------------|
@@ -33,7 +33,7 @@
 
 <br> 
 
-# **Deployed Versions**
+## **Deployed Versions**
 
 | Version No. | Deployment Date | <div align="center">Comments</div> | Status |
 | :---: | :---: | :--- | :---: |
