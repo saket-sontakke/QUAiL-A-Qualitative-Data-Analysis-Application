@@ -39,7 +39,8 @@
 | :---: | :---: | :--- | :---: |
 | **QUAiL Beta v1.0.0** | 17-Sep-25 | - Initial Release | $\color{red}\text{Inactive}$  |
 | **QUAiL Beta v1.0.1** | *Intermediate Build* | - Added **Show/Hide password icon** for improved UX <br> - Implemented **Email Verification** for Sign Up security <br> - Home Page updated with **Contact Us info** and **Site Stats** | N/A |
-| **[QUAiL Beta v1.1.0](https://quail.edarts.online/)** | 07-Dec-25 | - Added **Download Project (as .quail file)** feature <br> - Updated Import Modal to support **.pdf** documents <br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication | $\color{green}\text{Active}$ |
+| **QUAiL Beta v1.1.0** | 07-Dec-25 | - Added **Download Project (as .quail file)** feature <br> - Updated Import Modal to support **.pdf** documents <br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication | $\color{red}\text{Inactive}$ |
+| **[QUAiL Beta v1.1.1](https://quail.edarts.online/)** | 07-Dec-25 | - Added Manual SMTP Configuration | $\color{green}\text{Active}$ |
 
 <br> 
 
