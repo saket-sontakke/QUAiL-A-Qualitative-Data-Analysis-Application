@@ -71,7 +71,7 @@ const ResetPassword = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 pr-10 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 pr-10 text-gray-900 dark:text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
             />
             <ToggleButton isVisible={showPassword} onToggle={() => setShowPassword(!showPassword)} />
           </div>
@@ -84,7 +84,7 @@ const ResetPassword = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 pr-10 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 pr-10 text-gray-900 dark:text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
             />
             <ToggleButton isVisible={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
           </div>

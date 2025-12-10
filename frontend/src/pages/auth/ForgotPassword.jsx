@@ -52,7 +52,7 @@ const ForgotPassword = () => {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={loading}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 dark:text-white transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#1D3C87] dark:border-gray-600 dark:bg-gray-700"
           />
           <button
             type="submit"

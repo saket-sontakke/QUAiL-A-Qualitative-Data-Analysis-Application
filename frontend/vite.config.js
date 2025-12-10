@@ -18,12 +18,22 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
+    base: '/',
     server: {
       host: true,
       proxy: {
         '/api': {
           target: env.VITE_BACKEND_URL,
           changeOrigin: true,
+        },
+      },
+    },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
         },
       },
     },

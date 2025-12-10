@@ -67,32 +67,20 @@ const deleteProjectFiles = (project) => {
  * "Project (1)" -> "Project (2)" (Not "Project (1) (1)")
  */
 const generateUniqueName = async (inputName, userId) => {
-  // 1. Strip existing numbering suffix if it exists (e.g., "Project (2)" becomes "Project")
-  // Regex looks for space + parenthesis + digits + parenthesis at the very end
   const nameWithoutSuffix = inputName.replace(/ \(\d+\)$/, '');
 
-  // 2. Escape special characters for the DB Regex query
   const escapedName = nameWithoutSuffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   
-  // 3. Find all projects that share this "Root Name"
-  // Matches "Project" OR "Project (N)"
   const regex = new RegExp(`^${escapedName}( \\(\\d+\\))?$`, 'i');
-  
   const matches = await Project.find({ owner: userId, name: regex }).select('name');
   
-  // If (somehow) no matches exist, just return the root + (1)
-  if (matches.length === 0) return `${nameWithoutSuffix} (1)`;
+  const isNameTaken = matches.some(p => p.name.toLowerCase() === inputName.toLowerCase());
 
-  // 4. Find the highest existing number among all matches
+  if (!isNameTaken) return inputName;
+
   let maxNum = 0;
 
   matches.forEach(p => {
-    // If the name is exactly the root (e.g. "Project"), it counts as 0, but we want the next one to be (1)
-    if (p.name.toLowerCase() === nameWithoutSuffix.toLowerCase()) {
-        // no-op, maxNum stays 0 (or whatever it was)
-    }
-
-    // Check for suffix " (N)"
     const match = p.name.match(/ \((\d+)\)$/);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -100,9 +88,9 @@ const generateUniqueName = async (inputName, userId) => {
     }
   });
 
-  // 5. Return Root Name + (Max + 1)
   return `${nameWithoutSuffix} (${maxNum + 1})`;
 };
+
 
 // --- Routes ---
 
