@@ -65,6 +65,10 @@ https://github.com/user-attachments/assets/9f23100a-66cd-41a0-ac45-2774db130d15
 ## Workspace
 <img width="1920" height="1200" alt="Workspace" src="https://github.com/user-attachments/assets/b2663e29-5e05-4a0a-87d3-96e0e7dd38b1" />
 
+## API Configuration
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/906e892d-fd2b-409b-a784-17d93c1e72e2" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/44f551df-7045-4ff6-a37f-8f1a78f108c1" />
+
 ## Merge Codes
 <img width="1920" height="1200" alt="Merge Codes" src="https://github.com/user-attachments/assets/60e4d1d3-da76-46a8-8f34-a474b0ba7c5d" />
 
