@@ -65,7 +65,7 @@ const FloatingAssignCode = ({ x, y, onClose, onAssignCode, codeDefinitions, onDe
           <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500" />
         </div>
 
-        <div className="custom-scrollbar max-h-27 flex-grow overflow-y-auto pr-1">
+        <div className="custom-scrollbar max-h-27 grow overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-1">
             {filteredCodes.map((code) => (
               <div

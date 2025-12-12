@@ -20,6 +20,7 @@ import projectRoutes from './routes/projectRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import siteStatsRoutes from './routes/siteStatsRoutes.js';
+import transcriptionRoutes from './routes/transcriptionRoutes.js';
 
 /**
  * Loads environment variables from a .env file into process.env.
@@ -61,6 +62,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/site-stats', siteStatsRoutes);
+app.use('/api/user', transcriptionRoutes);
 
 /**
  * Conditionally connects to MongoDB and starts the Express server.

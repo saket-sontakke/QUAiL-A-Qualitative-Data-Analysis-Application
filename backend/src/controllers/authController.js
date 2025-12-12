@@ -39,6 +39,61 @@ export const protect = async (req, res, next) => {
 };
 
 /**
+ * Resends the verification email to the user.
+ * * @route POST /api/auth/resend-verification
+ * @access Public
+ */
+export const resendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ error: "This account is already verified. Please login." });
+    }
+
+    // Generate a new token
+    const verifyToken = crypto.randomBytes(20).toString('hex');
+    user.verificationToken = verifyToken;
+    user.verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    await user.save();
+
+    const verifyUrl = `${getClientUrl()}/verify-email/${verifyToken}`;
+
+    // Re-use the HTML Template
+    const message = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #333;">Verify your Email</h2>
+        <p style="color: #555; font-size: 16px;">Hi ${user.name},</p>
+        <p style="color: #555; font-size: 16px;">We received a request to resend your verification link. Please click the button below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verifyUrl}" clicktracking=off style="background-color: #F05623; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px; font-size: 16px;">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="color: #999; font-size: 14px; margin-top: 20px;">
+          Link valid for 24 hours. If the button doesn't work, use this link:<br>
+          <a href="${verifyUrl}" style="color: #F05623;">${verifyUrl}</a>
+        </p>
+      </div>
+    `;
+
+    await sendEmail(email, "Verify your email (Resent)", message);
+
+    res.status(200).json({ message: "Verification email resent. Please check your inbox." });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};
+
+/**
  * Registers a new user and sends a verification email.
  * * @route POST /api/auth/register
  * @access Public
@@ -67,13 +122,13 @@ export const registerUser = async (req, res) => {
         <p style="color: #555; font-size: 16px;">Hi ${name},</p>
         <p style="color: #555; font-size: 16px;">Please verify your account by clicking the button below:</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${verifyUrl}" clicktracking=off style="background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px; font-size: 16px;">
+          <a href="${verifyUrl}" clicktracking=off style="background-color: #F05623; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px; font-size: 16px;">
             Verify Email Address
           </a>
         </div>
         <p style="color: #999; font-size: 14px; margin-top: 20px;">
           If the button doesn't work, copy and paste this link into your browser:<br>
-          <a href="${verifyUrl}" style="color: #4CAF50;">${verifyUrl}</a>
+          <a href="${verifyUrl}" style="color: #F05623;">${verifyUrl}</a>
         </p>
       </div>
     `;

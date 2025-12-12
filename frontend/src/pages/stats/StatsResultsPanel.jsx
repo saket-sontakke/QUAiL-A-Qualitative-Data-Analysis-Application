@@ -168,7 +168,7 @@ const AssumptionChecklist = ({ validationStatus, chiSquareSubtype }) => {
             <div key={assumption.key} className={`${index < assumptions.length - 1 ? 'border-b dark:border-gray-700' : ''}`}>
               <div className="flex items-start space-x-4 p-4">
                 <div className="pt-1"><AssumptionStatusIcon status={status} /></div>
-                <div className="flex-grow text-left">
+                <div className="grow text-left">
                   <h4 className="font-semibold text-gray-800 dark:text-gray-200">{assumption.title}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{assumption.description}</p>
                 </div>
@@ -347,11 +347,11 @@ const StatsResultsPanel = forwardRef(({
       )}
       <div className="space-y-2 rounded-lg border bg-gray-50 p-4 text-justify text-sm dark:border-gray-700 dark:bg-gray-900/50">
         <div className="flex items-start gap-2">
-          {isSignificant ? <FaTimesCircle className="mt-0.5 flex-shrink-0 text-lg text-red-500" title="Rejected" /> : <FaCheckCircle className="mt-0.5 flex-shrink-0 text-lg text-green-500" title="Supported" />}
+          {isSignificant ? <FaTimesCircle className="mt-0.5 shrink-0 text-lg text-red-500" title="Rejected" /> : <FaCheckCircle className="mt-0.5 shrink-0 text-lg text-green-500" title="Supported" />}
           <p><strong>Null Hypothesis (H₀):</strong> {results.nullHypothesis}</p>
         </div>
         <div className="flex items-start gap-2">
-          {isSignificant ? <FaCheckCircle className="mt-0.5 flex-shrink-0 text-lg text-green-500" title="Supported" /> : <FaTimesCircle className="mt-0.5 flex-shrink-0 text-lg text-red-500" title="Rejected" />}
+          {isSignificant ? <FaCheckCircle className="mt-0.5 shrink-0 text-lg text-green-500" title="Supported" /> : <FaTimesCircle className="mt-0.5 shrink-0 text-lg text-red-500" title="Rejected" />}
           <p><strong>Alternative Hypothesis (Hₐ):</strong> {results.alternativeHypothesis}</p>
         </div>
       </div>

@@ -15,7 +15,10 @@ import {
 } from 'react-icons/fa';
 
 /**
- * Renders an icon indicating the current sort configuration.
+ * @description Renders the appropriate sort icon based on the current active sort key and direction.
+ * @param {object} props - Component props.
+ * @param {object} props.sortConfig - Configuration object containing { key, direction }.
+ * @returns {JSX.Element|null} The specific FontAwesome icon component or null.
  */
 const RenderSortIcon = ({ sortConfig }) => {
   const { key, direction } = sortConfig;
@@ -27,13 +30,28 @@ const RenderSortIcon = ({ sortConfig }) => {
   return null;
 };
 
+/**
+ * @description The main dashboard component for the application.
+ * It provides a comprehensive interface for users to:
+ * - View a list or grid of their projects.
+ * - Search, sort, and filter projects.
+ * - Create, update, delete, and duplicate projects.
+ * - Import and export project data (.quail files).
+ * * The component manages local state for the UI (modals, views) and syncs
+ * with the backend via REST API calls.
+ * * @returns {JSX.Element} The rendered Projects dashboard.
+ */
 const Projects = () => {
+  // --- Data State ---
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
+  
+  // --- UI/Loading State ---
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
 
+  // --- Modal Visibility State ---
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState(null);
@@ -42,20 +60,29 @@ const Projects = () => {
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [projectToCopy, setProjectToCopy] = useState(null);
 
+  // --- Navbar/Logout State ---
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutConfirmData, setLogoutConfirmData] = useState({});
 
+  // --- View Configuration State ---
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('tiles');
+  const [viewMode, setViewMode] = useState('tiles'); // 'tiles' | 'list'
   const [sortConfig, setSortConfig] = useState({ key: 'created', direction: 'desc' });
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Refs for DOM manipulation
   const sortMenuRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  /**
+   * Effect to handle "deep linking" or navigation actions.
+   * If the user is redirected here with `openCreateModal` in the location state,
+   * it automatically opens the Create Project modal.
+   */
   useEffect(() => {
     if (location.state?.openCreateModal) {
       setShowCreateModal(true);
@@ -63,6 +90,10 @@ const Projects = () => {
     }
   }, [location, navigate]);
 
+  /**
+   * Effect to fetch the user's projects from the backend upon component mount
+   * or when the user context changes.
+   */
   useEffect(() => {
     const fetchProjects = async () => {
       const token = user?.token;
@@ -85,6 +116,9 @@ const Projects = () => {
     fetchProjects();
   }, [user]);
 
+  /**
+   * Effect to handle clicking outside the sort menu to close it.
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
@@ -95,6 +129,12 @@ const Projects = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  /**
+   * Memoized computation for filtering and sorting the project list.
+   * This ensures expensive sorting/filtering only runs when dependencies change.
+   * 1. Filters based on `searchQuery` (name or description).
+   * 2. Sorts based on `sortConfig` (name, creation date, modification date).
+   */
   useMemo(() => {
     let result = [...projects];
     if (searchQuery) {
@@ -115,8 +155,15 @@ const Projects = () => {
     setFilteredProjects(result);
   }, [projects, searchQuery, sortConfig]);
 
-  // --- Handlers ---
+  // --- CRUD Handlers ---
 
+  
+
+  /**
+   * Sends a request to create a new project.
+   * Redirects to the new project's workspace upon success.
+   * @param {object} newProjectData - The payload from the create form.
+   */
   const handleCreateProject = async (newProjectData) => {
     const token = user?.token;
     if (!token) return;
@@ -131,6 +178,11 @@ const Projects = () => {
     }
   };
 
+  /**
+   * Updates an existing project's metadata (name/description).
+   * Updates local state optimistically or re-fetches to reflect changes.
+   * @param {object} updatedData - The modified project data.
+   */
   const handleUpdateProject = async (updatedData) => {
     const token = user?.token;
     if (!token) return;
@@ -147,6 +199,9 @@ const Projects = () => {
     }
   };
 
+  /**
+   * Permanently deletes a project via API and removes it from the local list.
+   */
   const handleDeleteProject = async () => {
     const token = user?.token;
     if (!token) return;
@@ -163,6 +218,10 @@ const Projects = () => {
     }
   };
 
+  /**
+   * Duplicates a project.
+   * @param {boolean} includeAnnotations - Whether to copy the codes and annotations or just the source files.
+   */
   const handleCopyProject = async (includeAnnotations) => {
     const token = user?.token;
     if (!token || !projectToCopy) return;
@@ -184,10 +243,18 @@ const Projects = () => {
 
   // --- Import / Export Handlers ---
 
+  /**
+   * Triggers the hidden file input click to open the OS file picker.
+   */
   const handleImportClick = () => {
     fileInputRef.current.click();
   };
 
+  /**
+   * Handles the file selection for importing a project.
+   * Validates the extension (.quail) and sends a multipart/form-data request.
+   * @param {React.ChangeEvent<HTMLInputElement>} event - The file input change event.
+   */
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -220,6 +287,13 @@ const Projects = () => {
     }
   };
 
+  /**
+   * Exports the project as a binary .quail file.
+   * Uses FileSaver.js to prompt the browser download.
+   * @param {React.MouseEvent} e - Click event.
+   * @param {string} projectId - ID of the project to export.
+   * @param {string} projectName - Name of the project (for filename).
+   */
   const handleExportQuail = async (e, projectId, projectName) => {
     e.stopPropagation();
     e.preventDefault();
@@ -241,7 +315,7 @@ const Projects = () => {
     }
   };
 
-  // --- Modal Helpers ---
+  // --- Modal Helper Functions ---
 
   const openEditModal = (project) => {
     setProjectToEdit(project);
@@ -272,11 +346,12 @@ const Projects = () => {
         setConfirmModalData={setLogoutConfirmData}
       />
 
-      <main className="container mx-auto flex flex-col flex-grow p-6 pt-22 overflow-hidden">
-        <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-6 z-10">
+      <main className="container mx-auto flex flex-col grow p-6 pt-22 overflow-hidden">
+        {/* --- Toolbar Section (Search, Sort, Actions) --- */}
+        <div className="shrink-0 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md mb-6 z-10">
           <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
             {/* Search Bar */}
-            <div className="relative flex-grow md:max-w-sm">
+            <div className="relative grow md:max-w-sm">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FaSearch className="text-gray-400" />
               </div>
@@ -346,7 +421,7 @@ const Projects = () => {
                 )}
               </AnimatePresence>
             </div>
-            <div className="flex-grow"></div>
+            <div className="grow"></div>
 
             {/* IMPORT PROJECT BUTTON */}
             <input 
@@ -386,7 +461,8 @@ const Projects = () => {
           </div>
         </div>
 
-        <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 pt-2">
+        {/* --- Content Area (Grid/List of Projects) --- */}
+        <div className="grow overflow-y-auto custom-scrollbar pr-2 pt-2">
           {error && (<div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200 rounded"><p>{error}</p></div>)}
           {isLoading && (<div className="flex justify-center items-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F05623]"></div></div>)}
           {!isLoading && filteredProjects.length === 0 && !error && (
@@ -400,128 +476,129 @@ const Projects = () => {
           )}
 
           {/* TILES VIEW */}
-{!isLoading && filteredProjects.length > 0 && viewMode === 'tiles' && (
-  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    {filteredProjects.map((project) => (
-      <Link to={`/project/${project._id}`} key={project._id} className="block">
-        <motion.div 
-          className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          whileHover={{ y: -5 }} 
-          transition={{ duration: 0.3 }}
-        >
-          <div>
-            {/* --- BADGE REMOVED FROM HERE --- */}
-            
-            <h2 title={project.name} className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
-            {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <div className="flex items-center"><FaCalendarAlt className="mr-1.5 flex-shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
-              <div className="flex items-center"><FaEdit className="mr-1.5 flex-shrink-0" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
+          {!isLoading && filteredProjects.length > 0 && viewMode === 'tiles' && (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProjects.map((project) => (
+                <Link to={`/project/${project._id}`} key={project._id} className="block">
+                  <motion.div 
+                    className="relative flex flex-col justify-between rounded-xl bg-white p-6 shadow-lg transition duration-500 hover:shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-full hover:bg-gray-50 dark:hover:bg-gray-700/60" 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    whileHover={{ y: -5 }} 
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div>
+                      {/* --- BADGE REMOVED FROM HERE --- */}
+                      
+                      <h2 title={project.name} className="mb-3 text-2xl font-bold text-cyan-900 dark:text-[#F05623] line-clamp-1">{project.name}</h2>
+                      {project.description && (<p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{project.description}</p>)}
+                      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <div className="flex items-center"><FaCalendarAlt className="mr-1.5 shrink-0" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+                        <div className="flex items-center"><FaEdit className="mr-1.5 shrink-0" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
+                      </div>
+                    </div>
+
+                    {/* --- FOOTER SECTION UPDATED --- */}
+                    {/* Changed 'justify-end' to just 'flex items-center' to allow left and right content */}
+                    <div className="mt-6 flex items-center">
+                      
+                      {/* 1. Badge placed here (Bottom Left) */}
+                      {project.isImported && (
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          <FaFileImport className="text-[10px]" />
+                          Imported
+                        </div>
+                      )}
+
+                      {/* 2. Action Buttons (Added 'ml-auto' to push them to the right) */}
+                      <div className="ml-auto flex items-center gap-1">
+                        <button 
+                          title="Download Project"
+                          onClick={(e) => handleExportQuail(e, project._id, project.name)} 
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        >
+                          <FaDownload size={14} />
+                        </button>
+                        <button 
+                          title="Duplicate Project"
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} 
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        >
+                          <FaCopy size={14} />
+                        </button>
+                        <button 
+                          title="Edit Project"
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} 
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        >
+                          <FaEdit size={14} />
+                        </button>
+                        <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                        <button 
+                          title="Delete Project"
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} 
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                        >
+                          <FaTrash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* --- FOOTER SECTION UPDATED --- */}
-          {/* Changed 'justify-end' to just 'flex items-center' to allow left and right content */}
-          <div className="mt-6 flex items-center">
-            
-            {/* 1. Badge placed here (Bottom Left) */}
-            {project.isImported && (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                <FaFileImport className="text-[10px]" />
-                Imported
-              </div>
-            )}
+          {/* LIST VIEW */}
+          {!isLoading && filteredProjects.length > 0 && viewMode === 'list' && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredProjects.map((project) => (
+                  <Link to={`/project/${project._id}`} key={project._id} className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+                    <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                             
+                             {/* 1. Name First */}
+                             <h3 title={project.name} className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
+                             
+                             {/* 2. Badge Second (After Name) */}
+                             {project.isImported && (
+                               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                 <FaFileImport className="text-[10px]" />
+                                 Imported
+                               </span>
+                             )}
 
-            {/* 2. Action Buttons (Added 'ml-auto' to push them to the right) */}
-            <div className="ml-auto flex items-center gap-1">
-              <button 
-                title="Download Project"
-                onClick={(e) => handleExportQuail(e, project._id, project.name)} 
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >
-                <FaDownload size={14} />
-              </button>
-              <button 
-                title="Duplicate Project"
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} 
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >
-                <FaCopy size={14} />
-              </button>
-              <button 
-                title="Edit Project"
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} 
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >
-                <FaEdit size={14} />
-              </button>
-              <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
-              <button 
-                title="Delete Project"
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} 
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              >
-                <FaTrash size={14} />
-              </button>
+                          </div>
+                          {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
+                          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
+                            <div className="flex items-center"><FaEdit className="mr-1.5" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
+                          </div>
+                        </div>
+
+                        {/* ... (Actions section remains unchanged) ... */}
+                        <div className="flex items-center gap-1 shrink-0 ml-4">
+                            {/* ... buttons ... */}
+                            <button onClick={(e) => handleExportQuail(e, project._id, project.name)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaDownload size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaCopy size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaEdit size={14} /></button>
+                            <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"><FaTrash size={14} /></button>
+                        </div>
+                      </div>
+                    </motion.li>
+                  </Link>
+                ))}
+              </ul>
             </div>
-          </div>
-        </motion.div>
-      </Link>
-    ))}
-  </div>
-)}
-
-{/* LIST VIEW */}
-{!isLoading && filteredProjects.length > 0 && viewMode === 'list' && (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-      {filteredProjects.map((project) => (
-        <Link to={`/project/${project._id}`} key={project._id} className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
-          <motion.li initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                   
-                   {/* 1. Name First */}
-                   <h3 title={project.name} className="text-lg font-semibold text-cyan-900 dark:text-[#F05623] truncate">{project.name}</h3>
-                   
-                   {/* 2. Badge Second (After Name) */}
-                   {project.isImported && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                        <FaFileImport className="text-[10px]" />
-                        Imported
-                      </span>
-                    )}
-
-                </div>
-                {project.description && (<p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">{project.description}</p>)}
-                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  <div className="flex items-center"><FaCalendarAlt className="mr-1.5" /><span>Created: {new Date(project.createdAt).toLocaleDateString('en-GB')}</span></div>
-                  <div className="flex items-center"><FaEdit className="mr-1.5" /><span>Modified: {new Date(project.updatedAt).toLocaleDateString('en-GB')}</span></div>
-                </div>
-              </div>
-
-              {/* ... (Actions section remains unchanged) ... */}
-              <div className="flex items-center gap-1 flex-shrink-0 ml-4">
-                  {/* ... buttons ... */}
-                  <button onClick={(e) => handleExportQuail(e, project._id, project.name)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaDownload size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openCopyModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaCopy size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><FaEdit size={14} /></button>
-                  <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
-                  <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); confirmDelete(project._id); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"><FaTrash size={14} /></button>
-              </div>
-            </div>
-          </motion.li>
-        </Link>
-      ))}
-    </ul>
-  </div>
-)}
+          )}
         </div>
       </main>
 
+      {/* --- Modals --- */}
       <CreateProjectModal
         show={showCreateModal}
         onClose={() => setShowCreateModal(false)}

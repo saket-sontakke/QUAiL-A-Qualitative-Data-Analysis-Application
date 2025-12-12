@@ -95,7 +95,7 @@ const ConfirmationModal = ({
               {title}
             </h2>
 
-            <div className="mb-6 break-words whitespace-normal text-sm text-gray-600 dark:text-gray-400">
+            <div className="mb-6 wrap-break-word whitespace-normal text-sm text-gray-600 dark:text-gray-400">
               <div className='flex items-center justify-center'>
                 {shortMessage}
                 {detailedMessage && (

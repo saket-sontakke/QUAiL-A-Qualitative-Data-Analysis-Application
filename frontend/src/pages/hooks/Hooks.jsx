@@ -16,7 +16,7 @@ import FileSaver from 'file-saver';
  * @param {string|null} [props.idFromProp=null] - An optional project ID passed as a prop, overriding the URL parameter.
  * @returns {object} An object containing all the state and handler functions required by the `ProjectView` component and its children.
  */
-export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode, idFromProp = null, isInEditMode }) {
+export default function useProjectViewHooks({ onImportSuccess, setFileInEditMode, idFromProp = null, isInEditMode, onRequestApiKey }) {
   const { user } = useAuth();
 
   const { id: idFromParams } = useParams();
@@ -404,29 +404,38 @@ const handleCommitNewFile = async (fileData) => {
   }
 };
 
-  /**
+/**
    * Handles the import and transcription of an audio file.
-   * @param {File} file - The audio file to import.
+   * Merges robust progress tracking with API key and duplicate checks.
+   * * @param {File} file - The audio file to import.
    * @param {string} [splittingOption='turn'] - The method for splitting the resulting transcript.
    * @param {string|null} [overrideName=null] - An optional name to use for the transcript file.
-   * @returns {Promise<void>}
    */
   const handleAudioImport = async (file, splittingOption = 'turn', overrideName = null) => {
+    // 1. Initialization
     setTranscriptionStatus({ isActive: true, message: 'Uploading audio...', progress: 0 });
+    
     const token = user?.token;
     if (!token) {
       setTranscriptionStatus({ isActive: false, message: 'Authentication Error.', progress: 0 });
       return;
     }
+
+    // 2. Prepare Form Data
     const formData = new FormData();
     formData.append('audio', file);
     formData.append('splittingOption', splittingOption);
     if (overrideName) {
       formData.append('overrideName', overrideName);
     }
+
     try {
+      // 3. Configure Axios with Progress Tracking
       const axiosConfig = {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}` 
+        },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setTranscriptionStatus(prev => ({
@@ -446,19 +455,43 @@ const handleCommitNewFile = async (fileData) => {
           }));
         },
       };
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/import-audio/${projectId}`, formData, axiosConfig);
+
+      // 4. Perform Request
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/import-audio/${projectId}`, 
+        formData, 
+        axiosConfig
+      );
+
+      // 5. Handle Success
       setProject(res.data.project);
+      
       const newlyImportedFile = res.data.project.importedFiles.at(-1);
       if (newlyImportedFile && onImportSuccess) {
         onImportSuccess(newlyImportedFile);
       }
 
       setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
+
     } catch (err) {
+      console.error('Audio import failed', err);
+      setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
+
+      // --- ERROR HANDLING LOGIC ---
+
+      // CASE A: Missing API Key (Status 428 - Precondition Required)
+      if (err.response && err.response.status === 428) {
+        if (onRequestApiKey) {
+            onRequestApiKey(); // Open the settings modal
+        }
+        return; // Stop here, do not show generic error
+      }
+
+      // CASE B: Duplicate File (Status 409 - Conflict)
       if (err.response && err.response.status === 409 && err.response.data.promptRequired) {
         const { suggestedName } = err.response.data;
         const originalTranscriptName = file.name.replace(/\.[^/.]+$/, " (Transcript).txt");
-        setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
+
         setConfirmModalData({
           title: 'Duplicate Transcript Detected',
           shortMessage: (
@@ -470,28 +503,32 @@ const handleCommitNewFile = async (fileData) => {
               </span>
             </p>
           ),
-          detailedMessage: "The assumption of independence is crucial for many statistical tests (e.g., chi-squared, t-tests). It means each data point is unrelated to others. Importing the same file twice violates this by creating perfect dependency, which can inflate statistical significance and lead to false conclusions.",
+          detailedMessage: "The assumption of independence is crucial for many statistical tests (e.g., chi-squared, t-tests). It means each data point is unrelated to others. Importing the same file twice violates this by creating perfect dependency.",
           onConfirm: () => {
             setShowConfirmModal(false);
+            // Recursive call with the new name
             handleAudioImport(file, splittingOption, suggestedName);
           },
           showCheckbox: true,
           checkboxLabel: "I understand the risks and wish to proceed."
         });
         setShowConfirmModal(true);
-        setTranscriptionStatus(prev => ({ ...prev, message: 'Awaiting confirmation...' }));
-      } else {
+      } 
+      
+      // CASE C: Generic Error
+      else {
         setConfirmModalData({
           title: 'Transcription Failed',
-          message: err.response?.data?.error || 'Failed to import and transcribe audio file.',
+          shortMessage: err.response?.data?.error || 'Failed to import and transcribe audio file.',
           onConfirm: () => setShowConfirmModal(false),
-          showInput: false
+          showInput: false,
+          showCheckbox: false
         });
         setShowConfirmModal(true);
-        setTranscriptionStatus({ isActive: false, message: '', progress: 0 });
       }
     }
   };
+
 
   /**
    * Updates the content of an existing file on the backend.

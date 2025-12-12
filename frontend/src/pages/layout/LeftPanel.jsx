@@ -225,7 +225,7 @@ const LeftPanel = ({
       </button>
 
       <div className={`flex h-full flex-col ${isEditing ? 'pointer-events-none opacity-60' : ''}`}>
-        <div className="relative z-20 flex-shrink-0 bg-white px-4 py-5 dark:bg-gray-800">
+        <div className="relative z-20 shrink-0 bg-white px-4 py-5 dark:bg-gray-800">
           {!isLeftPanelCollapsed && (
             <div className="relative flex items-center pr-10">
               <input
@@ -308,11 +308,11 @@ const LeftPanel = ({
                                 title={file.name}
                               >
                                 <div className="flex flex-1 items-center gap-2 overflow-hidden">
-                                  {isPinned && <RiPushpinFill className="flex-shrink-0 text-gray-500 dark:text-gray-300" title="Pinned File" />}
+                                  {isPinned && <RiPushpinFill className="shrink-0 text-gray-500 dark:text-gray-300" title="Pinned File" />}
                                   {file.sourceType === 'audio' ? (
-                                    <AiFillAudio className="flex-shrink-0 text-[#F05623]" title="Transcribed Audio File" />
+                                    <AiFillAudio className="shrink-0 text-[#F05623]" title="Transcribed Audio File" />
                                   ) : (
-                                    <IoDocumentTextOutline className="flex-shrink-0 text-[#1D3C87] dark:text-blue-500" title="Text File" />
+                                    <IoDocumentTextOutline className="shrink-0 text-[#1D3C87] dark:text-blue-500" title="Text File" />
                                   )}
                                   {renamingFileId === file._id ? (
                                     <div className="flex w-full items-center gap-1">
@@ -330,7 +330,7 @@ const LeftPanel = ({
                                               autoFocus
                                               onClick={(e) => e.stopPropagation()}
                                           />
-                                          <span className="flex-shrink-0 pr-1 text-sm text-gray-500 dark:text-gray-400">
+                                          <span className="shrink-0 pr-1 text-sm text-gray-500 dark:text-gray-400">
                                               {fileExtension}
                                           </span>
                                       </div>
@@ -363,7 +363,7 @@ const LeftPanel = ({
                                   )}
                                 </div>
                                 {renamingFileId !== file._id && (
-                                  <div className="flex-shrink-0">
+                                  <div className="shrink-0">
                                     { file._id !== 'staged-file' && (
                                       <button
                                         onClick={(e) => {
@@ -454,7 +454,7 @@ const LeftPanel = ({
                       </motion.ul>
                       {showScrollFade && (
                         <div
-                          className="pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white via-white/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
+                          className="pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-linear-to-t from-white via-white/80 to-transparent dark:from-gray-800 dark:via-gray-800/80"
                           aria-hidden="true"
                         />
                       )}

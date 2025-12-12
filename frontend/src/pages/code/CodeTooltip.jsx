@@ -26,14 +26,14 @@ const CodeTooltip = ({ codes, visible }) => {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 10 }}
           transition={{ duration: 0.15 }}
-          className="pointer-events-none fixed bottom-5 right-5 z-[100] max-w-xs rounded-lg border border-gray-300 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
+          className="pointer-events-none fixed bottom-5 right-5 z-100 max-w-xs rounded-lg border border-gray-300 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
         >
           <h4 className="mb-2 text-sm font-bold text-cyan-900 dark:text-[#F05623]">{title}</h4>
           <ul className="space-y-1.5">
             {codes.map((ann) => (
               <li key={ann._id} className="flex items-center text-xs">
                 <span
-                  className="mr-2 h-3 w-3 flex-shrink-0 rounded-full border border-gray-400 dark:border-gray-500"
+                  className="mr-2 h-3 w-3 shrink-0 rounded-full border border-gray-400 dark:border-gray-500"
                   style={{ backgroundColor: ann.codeDefinition?.color || '#ccc' }}
                 ></span>
                 <span className="text-gray-800 dark:text-gray-200">

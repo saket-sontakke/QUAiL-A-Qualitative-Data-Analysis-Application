@@ -11,15 +11,19 @@ import { FaFileUpload, FaMicrophoneAlt, FaTimes, FaParagraph, FaListUl, FaArrowL
  * @param {object} props - The component props.
  * @param {boolean} props.show - Controls the visibility of the modal.
  * @param {Function} props.onClose - The callback function to close the modal.
- * @param {(file: File, splitOption: string) => void} props.handleAudioImport - The handler for audio file imports, receiving the file and the chosen split option.
- * @param {(file: File, splitOption: string) => void} props.handleTextImport - The handler for text file imports, receiving the file and the chosen split option.
+ * @param {(file: File, splitOption: string) => void} props.handleAudioImport - The handler for audio file imports.
+ * @param {(file: File, splitOption: string) => void} props.handleTextImport - The handler for text file imports.
+ * @param {(show: boolean) => void} [props.setRequestApiKeyModal] - Setter to open the API Key Modal.
+ * @param {boolean} [props.hasApiKey] - Flag indicating if the user has a valid API key configured.
  * @returns {JSX.Element|null} The rendered modal component or null if not shown.
  */
 const ImportOptionsModal = ({
   show,
   onClose,
   handleAudioImport,
-  handleTextImport
+  handleTextImport,
+  setRequestApiKeyModal,
+  hasApiKey
 }) => {
   const [modalStep, setModalStep] = useState('initial');
   const audioInputRef = useRef(null);
@@ -32,11 +36,16 @@ const ImportOptionsModal = ({
   const MAX_TEXT_SIZE_MB = MAX_TEXT_SIZE_BYTES / 1024 / 1024;
   const MAX_AUDIO_SIZE_MB = MAX_AUDIO_SIZE_BYTES / 1024 / 1024;
 
-  // --- UPDATE HERE: Added .pdf to textFormats ---
   const textFormats = '.txt, .docx, .pdf'; 
   const audioFormats = '.mp3, .wav, .ogg, .m4a, .aac';
 
   const handleAudioOptionClick = (option) => {
+    if (hasApiKey === false) {
+        onClose();
+        if (setRequestApiKeyModal) setRequestApiKeyModal(true);
+        return;
+    }
+
     splitOptionRef.current = option;
     audioInputRef.current?.click();
   };

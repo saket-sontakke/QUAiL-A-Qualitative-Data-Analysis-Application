@@ -86,7 +86,7 @@ const VisualizationsView = memo(forwardRef(function VisualizationsView({ codedSe
 
   return (
     <div className="flex h-full">
-      <div className="flex-grow rounded-lg pr-6">
+      <div className="grow rounded-lg pr-6">
         <ChartRenderer
           ref={chartContainerRef}
           chartData={chartData}

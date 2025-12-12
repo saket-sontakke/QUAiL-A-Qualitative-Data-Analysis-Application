@@ -3,23 +3,80 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from './AuthContext.jsx';
 
+/**
+ * @description A functional component that handles user authentication via a login form.
+ * It manages form state, handles API interactions for logging in, and manages UI states
+ * for loading, errors, and unverified account scenarios.
+ * * Key features:
+ * - Email/Password authentication using the backend API.
+ * - Password visibility toggle.
+ * - Handling of unverified accounts (triggering a "Resend Verification" option).
+ * - Integration with AuthContext to update global user state upon success.
+ * * @returns {JSX.Element} The rendered login page component.
+ */
 const Login = () => {
   const navigate = useNavigate();
   const auth = useAuth();
+  
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const [showPassword, setShowPassword] = useState(false);
 
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendStatus, setResendStatus] = useState('');
+
+  /**
+   * Updates the form data state as the user types.
+   * Special Logic: If the user modifies the 'email' field, we assume they might be
+   * correcting a typo, so we reset the verification requirements and error messages.
+   * * @param {React.ChangeEvent<HTMLInputElement>} e - The input change event.
+   */
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    
+    if (e.target.name === 'email') {
+        setNeedsVerification(false);
+        setResendStatus('');
+        setError('');
+    }
   };
 
+  /**
+   * Triggers an API call to resend the verification email to the address currently
+   * in the form state. Updates the `resendStatus` to reflect the progress/outcome.
+   */
+  const handleResend = async () => {
+    setResendStatus('sending');
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/resend-verification`, { 
+        email: formData.email 
+      });
+      setResendStatus('sent');
+      setError('');
+    } catch (err) {
+      setResendStatus('error');
+      setError(err.response?.data?.error || 'Failed to resend email');
+    }
+  };
+
+  /**
+   * Handles the form submission for logging in.
+   * * Process:
+   * 1. Validates inputs (implicit via HTML required attributes).
+   * 2. Sends credentials to the backend login endpoint.
+   * 3. On Success: updates the global AuthContext and navigates to the dashboard.
+   * 4. On Failure: Checks if the error is due to an unverified email (401 + 'verify')
+   * to conditionally render the "Resend Verification" button.
+   * * @param {React.FormEvent} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
     setLoading(true);
+
     try {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, formData);
 
@@ -32,7 +89,13 @@ const Login = () => {
       navigate('/projects');
 
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      const errorMessage = err.response?.data?.error || 'Login failed';
+      setError(errorMessage);
+
+      if (err.response?.status === 401 && errorMessage.toLowerCase().includes('verify')) {
+        setNeedsVerification(true);
+      }
+
     } finally {
       setLoading(false);
     }
@@ -46,6 +109,27 @@ const Login = () => {
         </h2>
 
         {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
+
+        {/* Conditionally render Resend Verification button if account is unverified */}
+        {needsVerification && resendStatus !== 'sent' && (
+          <div className="mb-4 animate-fade-in text-center">
+             <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendStatus === 'sending'}
+              className="text-sm font-semibold dark:text-blue-400 text-blue-500 hover:underline disabled:opacity-50"
+            >
+              {resendStatus === 'sending' ? 'Sending email...' : 'Resend Verification Email?'}
+            </button>
+          </div>
+        )}
+
+        {/* Success message for email resend */}
+        {resendStatus === 'sent' && (
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-3 text-center text-sm text-green-600 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+            Link sent! Please check your inbox.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

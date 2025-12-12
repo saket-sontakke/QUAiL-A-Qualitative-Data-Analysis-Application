@@ -91,7 +91,7 @@ const ColorPicker = ({ color, onChange, usedColors = [] }) => {
           onClick={handleCustomButtonClick}
           title="Custom Color"
         >
-          <div className="h-6 w-6 rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500" />
+          <div className="h-6 w-6 rounded-full bg-linear-to-r from-red-500 via-yellow-500 to-blue-500" />
           {isCustom && (
             <>
               <div className="mx-1 h-5 w-px bg-gray-300 dark:bg-gray-500" />

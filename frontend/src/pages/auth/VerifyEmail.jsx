@@ -2,13 +2,32 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 
+/**
+ * @description A functional component that handles the email verification process.
+ * It is typically the destination page when a user clicks the verification link sent to their email.
+ * * Key features:
+ * - Extracts the verification token from the URL parameters.
+ * - Prevents duplicate API calls using a ref (React Strict Mode guard).
+ * - Manages UI states for loading (spinner), success, and error scenarios.
+ * * @returns {JSX.Element} The rendered verification status page.
+ */
 const VerifyEmail = () => {
   const { token } = useParams();
+  
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
   
+  /**
+   * Ref to track if the verification logic has already been executed.
+   * This is crucial for preventing the useEffect from firing twice in React.Strict Mode,
+   * which could cause race conditions or false negatives (e.g., token invalid because it was just used).
+   */
   const processedRef = useRef(false);
 
+  /**
+   * Effect that triggers the account verification immediately upon component mount.
+   * It ensures the API call is made only once per mount lifecycle.
+   */
   useEffect(() => {
     if (processedRef.current) return;
     processedRef.current = true;
@@ -33,7 +52,7 @@ const VerifyEmail = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 dark:bg-gray-900">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl text-center dark:bg-gray-800">
         
-        {/* LOADING STATE */}
+        {/* LOADING STATE: Displayed while the API call is in progress */}
         {status === 'verifying' && (
           <div className="flex flex-col items-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#F05623] border-t-transparent mb-4"></div>
@@ -41,7 +60,7 @@ const VerifyEmail = () => {
           </div>
         )}
 
-        {/* SUCCESS STATE */}
+        {/* SUCCESS STATE: Displayed when the backend confirms valid token */}
         {status === 'success' && (
           <div className="flex flex-col items-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -60,7 +79,7 @@ const VerifyEmail = () => {
           </div>
         )}
 
-        {/* ERROR STATE */}
+        {/* ERROR STATE: Displayed if token is invalid, expired, or server fails */}
         {status === 'error' && (
           <div className="flex flex-col items-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">

@@ -2,17 +2,40 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 
+/**
+ * @description A functional component that handles the password reset process.
+ * It expects a valid reset token in the URL parameters.
+ * * Key features:
+ * - Captures the reset token from the URL.
+ * - Validates that the new password and confirmation password match.
+ * - Sends the new password to the backend API.
+ * - Redirects the user to the home/login page upon successful reset.
+ * * @returns {JSX.Element} The rendered password reset form.
+ */
 const ResetPassword = () => {
   const { token } = useParams();
   const navigate = useNavigate();
+  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  /**
+   * Handles the form submission to reset the password.
+   * * Process:
+   * 1. Prevents default form submission.
+   * 2. Clears previous status messages.
+   * 3. Validates that `password` and `confirmPassword` match.
+   * 4. Sends a POST request to the reset-password endpoint with the token and new password.
+   * 5. On Success: Displays a success message and redirects to the home page after a 2-second delay.
+   * 6. On Failure: Sets the error state with the message returned from the API.
+   * * @param {React.FormEvent} e - The form submission event.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -32,6 +55,13 @@ const ResetPassword = () => {
     }
   };
 
+  /**
+   * A helper component to render the eye icon button for toggling password visibility.
+   * * @param {object} props - The component props.
+   * @param {boolean} props.isVisible - Whether the password is currently visible.
+   * @param {function} props.onToggle - Callback function to toggle the visibility state.
+   * @returns {JSX.Element} The toggle button with the appropriate eye icon.
+   */
   const ToggleButton = ({ isVisible, onToggle }) => (
     <button
       type="button"
@@ -40,7 +70,7 @@ const ResetPassword = () => {
     >
       {isVisible ? (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
         </svg>
       ) : (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
@@ -60,7 +90,7 @@ const ResetPassword = () => {
         {message && <p className="mb-4 text-sm text-green-500">{message}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* This hidden input fixes the missing autosuggest */}
+          {/* Hidden input to assist password managers with username detection */}
           <input type="text" autoComplete="username" className="hidden" />
 
           <div className="relative">

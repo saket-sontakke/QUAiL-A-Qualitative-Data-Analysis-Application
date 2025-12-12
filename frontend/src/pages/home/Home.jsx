@@ -11,8 +11,14 @@ import {
   FaMapMarkerAlt,
   FaBug,
   FaUsers,
-  FaChartLine
+  FaChartLine,
+  FaGithub, 
+  FaFileAlt, 
+  FaTools, 
+  FaExternalLinkAlt, 
+  FaUniversity
 } from "react-icons/fa";
+import { TbTargetArrow } from "react-icons/tb";
 import { RiUploadCloud2Fill } from "react-icons/ri";
 import { FaSitemap } from "react-icons/fa6";
 import { LuWorkflow, LuMailCheck } from "react-icons/lu";
@@ -37,7 +43,8 @@ const smoothHoverProps = {
   }
 };
 
-const FooterStats = ({ className = "" }) => {
+/* --- Updated: Bottom Bar for Stats & Copyright --- */
+const FooterBottomBar = () => {
   const [stats, setStats] = useState({ visits: 0, users: 0 });
   const [loading, setLoading] = useState(true);
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
@@ -70,32 +77,165 @@ const FooterStats = ({ className = "" }) => {
   }, [BACKEND_URL]);
 
   return (
-    <div className={`flex items-center gap-22 ${className}`}>
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-full bg-[#1D3C87]/10 text-[#1D3C87] shrink-0">
-          <FaUsers size={32} />
+    <div className="w-full bg-slate-100 dark:bg-black/20 border-t border-slate-200 dark:border-gray-800 py-6 mt-16">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        
+        {/* Copyright Section */}
+        <div className="text-sm text-gray-500 dark:text-gray-500 text-center md:text-left">
+          <p>Copyright © {new Date().getFullYear()} Centre for Educational Technology, IIT Bombay.</p>
+          <p className="text-xs mt-1 opacity-70">All rights reserved.</p>
         </div>
-        <div className="text-left">
-          <div className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Registered Users</div>
-          <div className="text-2xl font-extrabold text-[#132142] dark:text-gray-100">
-            {loading ? "..." : stats.users}
-            <span className="text-[#F05623] text-2xl ml-1">+</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-full bg-[#FF7E39]/10 text-[#FF7E39] shrink-0">
-          <FaChartLine size={32} />
-        </div>
-        <div className="text-left">
-          <div className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Website Visits</div>
-          <div className="text-2xl font-extrabold text-[#132142] dark:text-gray-100">
-            {loading ? "..." : stats.visits.toLocaleString()}
+        {/* Horizontal Stats Section */}
+        <div className="flex items-center gap-8 divide-x divide-gray-300 dark:divide-gray-700">
+          
+          <div className="flex items-center gap-3 pr-8 first:pl-0">
+             <div className="text-[#1D3C87] dark:text-blue-400 opacity-80"><FaUsers size={28} /></div>
+             <div className="flex flex-col">
+               <span className="text-s font-bold text-gray-700 dark:text-gray-300 leading-none pb-1">
+                  {loading ? "..." : stats.users}
+                  <span className="text-[#F05623] text-xs align-top ml-0.5">+</span>
+               </span>
+               <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">Registered Users</span>
+             </div>
           </div>
+
+          <div className="flex items-center gap-3 pl-1">
+             <div className="text-[#FF7E39] opacity-80"><FaChartLine size={28} /></div>
+             <div className="flex flex-col">
+               <span className="text-s font-bold text-gray-700 dark:text-gray-300 leading-none pb-1">
+                  {loading ? "..." : stats.visits.toLocaleString()}
+               </span>
+               <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">Total Visits</span>
+             </div>
+          </div>
+
         </div>
       </div>
     </div>
+  );
+};
+
+/* --- Helper for Footer Links --- */
+const FooterLink = ({ href, icon: Icon, text, external = true }) => (
+  <a
+    href={href}
+    target={external ? "_blank" : "_self"}
+    rel={external ? "noopener noreferrer" : ""}
+    className="group flex items-center gap-2 text-gray-700 dark:text-gray-400 hover:text-[#1D3C87] dark:hover:text-blue-400 transition-colors py-1"
+  >
+    {Icon && <Icon className="text-gray-400 group-hover:text-[#F05623] transition-colors" size={14} />}
+    <span className="text-sm font-medium">{text}</span>
+    {external && <FaExternalLinkAlt className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px]" />}
+  </a>
+);
+
+/* --- Updated Footer Component --- */
+const Footer = () => {
+  return (
+    <footer className="bg-slate-50 border-t border-slate-200 dark:bg-[#0B1120] dark:border-gray-800 pt-16">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          
+          {/* Column 1: Brand Info (Stats moved to bottom) */}
+          <div className="flex flex-col items-start mt-1">
+            <div 
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} 
+              className="flex items-center gap-3 cursor-pointer -mb-4"
+            >
+              <Logo className="h-20 w-20 md:h-32 md:w-32 text-[#132142] dark:text-gray-200 -translate-x-3 -translate-y-11" />
+                <div className="flex flex-col items-start">
+                    <h1 className="el-messiri-bold text-5xl md:text-6xl font-extrabold text-[#132142] dark:text-gray-200 leading-none -ml-12 -mt-10">
+                        QUAiL
+                    </h1>
+                    <span className="el-messiri-bold md:text-1xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-10 block min-h-[1.2em]">
+                        {CURRENT_VERSION && CURRENT_VERSION.trim() !== "" ? CURRENT_VERSION : "\u00A0"}
+                    </span>
+                </div>
+            </div>
+            <p className="text-sm text-justify text-gray-600 dark:text-gray-400 leading-relaxed mb-4 max-w-xs">
+              A Web-Based Qualitative Analysis Tool for Textual Data developed at the Centre for Educational Technology, IIT Bombay.
+            </p>
+          </div>
+
+          {/* Column 2: Ecosystem */}
+          <div className="lg:pl-18">
+            <h4 className="text-[#132142] dark:text-white font-bold mb-6 flex items-center gap-2">
+              <FaUniversity className="text-[#F05623]" /> The EDART Ecosystem
+            </h4>
+            <div className="flex flex-col gap-3">
+              <FooterLink 
+                href="https://edarts.online/" 
+                text="EDART Home" 
+                icon={TbTargetArrow}
+              />
+              <FooterLink 
+                href="https://edarts.online/tools.html" 
+                text="Explore All Tools" 
+                icon={FaTools}
+              />
+              <FooterLink 
+                href="https://edarts.online/about.html" 
+                text="About Us" 
+                icon={FaUsers}
+              />
+            </div>
+          </div>
+
+          {/* Column 3: Resources */}
+          <div className="lg:pl-18">
+            <h4 className="text-[#132142] dark:text-white font-bold mb-6 flex items-center gap-2">
+              <FaFileAlt className="text-[#F05623]" /> Resources
+            </h4>
+            <div className="flex flex-col gap-3">
+              <FooterLink 
+                href="https://archive.org/details/w-05-02-quai-l-a-web-based-qualitative-analysis-tool-for-textual-data-icce-2025/mode/2up" 
+                text="ICCE 2025 Paper" 
+                icon={FaFileAlt}
+              />
+              <FooterLink 
+                href="https://github.com/EDART-Labs/QUAiL" 
+                text="Documentation" 
+                icon={FaGithub}
+              />
+            </div>
+          </div>
+
+          {/* Column 4: Connect */}
+          <div className="lg:pl-4">
+            <h4 className="text-[#132142] dark:text-white font-bold mb-4 flex items-center gap-2">
+              <FaUsers className="text-[#F05623]" /> Connect
+            </h4>
+            <a 
+              href="https://maps.app.goo.gl/bDQnLyMKRHej4Ucb8" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-gray-700 dark:text-gray-400 hover:text-[#1D3C87] dark:hover:text-blue-400 mb-5 block transition-colors"
+            >
+              Centre for Educational Technology,<br />
+              IIT Bombay, Mumbai - 400076
+            </a>
+            <div className="flex gap-4 mt-4">
+              <a href="https://youtube.com/@educationaltechnology-iitb2594" target="_blank" rel="noopener noreferrer" 
+                 className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-[#FF0000] hover:scale-110 transition-all">
+                <FaYoutube size={20} />
+              </a>
+              <a href="https://www.linkedin.com/school/edtech-iitb/" target="_blank" rel="noopener noreferrer"
+                 className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-[#0A66C2] hover:scale-110 transition-all">
+                <FaLinkedin size={20} />
+              </a>
+              <a href="https://www.et.iitb.ac.in/" target="_blank" rel="noopener noreferrer"
+                 className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-[#F05623] hover:scale-110 transition-all">
+                <FaGlobe size={20} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Inserted Bottom Bar here */}
+      <FooterBottomBar />
+    </footer>
   );
 };
 
@@ -108,7 +248,6 @@ const ContactSection = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
   const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL;
   const CONTACT_EMAIL_2 = import.meta.env.VITE_CONTACT_EMAIL_2;
-
 
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState("idle"); 
@@ -166,9 +305,12 @@ const ContactSection = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="lg:col-span-5 flex flex-col gap-6"
           >
-            <motion.div 
+            <motion.a 
+              href="https://maps.app.goo.gl/bDQnLyMKRHej4Ucb8"
+              target="_blank" 
+              rel="noopener noreferrer"
               {...smoothHoverProps}
-              className="flex items-start gap-4 p-6 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 cursor-default"
+              className="flex items-start gap-4 p-6 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer"
             >
               <div className="p-3 rounded-full bg-[#FF7E39]/10 text-[#FF7E39] shrink-0">
                 <FaMapMarkerAlt size={24} />
@@ -180,7 +322,7 @@ const ContactSection = () => {
                   IIT Bombay, Mumbai - 400076
                 </p>
               </div>
-            </motion.div>
+            </motion.a>
 
             <motion.div 
               {...smoothHoverProps}
@@ -291,7 +433,7 @@ const ContactSection = () => {
                 <button
                   type="submit"
                   disabled={status === "loading"}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#1D3C87] to-[#F05623] text-white text-lg font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-xl bg-linear-to-r from-[#1D3C87] to-[#F05623] text-white text-lg font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {status === "loading" ? "Sending..." : "Send Message"}
                 </button>
@@ -392,7 +534,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="relative w-full overflow-x-hidden bg-gradient-to-b from-orange-50 via-slate-50 to-blue-50 dark:bg-none dark:bg-gray-950 text-gray-800 dark:text-white">
+    <div className="relative w-full overflow-x-hidden bg-linear-to-b from-orange-50 via-slate-50 to-blue-50 dark:bg-none dark:bg-gray-950 text-gray-800 dark:text-white">
       
       <motion.div
         className="fixed top-0 left-0 right-0 h-1 bg-[#F05623] origin-left z-50"
@@ -402,7 +544,7 @@ const Home = () => {
       {/* Hero Section */}
       <div 
         ref={heroRef} 
-        className="relative min-h-[100dvh] w-full flex items-center pt-4 pb-12 bg-transparent dark:bg-gradient-to-b dark:from-gray-950 dark:via-gray-900 dark:to-gray-900"
+        className="relative min-h-dvh w-full flex items-center pt-4 pb-12 bg-transparent dark:bg-linear-to-b dark:from-gray-950 dark:via-gray-900 dark:to-gray-900"
       >
         <div className="mx-auto grid w-full max-w-7xl grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 px-6 lg:px-8 items-start">
           
@@ -419,7 +561,7 @@ const Home = () => {
                     <h1 className="el-messiri-bold text-5xl md:text-9xl font-extrabold text-[#132142] dark:text-gray-200 leading-none">
                         QUAiL
                     </h1>
-                    <span className="el-messiri-bold md:text-3xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-54 block min-h-[1.2em]">
+                    <span className="el-messiri-bold md:text-3xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-52 block min-h-[1.2em]">
                         {CURRENT_VERSION && CURRENT_VERSION.trim() !== "" ? CURRENT_VERSION : "\u00A0"}
                     </span>
                 </div>
@@ -434,7 +576,7 @@ const Home = () => {
               <h2 className="text-3xl md:text-5xl lg:text-6xl julius-sans-one-regular font-extrabold leading-tight">
                 <span className="flex flex-row items-start gap-3"> 
                   <i className="bx bxs-quote-left text-4xl md:text-6xl text-[#F05623] opacity-80 leading-none -translate-y-5" />
-                  <span className="bg-gradient-to-br from-[#1D3C87] to-[#F05623] bg-clip-text text-transparent dark:from-[#3b82f6] dark:via-[#FF7E39] dark:to-[#F05623]">
+                  <span className="bg-linear-to-br from-[#1D3C87] to-[#F05623] bg-clip-text text-transparent dark:from-[#3b82f6] dark:via-[#FF7E39] dark:to-[#F05623]">
                     <TextType 
                         as="span" 
                         text={["Master", "Your", "Qualitative", "Workflow..."]} 
@@ -520,77 +662,12 @@ const Home = () => {
       </section>
 
       {/* Contact Section */}
-      <div ref={contactRef} className="bg-transparent dark:bg-gradient-to-b dark:from-gray-900 dark:to-black py-6 pb-18">
+      <div ref={contactRef} className="bg-transparent dark:bg-linear-to-b dark:from-gray-900 dark:to-black py-6 pb-18">
         <ContactSection />
       </div>
 
-      {/* Footer */}
-      <footer className="bg-blue-50 border-t border-blue-100 dark:bg-black dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-7">
-
-            <div className="flex items-center justify-between gap-8">
-                <div className="flex items-center gap-4 -ml-6">
-                    <Logo className="h-14 w-14 md:h-32 md:w-32 text-[#132142] dark:text-gray-200 -translate-y-4" />
-                    <div>
-                        <h3 className="el-messiri-bold text-2xl md:text-5xl font-bold text-[#132142] dark:text-gray-200 -ml-8">QUAiL</h3>
-                        <p className="el-messiri-bold text-sm md:text-lg text-gray-500 dark:text-gray-400 ml-8">
-                          {CURRENT_VERSION && CURRENT_VERSION.trim() !== "" ? CURRENT_VERSION : "\u00A0"}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="hidden md:flex items-center">
-                  <FooterStats />
-                </div>
-
-                <div className="flex flex-col items-center md:items-end gap-4">
-                    <a
-                        href="https://sites.google.com/view/learning-analytics-iitb/team-members"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-800 dark:text-gray-300 hover:text-[#FF7E39] transition-colors"
-                    >
-                        About Us
-                    </a>
-
-                    <div className="flex items-center gap-6">
-                        <a
-                            href="https://youtube.com/@educationaltechnology-iitb2594"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-800 dark:text-gray-400 hover:text-[#FF0000] hover:scale-110 transition-all"
-                            aria-label="YouTube"
-                        >
-                            <FaYoutube size={24} />
-                        </a>
-                        <a
-                            href="https://www.linkedin.com/school/edtech-iitb/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-800 dark:text-gray-400 hover:text-[#0A66C2] hover:scale-110 transition-all"
-                            aria-label="LinkedIn"
-                        >
-                            <FaLinkedin size={24} />
-                        </a>
-                        <a
-                            href="https://www.et.iitb.ac.in/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-800 dark:text-gray-400 hover:text-[#FF7E39] hover:scale-110 transition-all"
-                            aria-label="Website"
-                        >
-                            <FaGlobe size={24} />
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div className="md:hidden flex justify-center mt-4">
-              <FooterStats />
-            </div>
-
-        </div>
-      </footer>
+      {/* New Professional Footer */}
+      <Footer />
 
       <AnimatePresence>
         {showBackToTop && (
@@ -600,7 +677,7 @@ const Home = () => {
                 exit={{ opacity: 0, y: 20 }}
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 title="Back to Top"
-                className="fixed right-8 bottom-36 z-40 p-3 rounded-full bg-[#132142] dark:bg-white text-white dark:text-[#132142] shadow-lg cursor-pointer hover:bg-[#F05623] dark:hover:bg-[#F05623] dark:hover:text-white transition-colors"
+                className="fixed right-8 bottom-30 z-40 p-3 rounded-full bg-[#132142] dark:bg-white text-white dark:text-[#132142] shadow-lg cursor-pointer hover:bg-[#F05623] dark:hover:bg-[#F05623] dark:hover:text-white transition-colors"
             >
                 <FaArrowUp size={20} />
             </motion.div>
@@ -612,3 +689,4 @@ const Home = () => {
 };
 
 export default Home;
+

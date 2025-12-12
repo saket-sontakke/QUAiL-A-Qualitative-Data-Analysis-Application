@@ -104,8 +104,8 @@ const TableView = ({
                 )}
             </div>
         ) : (
-          <div className="flex-grow flex items-center gap-4">
-            <div className="relative flex-grow">
+          <div className="grow flex items-center gap-4">
+            <div className="relative grow">
             <input 
               type="text" 
               value={searchTerm} 
@@ -161,7 +161,7 @@ const TableView = ({
           </div>
         )}
         {isProjectOverview && (
-          <div className="flex items-center gap-1 rounded-md bg-gray-200 dark:bg-gray-700 p-1 text-xs font-medium flex-shrink-0">
+          <div className="flex items-center gap-1 rounded-md bg-gray-200 dark:bg-gray-700 p-1 text-xs font-medium shrink-0">
             <button onClick={() => setTableView('overall')} className={`px-3 py-1.5 rounded-md transition-colors ${tableView === 'overall' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-300/50 dark:hover:bg-white/10'}`}>
               Overall
             </button>
@@ -254,7 +254,7 @@ const TableView = ({
                           </>
                         )}
                         <td
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 break-words"
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 wrap-break-word"
                           style={{ backgroundColor: baseBgColor, transition: 'background-color 0.15s ease-in-out' }}
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBgColor}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = baseBgColor}
@@ -298,7 +298,7 @@ const TableView = ({
                         return (
                           <tr key={segment._id} className="text-gray-800 dark:text-gray-200">
                             {isFirstSegmentOfDoc && (
-                              <td rowSpan={docGroup.totalSegmentsInDoc} className="px-4 py-2 border border-gray-300 dark:border-gray-600 align-middle text-center text-sm break-words">
+                              <td rowSpan={docGroup.totalSegmentsInDoc} className="px-4 py-2 border border-gray-300 dark:border-gray-600 align-middle text-center text-sm wrap-break-word">
                                 {docGroup.document.name}
                               </td>
                             )}
@@ -315,7 +315,7 @@ const TableView = ({
                               </>
                             )}
                             <td
-                              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 break-words"
+                              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 wrap-break-word"
                               style={{ backgroundColor: baseBgColor, transition: 'background-color 0.15s ease-in-out' }}
                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBgColor}
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = baseBgColor}
@@ -359,11 +359,11 @@ const TableView = ({
                         fileGroup.overlaps.map((overlap, overlapIndex) => (
                         <tr key={`${fileGroup.document._id}-${overlap.start}`} className="text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             {overlapIndex === 0 && (
-                            <td rowSpan={fileGroup.overlaps.length} className="px-4 py-2 border border-gray-300 dark:border-gray-600 align-middle text-center text-sm break-words font-medium">
+                            <td rowSpan={fileGroup.overlaps.length} className="px-4 py-2 border border-gray-300 dark:border-gray-600 align-middle text-center text-sm wrap-break-word font-medium">
                                 {fileGroup.document.name}
                             </td>
                             )}
-                            <td className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 break-words italic">
+                            <td className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-left text-sm text-gray-800 dark:text-gray-200 wrap-break-word italic">
                             {`"${overlap.text}"`}
                             </td>
                             <td className="px-4 py-2 border border-gray-300 dark:border-gray-600 align-middle text-center">

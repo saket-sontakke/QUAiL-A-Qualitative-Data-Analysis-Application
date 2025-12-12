@@ -1,16 +1,17 @@
 import jwt from 'jsonwebtoken';
 import Project from '../models/Project.js';
+import User from '../models/Users.js';
 
 /**
  * Express middleware to protect routes by requiring a valid JSON Web Token (JWT).
- * It verifies the token from the Authorization header and, if valid, attaches
- * the user's ID to the request object as `req.userId`.
+ * It verifies the token from the Authorization header and checks the DB to ensure
+ * the user still exists.
  *
  * @param {import('express').Request} req - The Express request object.
  * @param {import('express').Response} res - The Express response object.
  * @param {import('express').NextFunction} next - The next middleware function.
  */
-export const requireAuth = (req, res, next) => {
+export const requireAuth = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -19,6 +20,13 @@ export const requireAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const userExists = await User.findById(decoded.id).select('_id');
+
+    if (!userExists) {
+      return res.status(401).json({ error: 'User no longer exists. Access denied.' });
+    }
+
     req.userId = decoded.id;
     next();
   } catch (err) {
@@ -51,3 +59,4 @@ export const getProjectById = async (req, res) => {
     res.status(500).json({ error: 'Server error while fetching project' });
   }
 };
+

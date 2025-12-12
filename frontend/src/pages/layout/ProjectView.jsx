@@ -21,6 +21,7 @@ import SplitReviewModal from '../code/SplitReviewModal.jsx';
 import axios from 'axios';
 import FileSaver from 'file-saver';
 import { useAuth } from '../auth/AuthContext.jsx';
+import ApiKeyModal from '../components/ApiKeyModal.jsx';
 
 /** @constant {number} MIN_WIDTH - The minimum width for the resizable left panel. */
 const MIN_WIDTH = 200;
@@ -48,6 +49,7 @@ const ProjectView = () => {
   const [editedContent, setEditedContent] = useState('');
   const isEditing = !!fileInEditMode;
   const [showFormattingTip, setShowFormattingTip] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const [showFind, setShowFind] = useState(false);
   const [showFindReplace, setShowFindReplace] = useState(false);
@@ -95,7 +97,14 @@ const ProjectView = () => {
     setShowCodeDropdown, showConfirmModal, setShowConfirmModal, confirmModalData,
     setConfirmModalData, searchQuery, setSearchQuery, searchInputRef, handleMergeCodes,
     handleSplitCodes, undo, redo, canUndo, canRedo, handleCreateMemoForSegment,
-  } = useProjectViewHooks({ onImportSuccess: enterEditMode, setFileInEditMode: setFileInEditMode, isInEditMode: isEditing });
+  } = useProjectViewHooks({ 
+    onImportSuccess: enterEditMode, 
+    setFileInEditMode: setFileInEditMode, 
+    isInEditMode: isEditing, 
+    onRequestApiKey: () => {
+        setShowImportOptionsModal(false);
+        setShowApiKeyModal(true);
+    }});
 
   const [showSplitMergeModal, setShowSplitMergeModal] = useState(false);
   const [splitReviewData, setSplitReviewData] = useState({
@@ -729,7 +738,8 @@ const ProjectView = () => {
   if (error) return <div className="mt-10 text-center text-red-600">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white">
+    // <div className="min-h-screen bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
       <Navbar
         projectName={projectName}
         isImported={project?.isImported}
@@ -748,9 +758,17 @@ const ProjectView = () => {
         onToggleTooltip={handleToggleCodeTooltip}
         onRestoreDefaults={handleRestoreDefaults}
       />
+      <ApiKeyModal
+        show={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+        onSaveSuccess={() => {
+            // Optional: Re-open the import modal so they can try again immediately
+            setShowImportOptionsModal(true);
+        }}
+      />
 
       {transcriptionStatus.isActive && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70">
+        <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black bg-opacity-70">
           <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-xl dark:bg-gray-800">
             <h3 className="mb-4 text-xl font-bold text-[#1D3C87] dark:text-[#F05623]">
               {transcriptionStatus.message}

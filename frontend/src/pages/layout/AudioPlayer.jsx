@@ -256,7 +256,7 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
 
   if (isPlayerHidden) {
     return (
-      <div className="flex-shrink-0 rounded-xl bg-white p-0.5 shadow-md dark:bg-gray-800">
+      <div className="shrink-0 rounded-xl bg-white p-0.5 shadow-md dark:bg-gray-800">
         <button
           onClick={() => setIsPlayerHidden(false)}
           className="flex w-full items-center justify-center gap-2 text-sm text-gray-600 transition-colors hover:text-cyan-900 dark:text-gray-300 dark:hover:text-[#F05623]"
@@ -271,11 +271,11 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
   }
 
   return (
-    <div className="flex-shrink-0 rounded-xl bg-white p-3 text-gray-800 shadow-md dark:bg-gray-800 dark:text-gray-200">
+    <div className="shrink-0 rounded-xl bg-white p-3 text-gray-800 shadow-md dark:bg-gray-800 dark:text-gray-200">
       <audio ref={audioRef} src={src} key={fileId} preload="metadata" />
 
       <div className="flex w-full items-center gap-3">
-        <button onClick={togglePlayPause} disabled={!isLoaded} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-cyan-900 text-white shadow-lg transition-all duration-300 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#F05623]" title={!isLoaded ? 'Loading...' : (isPlaying ? "Pause" : "Play") }>
+        <button onClick={togglePlayPause} disabled={!isLoaded} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-900 text-white shadow-lg transition-all duration-300 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#F05623]" title={!isLoaded ? 'Loading...' : (isPlaying ? "Pause" : "Play") }>
           {isPlaying ? <FaPause size={16} /> : <FaPlay size={16} className="ml-0.5" />}
         </button>
 
