@@ -54,7 +54,9 @@
 
 https://github.com/user-attachments/assets/9f23100a-66cd-41a0-ac45-2774db130d15
 
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/cd5dcd2f-af1e-4b38-bef5-9a658dc4fb9f" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/dbe048f6-6289-4060-ae37-d933877315b9" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/54655c9e-708d-40f5-a591-4e9d9f3399b2" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/55ff673f-1e51-4aae-9e03-4b711213ff41" />
 
 ## Projects
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/69c41c89-1eec-4089-949a-79c91cb0c9d4" />
