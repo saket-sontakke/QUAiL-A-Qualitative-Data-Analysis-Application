@@ -56,20 +56,21 @@ https://github.com/user-attachments/assets/9f23100a-66cd-41a0-ac45-2774db130d15
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/cd5dcd2f-af1e-4b38-bef5-9a658dc4fb9f" />
 
 ## Projects
-<img width="1920" height="1200" alt="Projects" src="https://github.com/user-attachments/assets/289dea64-1386-4ed0-81f0-aed0ed47fe01" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/69c41c89-1eec-4089-949a-79c91cb0c9d4" />
 
 ## Workspace
-<img width="1920" height="1200" alt="Workspace" src="https://github.com/user-attachments/assets/b2663e29-5e05-4a0a-87d3-96e0e7dd38b1" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/4b0bb3a5-579b-4709-a13d-a5cb983cc2c7" />
+
 
 ## API Configuration
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/906e892d-fd2b-409b-a784-17d93c1e72e2" />
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/44f551df-7045-4ff6-a37f-8f1a78f108c1" />
 
 ## Merge Codes
-<img width="1920" height="1200" alt="Merge Codes" src="https://github.com/user-attachments/assets/60e4d1d3-da76-46a8-8f34-a474b0ba7c5d" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/b1151433-5aae-44bb-b888-80170662c471" />
 
 ## Split Codes
-<img width="1920" height="1200" alt="Split Codes" src="https://github.com/user-attachments/assets/abe58b3a-24ba-403e-a4fd-48d9bbbb22ef" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/ec410f3a-1387-4af9-bb53-d3bb75a0b164" />
 
 ## Visualizations
 <img width="1920" height="1200" alt="Visualizations" src="https://github.com/user-attachments/assets/ae40f7b7-5cc3-4444-b3d8-37263fb39521" />
