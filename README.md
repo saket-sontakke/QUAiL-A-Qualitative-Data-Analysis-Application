@@ -46,6 +46,7 @@
 ---
 
 <br> 
+
 | Version No. | Deployment Date | <div align="center">Comments</div> | Status |
 | :---: | :---: | :--- | :---: |
 | **[QUAiL Beta v1.0.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.0%5D.pdf)** | 17-Sep-25 | - Initial Release. | $\color{red}\text{Inactive}$ |
