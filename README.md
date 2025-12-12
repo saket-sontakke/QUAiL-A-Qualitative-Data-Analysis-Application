@@ -53,6 +53,7 @@
 ## Landing page
 
 https://github.com/user-attachments/assets/9f23100a-66cd-41a0-ac45-2774db130d15
+
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/cd5dcd2f-af1e-4b38-bef5-9a658dc4fb9f" />
 
 ## Projects
