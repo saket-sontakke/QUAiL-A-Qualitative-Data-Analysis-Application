@@ -37,23 +37,16 @@
 
 | Version No. | Deployment Date | <div align="center">Comments</div> | Status |
 | :---: | :---: | :--- | :---: |
-| **[QUAiL Beta v1.0.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.0%5D.pdf)** | 17-Sep-25 | - Initial Release | $\color{red}\text{Inactive}$ |
-| **[QUAiL Beta v1.0.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.1%5D.pdf)** | *Intermediate Build* | - Added **Show/Hide password icon** for improved UX <br> - Implemented **Email Verification** for Sign Up security <br> - Home Page updated with **Contact Us info** and **Site Stats** | N/A |
-| **[QUAiL Beta v1.1.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.0%5D.pdf)** | 07-Dec-25 | - Added **Download Project (as .quail file)** feature <br> - Updated Import Modal to support **.pdf** documents <br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication | $\color{red}\text{Inactive}$ |
-| **[QUAiL Beta v1.1.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.1%5D.pdf)** | 07-Dec-25 | - Added Manual SMTP Configuration <br> - Fixed UI issues | <span style="color: green; font-weight: bold;">Active</span> |
-| **[QUAiL Beta v1.2.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/e4e20cbadbffb9d384811e91aa199dbb1b38d170/QUAiL%20Developer%20Guide%20%5BBeta%20v1.2.0%5D.pdf)** | Unreleased | - Fixed Zombie User issue <br> - Added Bring Your Own Key (BYOK) model for transcription API <br> - UI Updates <br> - Upgraded verfication mails| $\color{yellow}\text{Unreleased}$ <br>|
+| **[QUAiL Beta v1.0.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.0%5D.pdf)** | 17-Sep-25 | - Initial Release. | $\color{red}\text{Inactive}$ |
+| **[QUAiL Beta v1.0.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.1%5D.pdf)** | *Intermediate Build* | - Added **Show/Hide password icon** for improved UX.<br> - Implemented **Email Verification** for Sign Up security.<br> - Home Page updated with **Contact Us info** and **Site Stats**. | N/A |
+| **[QUAiL Beta v1.1.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.0%5D.pdf)** | 07-Dec-25 | - Added **Download Project (as .quail file)** feature.<br> - Updated Import Modal to support **.pdf** documents.<br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication. | $\color{red}\text{Inactive}$ |
+| **[QUAiL Beta v1.1.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.1%5D.pdf)** | 07-Dec-25 | - Added **Manual SMTP** Configuration.<br> - Fixed **UI** issues. | [Active](https://quail.edarts.online/) |
+| **[QUAiL Beta v1.2.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/e4e20cbadbffb9d384811e91aa199dbb1b38d170/QUAiL%20Developer%20Guide%20%5BBeta%20v1.2.0%5D.pdf)** | 00-Dec-25 | - Fixed **Zombie User** issue.<br> - Added **Bring Your Own Key (BYOK)** model for transcription API.<br> - **UI** Updates.<br> - Upgraded verification emails. | $\color{yellow}\text{Unreleased}$ |
+
 
 ---
 
 <br> 
-
-| Version No. | Deployment Date | <div align="center">Comments</div> | Status |
-| :---: | :---: | :--- | :---: |
-| **[QUAiL Beta v1.0.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.0%5D.pdf)** | 17-Sep-25 | - Initial Release. | $\color{red}\text{Inactive}$ |
-| **[QUAiL Beta v1.0.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.0.1%5D.pdf)** | *Intermediate Build* | - Added **Show/Hide password icon** for improved UX.<br> - Implemented **Email Verification** for Sign Up security.<br> - Home Page updated with **Contact Us info** and **Site Stats**. | N/A |
-| **[QUAiL Beta v1.1.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.0%5D.pdf)** | 07-Dec-25 | - Added **Download Project (as .quail file)** feature.<br> - Updated Import Modal to support **.pdf** documents.<br> - Fixed the **"Shallow Copy"/"Broken Reference"** issue for project duplication. | $\color{red}\text{Inactive}$ |
-| **[QUAiL Beta v1.1.1](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/5c34a019e4446173838c321f152723b5dca7b6e5/QUAiL%20Developer%20Guide%20%5BBeta%20v1.1.1%5D.pdf)** | 07-Dec-25 | - Added Manual SMTP Configuration.<br> - Fixed UI issues. | [Active](https://quail.edarts.online/) |
-| **[QUAiL Beta v1.2.0](https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application/blob/e4e20cbadbffb9d384811e91aa199dbb1b38d170/QUAiL%20Developer%20Guide%20%5BBeta%20v1.2.0%5D.pdf)** | 00-Dec-25 | - Fixed Zombie User issue.<br> - Added Bring Your Own Key (BYOK) model for transcription API.<br> - UI Updates.<br> - Upgraded verification emails. | $\color{yellow}\text{Unreleased}$ |
 
 # Screenshots
 
