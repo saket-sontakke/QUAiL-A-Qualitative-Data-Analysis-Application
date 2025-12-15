@@ -82,7 +82,19 @@ const FooterBottomBar = () => {
         
         {/* Copyright Section */}
         <div className="text-sm text-gray-500 dark:text-gray-500 text-center md:text-left">
-          <p>Copyright © {new Date().getFullYear()} Centre for Educational Technology, IIT Bombay.</p>
+          <p>
+            Copyright © {new Date().getFullYear()}
+            {/* The link is added here: */}
+            <a
+              href="https://edarts.online/"
+              target="_blank" // Optional: Opens the link in a new tab
+              rel="noopener noreferrer" // Recommended for security when using target="_blank"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-400 transition-colors duration-200"
+            >
+              {' '}Educational Data Analytics Research Tools (EDART)
+            </a>
+            .
+          </p>
           <p className="text-xs mt-1 opacity-70">All rights reserved.</p>
         </div>
 

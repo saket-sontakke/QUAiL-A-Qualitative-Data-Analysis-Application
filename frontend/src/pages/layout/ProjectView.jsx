@@ -11,7 +11,7 @@ import CodedSegmentsTableModal from '../table/CodedSegmentsTableModal.jsx';
 import LeftPanel from '../layout/LeftPanel.jsx';
 import DocumentViewer from '../layout/DocumentViewer.jsx';
 import ImportOptionsModal from './ImportOptionsModal.jsx';
-import useProjectViewHooks from '../hooks/Hooks.jsx';
+import useProjectViewHooks from '../hooks/useProjectViewHooks.js';
 import AudioPlayer from '../layout/AudioPlayer.jsx';
 import EditToolbar from '../layout/edit-mode/EditToolbar.jsx';
 import CodeDetailsModal from '../code/CodeDetailsModal.jsx';
