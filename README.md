@@ -48,6 +48,11 @@
 
 <br> 
 
+> [!NOTE] 
+> Project Tracker: https://docs.google.com/spreadsheets/d/1FCrq5P15ZDCVAF6wH5ES_Y3n6cKEVQqvYcgsagkZHtc/edit?usp=sharing 
+
+<br>
+
 # Screenshots
 
 ## Landing page
