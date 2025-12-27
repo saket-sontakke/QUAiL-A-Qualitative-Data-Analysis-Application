@@ -2,11 +2,14 @@ import mongoose from 'mongoose';
 import validator from 'validator';
 
 /**
- * Defines the schema for a User document in the database.
- * Includes authentication fields and secure storage for external API keys.
+ * Mongoose schema definition for the User model.
+ * * Defines the structure for user documents, including authentication credentials,
+ * encrypted storage for external API keys, and token management for account 
+ * verification and password recovery.
+ * * @type {mongoose.Schema}
  */
 const userSchema = new mongoose.Schema({
-  // --- 1. Identity & Auth ---
+  // --- Identity and Authentication ---
   name: {
     type: String,
     required: [true, 'Please tell us your name']
@@ -23,7 +26,7 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Please provide a password']
   },
 
-  // --- 2. User Configuration (New Feature) ---
+  // --- External API Configuration ---
   apiKeys: {
     assemblyAI: {
       iv: String,
@@ -31,7 +34,7 @@ const userSchema = new mongoose.Schema({
     }
   },
   
-  // --- 3. Email Verification ---
+  // --- Account Verification ---
   isVerified: {
     type: Boolean,
     default: false
@@ -39,7 +42,7 @@ const userSchema = new mongoose.Schema({
   verificationToken: String,
   verificationTokenExpire: Date,
 
-  // --- 4. Password Reset ---
+  // --- Password Recovery ---
   resetToken: String,
   resetTokenExpiry: Date,
 }, { timestamps: true });

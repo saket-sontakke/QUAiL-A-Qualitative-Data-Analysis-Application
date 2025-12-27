@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 
 /**
- * Schema for tracking global site statistics (visits).
- * Designed as a singleton (only one document with name: 'global' should exist).
+ * Defines the Mongoose schema for tracking site-wide statistics.
+ * This schema enforces a singleton-like pattern using a unique name field
+ * to aggregate global metrics.
  */
 const siteStatsSchema = new mongoose.Schema({
+  // --- Field Definitions ---
   name: {
     type: String,
     required: true,

@@ -7,37 +7,49 @@ import fs from 'fs';
 import archiver from 'archiver';
 import Project from '../models/Project.js';
 
+// --- Router Initialization ---
 const router = express.Router();
 
-// --- Export Helper Functions ---
-
 /**
- * Converts a HEX color string to an ARGB string for ExcelJS.
- * @param {string} hex - The hex color code.
- * @param {number} [alpha=1.0] - The alpha transparency value.
- * @returns {string} The ARGB color string.
+ * Converts a standard HEX color code into an ARGB hexadecimal string.
+ * Handles validation and normalizes 3-digit HEX codes to 6-digit format.
+ *
+ * @param {string} hex - The HEX color string (e.g., "#FFF" or "#FFFFFF").
+ * @param {number} [alpha=1.0] - The opacity value, ranging from 0.0 to 1.0.
+ * @returns {string} The resulting ARGB string (Alpha prepended to RGB).
  */
 const hexToArgb = (hex, alpha = 1.0) => {
+  // --- Validation and Fallback ---
   if (!hex || !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
     hex = '#CCCCCC';
   }
+
+  // --- Normalization ---
   let cleanHex = hex.substring(1);
   if (cleanHex.length === 3) {
     cleanHex = cleanHex.split('').map(char => char + char).join('');
   }
+
+  // --- Alpha Conversion ---
   const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0').toUpperCase();
+
   return `${alphaHex}${cleanHex}`;
 };
 
 /**
- * Creates a subtle color scheme for Excel cell styling.
- * @param {string} baseHex - The base hex color.
- * @returns {object} An object with fill and border styles.
+ * Generates a subtle color scheme configuration based on a provided base hexadecimal color.
+ * Designed for applying consistent styling to cells, including background fills and borders.
+ *
+ * @param {string} baseHex - The primary hexadecimal color string used to derive the scheme.
+ * @returns {Object} An object containing style definitions for cell backgrounds and borders.
  */
 const createSubtleColorScheme = (baseHex) => {
   return {
+    // --- Background Styles ---
     nameCell: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(baseHex, 0.15) } },
     contentRows: { type: 'pattern', pattern: 'solid', fgColor: { argb: hexToArgb(baseHex, 0.05) } },
+
+    // --- Border Styles ---
     leftBorder: {
       left: { style: 'thick', color: { argb: hexToArgb(baseHex, 0.8) } },
       right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
@@ -54,24 +66,36 @@ const createSubtleColorScheme = (baseHex) => {
 };
 
 /**
- * Applies a subtle color scheme to a range of cells in an Excel worksheet.
- * @param {object} worksheet - The ExcelJS worksheet object.
- * @param {number} codeStartRow - The starting row for the colored block.
- * @param {number} codeEndRow - The ending row for the colored block.
- * @param {string} baseHexColor - The base hex color for styling.
- * @param {object} columns - An object defining column letters.
- * @returns {void}
+ * Applies a subtle color scheme and formatting to a specific region of a worksheet.
+ * This includes setting background colors, borders, font styles, and alignment
+ * for name columns, content columns, and other associated columns.
+ *
+ * @param {Object} worksheet - The worksheet object to modify (e.g., ExcelJS Worksheet).
+ * @param {number} codeStartRow - The row number where the formatting begins.
+ * @param {number} codeEndRow - The row number where the formatting ends.
+ * @param {string} baseHexColor - The base hexadecimal color code used to generate the color scheme.
+ * @param {Object} columns - Configuration object defining column mappings.
+ * @param {string} columns.nameColumn - The column letter for the name/primary cell.
+ * @param {string[]} columns.otherColumns - Array of column letters for secondary columns.
+ * @param {string[]} columns.contentColumns - Array of column letters for the content body.
  */
 const applySubtleColoring = (worksheet, codeStartRow, codeEndRow, baseHexColor, columns) => {
+  // --- Initialization & Color Generation ---
   const colors = createSubtleColorScheme(baseHexColor);
   const nameColumn = columns.nameColumn;
+
+  // --- Primary Cell Formatting ---
   worksheet.getCell(`${nameColumn}${codeStartRow}`).fill = colors.nameCell;
   worksheet.getCell(`${nameColumn}${codeStartRow}`).font = { bold: true };
   worksheet.getCell(`${nameColumn}${codeStartRow}`).border = colors.leftBorder;
+
+  // --- Secondary Columns Formatting ---
   columns.otherColumns.forEach(col => {
     worksheet.getCell(`${col}${codeStartRow}`).fill = colors.contentRows;
     worksheet.getCell(`${col}${codeStartRow}`).border = colors.standardBorder;
   });
+
+  // --- Content Range Formatting ---
   for (let i = codeStartRow; i <= codeEndRow; i++) {
     columns.contentColumns.forEach(col => {
       worksheet.getCell(`${col}${i}`).fill = colors.contentRows;
@@ -79,38 +103,42 @@ const applySubtleColoring = (worksheet, codeStartRow, codeEndRow, baseHexColor, 
       worksheet.getCell(`${col}${i}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
     });
   }
+
+  // --- Alignment Finalization ---
   worksheet.getCell(`${nameColumn}${codeStartRow}`).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
   columns.otherColumns.forEach(col => {
     worksheet.getCell(`${col}${codeStartRow}`).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
   });
 };
 
-
-// --- Export Routes ---
-
 /**
- * Exports all coded segments from a project to an Excel file.
- * @param {string} req.params.projectId - The ID of the project.
- * @param {string} [req.query.format='byDocument'] - The format of the export ('byDocument', 'overall', or 'matrix').
- * @returns {File} 200 - The generated Excel file.
- * @returns {object} 404 - An error object if the project is not found.
- * @returns {object} 500 - An error object if the export fails.
- */
+* Handles the export of coded segments for a specific project into an Excel file.
+* Supports 'matrix', 'overall', and 'byDocument' formats.
+* @param {Object} req - The Express request object.
+* @param {Object} req.params - The request parameters containing projectId.
+* @param {string} req.userId - The ID of the authenticated user (injected by middleware).
+* @param {Object} req.query - The query parameters (e.g., format).
+* @param {Object} res - The Express response object.
+* @returns {Promise<void>} Sends a downloadable Excel file stream to the client. 
+*/
 router.get('/:projectId/export-coded-segments', async (req, res) => {
   const { projectId } = req.params;
   const userId = req.userId;
   const { format = 'byDocument' } = req.query;
 
   try {
+    // --- Data Retrieval & Validation ---
     const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
     if (!project) {
       return res.status(404).json({ error: 'Project not found or unauthorized' });
     }
     const workbook = new ExcelJS.Workbook();
 
+    // --- Matrix Report Generation ---
     if (format === 'matrix') {
         const worksheet = workbook.addWorksheet('Code Matrix Report');
   
+        // 1. Header Configuration
         const sortedCodeDefs = [...project.codeDefinitions].sort((a, b) => a.name.localeCompare(b.name));
         const allCodeNames = sortedCodeDefs.map(cd => cd.name);
         const codeNameToColorMap = new Map(sortedCodeDefs.map(cd => [cd.name, cd.color || '#CCCCCC']));
@@ -136,6 +164,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
           };
         });
         
+        // 2. Data Processing & Row Generation
         const allFiles = project.importedFiles;
         let currentRowIndex = 2;
   
@@ -156,7 +185,8 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
   
             let rowData = {};
             let rowTotal = 0;
-  
+
+            // Line Parsing
             const transcriptLineRegex = /^(?:(\[.*?\]|\(.*?\)|{.*?}|\b\d{1,2}:\d{2}:\d{2}(?:\.\d{3})?\b)\s*)?(?:([^:]+?):\s*)?(.*)/;
             const match = lineText.match(transcriptLineRegex);
 
@@ -175,6 +205,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
 
             codeKeys.forEach(key => rowData[key] = '');
   
+            // Code Intersection Check
             segmentsForThisFile.forEach(segment => {
               if (Math.max(lineStart, segment.startIndex) < Math.min(lineEnd, segment.endIndex)) {
                 const codeName = segment.codeDefinition.name;
@@ -202,6 +233,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
           }
         }
         
+        // 3. Summary & Styling
         const summaryRowIndex = currentRowIndex;
         const summaryRow = worksheet.addRow({});
         summaryRow.getCell('segmenttext').value = 'Total';
@@ -274,6 +306,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
         return res.end();
       }
 
+    // --- Standard Report Generation (Overall / By Document) ---
     const worksheet = workbook.addWorksheet('Coded Segments');
     let totalFrequency = 0;
     
@@ -293,6 +326,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
     };
 
     if (format === 'overall') {
+      // Overall Format Grouping
       worksheet.columns = [
         { header: 'Code Definition', key: 'codeName', width: 30 },
         { header: 'Code Description', key: 'codeDescription', width: 40 },
@@ -359,6 +393,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
       }
       totalFrequency = project.codedSegments.length;
     } else {
+      // By Document Format Grouping
       worksheet.columns = [
         { header: 'File Name', key: 'fileName', width: 30 },
         { header: 'Code Definition', key: 'codeName', width: 25 },
@@ -437,6 +472,7 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
       }
       totalFrequency = project.codedSegments.length;
     }
+    // --- Totals & Final Response ---
     const totalRow = worksheet.addRow({});
     const totalLabelCell = worksheet.getCell(totalRow.number, worksheet.columns.length - 1);
     const totalValueCell = worksheet.getCell(totalRow.number, worksheet.columns.length);
@@ -463,23 +499,181 @@ router.get('/:projectId/export-coded-segments', async (req, res) => {
 });
 
 /**
- * Exports all overlapping code segments, with UI-aligned color styling for codes,
- * to a single Excel worksheet that includes a full statistical summary.
- * @param {string} req.params.projectId - The ID of the project.
- * @returns {File} 200 - The generated Excel file.
- * @returns {object} 404 - An error object if the project is not found or no overlaps exist.
- * @returns {object} 500 - An error object if the export fails.
+ * Exports all coded segments associated with a specific file within a project to an Excel spreadsheet.
+ * Performs authorization checks, retrieves project data, organizes segments by code definition,
+ * applies formatting to the worksheet, and streams the result as a downloadable .xlsx file.
+ *
+ * @param {Object} req - The Express request object, expecting `projectId` and `fileId` in `req.params`, and `userId` in `req.userId`.
+ * @param {Object} res - The Express response object used to send the file or error status.
+ * @returns {Promise<void>} Resolves when the response is sent.
+ */
+router.get('/:projectId/export-coded-segments-file/:fileId', async (req, res) => {
+  // --- Request Parsing & Context ---
+  const { projectId, fileId } = req.params;
+  const userId = req.userId;
+
+  try {
+    // --- Database Verification & Authorization ---
+    const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found or unauthorized' });
+    }
+
+    // --- File & Segment Validation ---
+    const file = project.importedFiles.find(f => f._id.toString() === fileId);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found.' });
+    }
+
+    const fileSegments = project.codedSegments.filter(s => s.fileId && s.fileId.toString() === fileId);
+
+    if (fileSegments.length === 0) {
+      return res.status(404).json({ error: 'No coded segments found for this file.' });
+    }
+
+    // --- Workbook Initialization & Styling ---
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Coded Segments');
+    let totalFrequency = 0;
+
+    const styleHeader = (ws) => {
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF444444' } };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          left: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          bottom: { style: 'thin', color: { argb: 'FF6A6A6A' } },
+          right: { style: 'thin', color: { argb: 'FF6A6A6A' } }
+        };
+      });
+    };
+
+    worksheet.columns = [
+      { header: 'Code Definition', key: 'codeName', width: 30 },
+      { header: 'Code Description', key: 'codeDescription', width: 40 },
+      { header: 'File Name', key: 'fileName', width: 30 },
+      { header: 'Coded Segment Text', key: 'text', width: 60 },
+      { header: 'Frequency', key: 'frequency', width: 15 },
+    ];
+    styleHeader(worksheet);
+
+    // --- Data Grouping ---
+    const groupedByCode = {};
+    fileSegments.forEach(segment => {
+      const defId = segment.codeDefinition?._id?.toString() || 'undefined';
+      if (!groupedByCode[defId]) {
+        groupedByCode[defId] = { definition: segment.codeDefinition, segments: [] };
+      }
+      groupedByCode[defId].segments.push(segment);
+    });
+
+    // --- Row Generation & Formatting ---
+    let currentRow = 2;
+    for (const { definition, segments } of Object.values(groupedByCode)) {
+      const codeStartRow = currentRow;
+      const baseHexColor = definition?.color || '#CCCCCC';
+
+      const segmentsByFile = segments.reduce((acc, segment) => {
+          const fileName = segment.fileName || 'Unknown File';
+          if (!acc[fileName]) acc[fileName] = [];
+          acc[fileName].push(segment);
+          return acc;
+      }, {});
+
+      for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+          for (const segment of fileSegments) {
+              worksheet.addRow({ text: `"${segment.text || ''}"` });
+              currentRow++;
+          }
+      }
+
+      const codeEndRow = currentRow - 1;
+      worksheet.mergeCells(`A${codeStartRow}:A${codeEndRow}`);
+      worksheet.mergeCells(`B${codeStartRow}:B${codeEndRow}`);
+      worksheet.mergeCells(`E${codeStartRow}:E${codeEndRow}`);
+      worksheet.getCell(`A${codeStartRow}`).value = definition?.name || 'Unknown Code';
+      worksheet.getCell(`B${codeStartRow}`).value = definition?.description || 'No description';
+      worksheet.getCell(`E${codeStartRow}`).value = segments.length;
+
+      applySubtleColoring(worksheet, codeStartRow, codeEndRow, baseHexColor, {
+        nameColumn: 'A',
+        otherColumns: ['B', 'E'],
+        contentColumns: ['C', 'D']
+      });
+
+      let fileRowTracker = codeStartRow;
+      for (const [fileName, fileSegments] of Object.entries(segmentsByFile)) {
+          const fileStartRow = fileRowTracker;
+          const fileEndRow = fileRowTracker + fileSegments.length - 1;
+          if (fileEndRow >= fileStartRow) {
+              worksheet.mergeCells(`C${fileStartRow}:C${fileEndRow}`);
+              const fileCell = worksheet.getCell(`C${fileStartRow}`);
+              fileCell.value = fileName;
+              fileCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          }
+          fileRowTracker = fileEndRow + 1;
+      }
+    }
+    totalFrequency = fileSegments.length;
+
+    // --- Total Frequency Calculation ---
+    const totalRow = worksheet.addRow({});
+    const totalLabelCell = worksheet.getCell(totalRow.number, worksheet.columns.length - 1);
+    const totalValueCell = worksheet.getCell(totalRow.number, worksheet.columns.length);
+    totalLabelCell.value = 'Total Frequency';
+    totalValueCell.value = totalFrequency;
+    totalLabelCell.font = { bold: true };
+    totalValueCell.font = { bold: true };
+    totalLabelCell.alignment = { horizontal: 'right' };
+    totalValueCell.alignment = { horizontal: 'center' };
+    totalLabelCell.border = {
+      top: { style: 'thick', color: { argb: 'FF666666' } }
+    };
+    totalValueCell.border = {
+      top: { style: 'thick', color: { argb: 'FF666666' } }
+    };
+
+    // --- Response & File Download ---
+    const sanitizedFileName = file.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedFileName}_coded_segments_overall.xlsx"`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    // --- Error Handling ---
+    console.error('[SINGLE FILE EXPORT ERROR]', err);
+    res.status(500).json({ error: 'Failed to export coded segments', details: err.message });
+  }
+});
+
+/**
+ * Handles the export of overlapping coded segments within a project to an Excel file.
+ * Calculates overlaps based on segment intervals, computes statistics, and formats an Excel report.
+ *
+ * @param {Object} req - The Express request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.projectId - The unique identifier of the project.
+ * @param {string} req.userId - The ID of the authenticated user requesting the export.
+ * @param {Object} res - The Express response object used to send the Excel file.
+ * @returns {Promise<void>} Sends a generated .xlsx file stream or a JSON error response.
  */
 router.get('/:projectId/export-overlaps', async (req, res) => {
     const { projectId } = req.params;
     const userId = req.userId;
   
     try {
+      // --- Project Retrieval and Validation ---
       const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
       if (!project) {
         return res.status(404).json({ error: 'Project not found or unauthorized' });
       }
   
+      // --- Data Preparation: Group Segments by File ---
       const overlapsByFile = {};
       const segmentsByFile = project.codedSegments.reduce((acc, segment) => {
         const fileId = segment.fileId.toString();
@@ -488,12 +682,14 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
         return acc;
       }, {});
   
+      // --- Overlap Detection Logic ---
       for (const fileId in segmentsByFile) {
           const segments = segmentsByFile[fileId];
           if (segments.length < 2) continue;
           const file = project.importedFiles.find(f => f._id.toString() === fileId);
           if (!file?.content) continue;
   
+          // Identify all start and end points to define atomic intervals
           const boundaryPoints = new Set();
           segments.forEach(s => {
               boundaryPoints.add(s.startIndex);
@@ -501,6 +697,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
           });
           const sortedPoints = Array.from(boundaryPoints).sort((a, b) => a - b);
   
+          // Analyze each interval for overlapping segments
           const fileOverlaps = [];
           for (let i = 0; i < sortedPoints.length - 1; i++) {
               const intervalStart = sortedPoints[i];
@@ -520,6 +717,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
               }
           }
   
+          // Merge adjacent intervals if they share the exact same set of codes
           if (fileOverlaps.length > 0) {
               const mergedOverlaps = [];
               let currentOverlap = { ...fileOverlaps[0] };
@@ -545,6 +743,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
         return res.status(404).json({ error: 'No overlapping codes found in the project to export.' });
       }
   
+      // --- Statistics Calculation ---
       const totalOverlapRegions = finalOverlaps.reduce((total, fileGroup) => total + fileGroup.overlaps.length, 0);
       const documentsWithOverlaps = finalOverlaps.length;
       const totalDocuments = project.importedFiles.length;
@@ -553,6 +752,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
       );
       const averageOverlapLength = totalOverlapRegions > 0 ? Math.round(totalOverlapTextLength / totalOverlapRegions) : 0;
       
+      // Calculate code pair frequency
       const allOverlapCodes = new Set();
       const codePairFrequency = {};
       finalOverlaps.forEach(fileGroup => {
@@ -572,6 +772,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
       const uniqueCodesList = Array.from(allOverlapCodes).sort();
       const mostFrequentPair = Object.entries(codePairFrequency).sort(([,a], [,b]) => b - a)[0];
   
+      // --- Excel Generation: Setup and Summary Headers ---
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Overlapping Codes Report');
       
@@ -589,6 +790,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
       worksheet.getCell('E2').value = 'Average Overlap Length:';
       worksheet.getCell('F2').value = `${averageOverlapLength} characters`;
       
+      // Style summary rows
       [1, 2].forEach(rowNum => {
         worksheet.getRow(rowNum).eachCell({ includeEmpty: true }, (cell, colNum) => {
           if (colNum % 2 === 1) { 
@@ -602,6 +804,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
         });
       });
       
+      // --- Excel Generation: Data Table Headers ---
       worksheet.addRow({});
       const headerRow = worksheet.getRow(4);
       headerRow.values = ['File Name', 'Overlapping Text', 'Applied Codes', 'Code Count'];
@@ -616,11 +819,13 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
       worksheet.getColumn('E').width = 30;
       worksheet.getColumn('F').width = 40; 
   
+      // --- Excel Generation: Populate Data Rows ---
       let currentRowIndex = 5;
       finalOverlaps.forEach(fileGroup => {
         const fileStartRow = currentRowIndex;
         fileGroup.overlaps.forEach(overlap => {
           
+          // Create Rich Text object for colored codes
           const richTextValue = [];
           overlap.codes.forEach((code, index) => {
             richTextValue.push({
@@ -649,6 +854,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
           currentRowIndex++;
         });
         
+        // Merge file name cells for visual grouping
         const fileEndRow = currentRowIndex - 1;
         if (fileEndRow >= fileStartRow) {
           worksheet.mergeCells(`A${fileStartRow}:A${fileEndRow}`);
@@ -660,6 +866,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
         }
       });
   
+      // Apply borders and alignment to data table
       for (let i = 4; i < currentRowIndex; i++) {
           const row = worksheet.getRow(i);
           row.eachCell({ includeEmpty: true }, (cell) => {
@@ -670,6 +877,7 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
           });
       }
   
+      // --- Response Handling ---
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${project.name}_overlaps_report.xlsx"`);
       await workbook.xlsx.write(res);
@@ -682,27 +890,32 @@ router.get('/:projectId/export-overlaps', async (req, res) => {
   });
 
 /**
- * Exports all memos for a single file to an Excel file.
- * @param {string} req.params.projectId - The ID of the project.
- * @param {string} req.params.fileId - The ID of the file to export memos from.
- * @returns {File} 200 - The generated Excel file.
- * @returns {object} 404 - An error object if the project or file is not found.
- * @returns {object} 500 - An error object if the export fails.
+ * Exports all memos associated with a specific file within a project to an Excel (.xlsx) spreadsheet.
+ *
+ * @route GET /:projectId/files/:fileId/export-memos
+ * @param {Object} req - The Express request object.
+ * @param {string} req.params.projectId - The unique identifier of the project.
+ * @param {string} req.params.fileId - The unique identifier of the file to export memos for.
+ * @param {Object} res - The Express response object used to stream the file or send error responses.
+ * @returns {Promise<void>} Streams the generated Excel workbook to the client or returns a JSON error.
  */
 router.get('/:projectId/files/:fileId/export-memos', async (req, res) => {
     const { projectId, fileId } = req.params;
     try {
+      // --- Project and File Retrieval ---
       const project = await Project.findById(projectId);
       if (!project) return res.status(404).json({ error: 'Project not found' });
   
       const file = project.importedFiles.id(fileId);
       if (!file) return res.status(404).json({ error: 'File not found' });
   
+      // --- Memo Filtering ---
       const memosForFile = project.memos.filter(memo => memo.fileId && memo.fileId.toString() === fileId);
       if (memosForFile.length === 0) {
         return res.status(404).json({ error: 'No memos found for this file.' });
       }
   
+      // --- Workbook Generation ---
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Memos');
       worksheet.columns = [
@@ -731,6 +944,7 @@ router.get('/:projectId/files/:fileId/export-memos', async (req, res) => {
         });
       });
   
+      // --- Response Headers and Stream ---
       const sanitizedFileName = file.name.replace(/\.[^/.]+$/, '').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
       res.setHeader(
         'Content-Type',
@@ -740,29 +954,27 @@ router.get('/:projectId/files/:fileId/export-memos', async (req, res) => {
       await workbook.xlsx.write(res);
       res.end();
     } catch (err) {
+      // --- Error Handling ---
       console.error(err);
       res.status(500).json({ error: 'Failed to export memos.' });
     }
 });
 
 /**
- * Exports a specific file from a project in a user-requested format (e.g., DOCX or PDF).
- * The function retrieves the file content and uses appropriate libraries to generate
- * the document in the specified format, streaming it back to the client for download.
+ * Express route handler to export a specific file within a project to a requested format.
+ * Currently supports DOCX and PDF formats.
  *
- * @param {string} req.params.projectId - The ID of the project containing the file.
- * @param {string} req.params.fileId - The ID of the file to be exported.
- * @param {string} req.query.format - The desired export format. Supported values: 'docx', 'pdf'.
- * @returns {File} 200 - The generated file (DOCX or PDF) for download.
- * @returns {object} 400 - An error object if the requested format is invalid or not supported.
- * @returns {object} 404 - An error object if the project or file is not found.
- * @returns {object} 500 - An error object if the file generation or export process fails.
+ * @param {Object} req - The Express request object, containing path params (projectId, fileId) and query params (format).
+ * @param {Object} res - The Express response object used to send the file buffer or stream.
+ * @returns {Promise<void>} Returns a promise that resolves when the response is sent.
  */
 router.get('/:projectId/files/:fileId/export', async (req, res) => {
+    // --- Parameter Extraction ---
     const { projectId, fileId } = req.params;
     const { format } = req.query;
   
     try {
+      // --- Project & File Retrieval ---
       const project = await Project.findOne({ _id: projectId, owner: req.userId });
       if (!project) {
         return res.status(404).json({ error: 'Project not found.' });
@@ -773,9 +985,11 @@ router.get('/:projectId/files/:fileId/export', async (req, res) => {
         return res.status(404).json({ error: 'File not found.' });
       }
   
+      // --- Metadata Processing ---
       const baseName = path.basename(file.name, path.extname(file.name));
   
       if (format === 'docx') {
+        // --- DOCX Generation ---
         const paragraphs = file.content.split('\n').map(line => new Paragraph({
           alignment: AlignmentType.JUSTIFIED,
           children: [new TextRun(line)],
@@ -793,6 +1007,7 @@ router.get('/:projectId/files/:fileId/export', async (req, res) => {
         res.send(buffer);
   
       } else if (format === 'pdf') {
+        // --- PDF Generation ---
         const doc = new PDFDocument();
         let filename = `${baseName}.pdf`;
         filename = encodeURIComponent(filename);
@@ -806,42 +1021,78 @@ router.get('/:projectId/files/:fileId/export', async (req, res) => {
         doc.end();
   
       } else {
+        // --- Invalid Format Handling ---
         return res.status(400).json({ error: 'Invalid or unsupported format specified.' });
       }
     } catch (err) {
+      // --- Error Handling ---
       console.error('File export error:', err);
       res.status(500).json({ error: 'Failed to export file.' });
     }
 });
   
 /**
- * Exports the entire project as a .quail (ZIP) archive.
+ * Handles the export of a specific project as a compressed .quail archive.
+ * * This route retrieves the project data, packages associated audio assets,
+ * sanitizes system fields, and generates a ZIP file containing the project
+ * JSON and assets. It handles temporary file creation, streaming response, 
+ * and cleanup of temporary files upon completion.
+ *
+ * @param {Object} req - The Express request object.
+ * @param {string} req.params.projectId - The unique identifier of the project to export.
+ * @param {string} req.userId - The ID of the user requesting the export (attached by middleware).
+ * @param {Object} res - The Express response object.
+ * @returns {void} Triggers a file download stream or sends a JSON error response.
  */
 router.get('/:projectId/export-quail', async (req, res) => {
   const { projectId } = req.params;
   const userId = req.userId;
 
   try {
+    // --- Project Retrieval & Validation ---
     const project = await Project.findOne({ _id: projectId, owner: userId }).lean();
     if (!project) {
       return res.status(404).json({ error: 'Project not found.' });
     }
 
+    // --- File System & Stream Setup ---
     const filename = `${project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.quail`;
-    res.attachment(filename);
-
+    
+    const zipPath = path.join(process.cwd(), `temp_export_${Date.now()}_${filename}`);
+    const output = fs.createWriteStream(zipPath);
+    
     const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.pipe(res);
+
+    // --- Response Handling & Cleanup ---
+    output.on('close', function () {
+      console.log(archive.pointer() + ' total bytes');
+      console.log('Archiver finalized. Sending file...');
+
+      res.download(zipPath, filename, (err) => {
+        if (err) {
+          console.error("Error sending file to client:", err);
+        }
+
+        fs.unlink(zipPath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error("Failed to delete temp export file:", unlinkErr);
+          } else {
+            console.log(`Cleaned up temp export file: ${zipPath}`);
+          }
+        });
+      });
+    });
 
     archive.on('error', function(err) {
       console.error('Archiver error:', err);
       res.status(500).send({error: err.message});
     });
 
-    const projectData = { ...project };
+    archive.pipe(output);
 
-    // 1. Process Files for Audio Assets
-    // We KEEP the _id here because we need it for mapping relationships on import
+    // --- Data Processing & Asset Archival ---
+    const projectData = JSON.parse(JSON.stringify(project));
+
     if (projectData.importedFiles) {
       projectData.importedFiles = projectData.importedFiles.map(file => {
         if (file.sourceType === 'audio' && file.audioUrl) {
@@ -850,11 +1101,9 @@ router.get('/:projectId/export-quail', async (req, res) => {
 
           if (fs.existsSync(absolutePath)) {
             const ext = path.extname(relativePath);
-            // Use the ID in the filename to prevent collisions inside the zip
             const zipAssetName = `assets/${file._id}${ext}`;
             archive.file(absolutePath, { name: zipAssetName });
 
-            // Point the URL to the internal zip path
             return { ...file, audioUrl: zipAssetName };
           }
         }
@@ -862,17 +1111,16 @@ router.get('/:projectId/export-quail', async (req, res) => {
       });
     }
 
-    // REMOVED: The block that deleted _ids from codeDefinitions, codedSegments, etc.
-    // We strictly need these IDs to exist in project.json to reconstruct the web of references.
-
-    // Remove only top-level system fields
+    // --- Data Sanitization ---
     delete projectData._id;
     delete projectData.owner;
     delete projectData.createdAt;
     delete projectData.updatedAt;
     delete projectData.__v;
 
+    // --- Archive Finalization ---
     archive.append(JSON.stringify(projectData, null, 2), { name: 'project.json' });
+    
     await archive.finalize();
 
   } catch (err) {

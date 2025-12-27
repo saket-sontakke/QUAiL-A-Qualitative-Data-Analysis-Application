@@ -4,16 +4,7 @@ import { TbRewindForward10, TbRewindBackward10 } from "react-icons/tb";
 import { TiArrowLoop } from "react-icons/ti";
 
 /**
- * A feature-rich and collapsible audio player component for playing audio files.
- * It includes controls for playback, a draggable progress bar, volume, looping, and variable
- * playback speeds. The player is designed to reset its state when the audio
- * source changes. This version includes a modern + fallback OS detection so the
- * UI can show `Cmd` on Apple platforms and `Ctrl` elsewhere.
- *
- * @param {object} props - The component props.
- * @param {string} props.src - The URL of the audio source to play.
- * @param {string} props.fileId - A unique key for the audio file, used to reset the player state on source change.
- * @returns {JSX.Element} The rendered audio player component.
+ * A feature-rich and collapsible audio player component.
  */
 const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
   const audioRef = useRef(null);
@@ -35,29 +26,21 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
   const [customPlaybackRate, setCustomPlaybackRate] = useState(playbackRate.toString());
   const playbackRates = [0.5, 1, 1.25, 1.5, 1.75, 2];
 
-  // Dual OS detection: try modern API first, fall back to navigator.platform and then userAgent
+  // Dual OS detection
   const getOS = () => {
     if (typeof navigator === 'undefined') return 'unknown';
-
     try {
       if (navigator.userAgentData?.platform) {
         return navigator.userAgentData.platform;
       }
-    } catch (err) {
-      // ignore
-    }
-
-    // Fallback to the older navigator.platform
+    } catch (err) { /* ignore */ }
     if (navigator.platform) return navigator.platform;
-
-    // Last resort: sniff userAgent (not ideal, but a safe fallback)
     if (navigator.userAgent) {
       const ua = navigator.userAgent;
       if (/Mac|iPhone|iPad|iPod/.test(ua)) return 'Mac';
       if (/Win/.test(ua)) return 'Windows';
       if (/Linux/.test(ua)) return 'Linux';
     }
-
     return 'unknown';
   };
 
@@ -127,6 +110,31 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
       setIsLoaded(false);
     }
   }, [fileId]);
+
+  // Handle "Don't show again" logic
+  useEffect(() => {
+    // If player is visible (not hidden), check storage
+    if (!isPlayerHidden) {
+      const shouldHide = localStorage.getItem('hideAudioSeekTip') === 'true';
+      
+      if (!shouldHide) {
+        setIsInfoVisible(true);
+        // Auto-hide after 10 seconds
+        const timer = setTimeout(() => {
+          setIsInfoVisible(false);
+        }, 10000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isPlayerHidden]);
+
+  const handleNeverShowChange = (e) => {
+    if (e.target.checked) {
+      localStorage.setItem('hideAudioSeekTip', 'true');
+    } else {
+      localStorage.removeItem('hideAudioSeekTip');
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -294,8 +302,23 @@ const AudioPlayer = forwardRef(({ src, fileId }, ref) => {
               <FaInfoCircle size={12} />
             </button>
             {isInfoVisible && (
-              <div ref={infoPopupRef} className="absolute bottom-full left-1/2 z-20 w-max -translate-x-1/2 transform rounded-lg bg-gray-700 px-3 py-2 text-center text-xs font-medium text-white shadow-sm dark:bg-gray-900 ml-7 mb-4">
-                Tip: Hold {seekKey} + Click on text to jump to its timestamp.
+              <div ref={infoPopupRef} className="absolute bottom-full left-1/2 z-20 mb-4 ml-7 w-max -translate-x-1/2 transform rounded-lg bg-gray-200 p-3 text-center text-xs font-medium text-black dark:text-white shadow-sm dark:bg-gray-900">
+                <p>Tip: {seekKey} + Click on any sentence to jump to its timestamp.</p>
+                
+                {/* NEVER SHOW AGAIN CHECKBOX */}
+                <div className="mt-2 flex items-center justify-center gap-2 border-t border-gray-600 pt-2">
+                  <input 
+                    type="checkbox" 
+                    id="hideSeekTip"
+                    className="h-3 w-3 rounded border-gray-500 text-cyan-500 focus:ring-0 dark:bg-gray-700"
+                    defaultChecked={localStorage.getItem('hideAudioSeekTip') === 'true'}
+                    onChange={handleNeverShowChange}
+                  />
+                  <label htmlFor="hideSeekTip" className="cursor-pointer text-[10px] text-black dark:text-gray-300 hover:text-white">
+                    Don't show again
+                  </label>
+                </div>
+
                 <div className="absolute left-1/2 top-full -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-gray-700 dark:border-t-gray-900" />
               </div>
             )}

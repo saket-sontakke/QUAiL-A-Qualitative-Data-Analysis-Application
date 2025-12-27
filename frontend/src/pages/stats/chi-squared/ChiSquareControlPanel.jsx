@@ -55,6 +55,71 @@ const IndependencePanel = ({ codeDefinitions, indepCodes, setIndepCodes, project
  * @param {Function} props.setHomoDocGroups - The state setter for the document groups.
  * @returns {JSX.Element} The rendered panel for the Test for Homogeneity.
  */
+// const HomogeneityPanel = ({ codeDefinitions, homoCodes, setHomoCodes, project, homoNumGroups, setHomoNumGroups, homoDocGroups, setHomoDocGroups }) => {
+//   useEffect(() => {
+//     const newGroups = {};
+//     const numGroups = parseInt(homoNumGroups, 10) || 2;
+
+//     for (let i = 0; i < numGroups; i++) {
+//       const groupName = `Group ${String.fromCharCode(65 + i)}`;
+//       newGroups[groupName] = homoDocGroups[groupName] || [];
+//     }
+//     setHomoDocGroups(newGroups);
+//   }, [homoNumGroups]);
+
+//   const allSelectedDocs = new Set(Object.values(homoDocGroups).flat());
+//   const maxGroups = project.importedFiles.length > 1 ? project.importedFiles.length - 1 : 1;
+
+//   return (
+//     <div className="space-y-5 animate-fade-in-up">
+//       <div className="text-left">
+//         <h3 className="text-xl font-bold">Chi-Square Test for Homogeneity</h3>
+//         <p className="mt-1 text-sm text-gray-500">Compares the distribution of codes across two or more document groups.</p>
+//       </div>
+//       <hr className="dark:border-gray-600" />
+//       <div className="space-y-4">
+//         <div>
+//           <label className="mb-1 block text-sm font-medium">① Codes</label>
+//           <SearchableMultiCodeDropdown codes={codeDefinitions} selectedCodeIds={homoCodes} onSelectionChange={setHomoCodes} placeholder="Select 2 or more codes..." />
+//           <p className="mt-1 text-xs text-gray-500">Select 2 or more codes to analyze.</p>
+//         </div>
+//         <div>
+//           <label className="mb-1 block text-sm font-medium">② Number of Groups to Compare</label>
+//           <div className="flex items-center gap-2">
+//             <input
+//               type="number"
+//               min="2"
+//               max={maxGroups}
+//               value={homoNumGroups}
+//               onChange={(e) => setHomoNumGroups(Math.max(2, Math.min(maxGroups, parseInt(e.target.value, 10) || 2)))}
+//               className="w-24 rounded-md border p-2 dark:border-gray-600 dark:bg-gray-900"
+//             />
+//             <div className="group relative">
+//               <FaInfoCircle className="text-gray-400" />
+//               <div className="pointer-events-none absolute bottom-full mb-2 w-72 rounded-md bg-gray-800 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+//                 When you create a separate group for each document, the Test for Homogeneity becomes mathematically identical to the Test of Independence.
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//         <div className="space-y-3 pt-2">
+//           {Object.keys(homoDocGroups).map((groupName) => (
+//             <div key={groupName}>
+//               <label className="mb-1 block text-sm font-medium">{`③ ${groupName} Documents`}</label>
+//               <SearchableMultiSelectDropdown
+//                 files={project.importedFiles}
+//                 selectedFileIds={homoDocGroups[groupName]}
+//                 onSelectionChange={(selection) => setHomoDocGroups(prev => ({ ...prev, [groupName]: selection }))}
+//                 disabledFileIds={[...allSelectedDocs].filter(id => !homoDocGroups[groupName].includes(id))}
+//                 placeholder="Select 1 or more documents..."
+//               />
+//             </div>
+//           ))}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
 const HomogeneityPanel = ({ codeDefinitions, homoCodes, setHomoCodes, project, homoNumGroups, setHomoNumGroups, homoDocGroups, setHomoDocGroups }) => {
   useEffect(() => {
     const newGroups = {};
@@ -86,14 +151,37 @@ const HomogeneityPanel = ({ codeDefinitions, homoCodes, setHomoCodes, project, h
         <div>
           <label className="mb-1 block text-sm font-medium">② Number of Groups to Compare</label>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="2"
-              max={maxGroups}
-              value={homoNumGroups}
-              onChange={(e) => setHomoNumGroups(Math.max(2, Math.min(maxGroups, parseInt(e.target.value, 10) || 2)))}
-              className="w-24 rounded-md border p-2 dark:border-gray-600 dark:bg-gray-900"
-            />
+            
+            {/* --- CHANGED SECTION START: Custom Input Wrapper --- */}
+            <div className="relative w-16">
+              <input
+                type="number"
+                min="2"
+                max={maxGroups}
+                value={homoNumGroups}
+                onChange={(e) => setHomoNumGroups(Math.max(2, Math.min(maxGroups, parseInt(e.target.value, 10) || 2)))}
+                // Added 'hide-number-arrows', 'dark:text-gray-200', and padding adjustments
+                className="w-full rounded-md border border-gray-300 py-2 pl-3 pr-8 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 hide-number-arrows"
+              />
+              
+              {/* Custom Spin Buttons */}
+              <div className="absolute right-0 top-0 mr-1 flex h-full flex-col items-center justify-center">
+                <button 
+                  onClick={() => setHomoNumGroups(prev => Math.min(maxGroups, (parseInt(prev, 10) || 2) + 1))}
+                  className="h-1/2 rounded-tr-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 4.86l-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/></svg>
+                </button>
+                <button 
+                  onClick={() => setHomoNumGroups(prev => Math.max(2, (parseInt(prev, 10) || 2) - 1))}
+                  className="h-1/2 rounded-br-sm px-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                </button>
+              </div>
+            </div>
+            {/* --- CHANGED SECTION END --- */}
+
             <div className="group relative">
               <FaInfoCircle className="text-gray-400" />
               <div className="pointer-events-none absolute bottom-full mb-2 w-72 rounded-md bg-gray-800 p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">

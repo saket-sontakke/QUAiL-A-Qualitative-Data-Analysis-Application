@@ -23,6 +23,10 @@ export const useProjectCore = (idFromProp = null) => {
     progress: 0,
   });
 
+  // 🔄 Sync State (New)
+  const [lastSeenSyncVersion, setLastSeenSyncVersion] = useState(null);
+  const isRefetchingRef = useRef(false); // Guard to prevent double fetches
+
   // File selection state
   const [selectedContent, setSelectedContent] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
@@ -90,6 +94,21 @@ export const useProjectCore = (idFromProp = null) => {
     { name: 'Pink', value: '#FFC0CB', cssClass: 'bg-pink-300' },
   ];
 
+  // =========================================================================
+  // 🟢 FIX START: Keep Sync Version Updated
+  // =========================================================================
+  // Whenever 'project' updates (whether from fetch, file manager commit, or sync),
+  // we must update lastSeenSyncVersion. This prevents the "Version Mismatch"
+  // loop when useFileManager updates the project state directly.
+  useEffect(() => {
+    if (project && project.syncVersion !== undefined) {
+      setLastSeenSyncVersion(project.syncVersion);
+    }
+  }, [project]);
+  // =========================================================================
+  // 🟢 FIX END
+  // =========================================================================
+
   /**
    * Synchronizes local optimistic updates with the global project cache.
    * This ensures data persists when switching files without a full refetch.
@@ -105,7 +124,7 @@ export const useProjectCore = (idFromProp = null) => {
       if (action === 'add') {
          // FIXED: Prevent duplicates by checking if ID already exists
          if (!list.find(item => item._id === payload._id)) {
-            clone[collection] = [...list, payload];
+           clone[collection] = [...list, payload];
          }
       } else if (action === 'update') {
          // payload is the updated item
@@ -118,6 +137,13 @@ export const useProjectCore = (idFromProp = null) => {
          clone[collection] = list.filter(item => !payload.includes(item._id));
       }
       
+      // 🔄 Sync Update: If we mutate locally, we assume version incremented on server.
+      // We bump it locally so the next focus check doesn't false-positive refetch.
+      if (clone.syncVersion !== undefined) {
+          clone.syncVersion += 1;
+          // The new useEffect will handle updating lastSeenSyncVersion state
+      }
+
       return clone;
     });
   }, []);
@@ -195,14 +221,21 @@ export const useProjectCore = (idFromProp = null) => {
    * Fetches the full project data from the backend API.
    */
   const fetchProject = useCallback(async () => {
+    // Guard against rapid re-entries
+    if (isRefetchingRef.current) return;
+    
+    isRefetchingRef.current = true;
     setLoading(true);
     setError('');
+    
     const token = user?.token;
     if (!token) {
       setError('Authentication error. Please log in.');
       setLoading(false);
+      isRefetchingRef.current = false;
       return;
     }
+
     try {
       const res = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}`, 
@@ -213,6 +246,8 @@ export const useProjectCore = (idFromProp = null) => {
       setProjectName(fetchedProject.name);
       setCodeDefinitions(fetchedProject.codeDefinitions || []);
       
+      // The new useEffect will handle syncVersion logic here automatically
+
       const savedPinnedFiles = localStorage.getItem(`pinnedFiles_${projectId}`);
       if (savedPinnedFiles) {
         setPinnedFiles(JSON.parse(savedPinnedFiles));
@@ -222,6 +257,7 @@ export const useProjectCore = (idFromProp = null) => {
       setError(err.response?.data?.error || 'Failed to load project');
     } finally {
       setLoading(false);
+      isRefetchingRef.current = false; // Release the lock
     }
   }, [projectId, user]);
 
@@ -273,17 +309,60 @@ export const useProjectCore = (idFromProp = null) => {
     fetchProject();
   }, [projectId, fetchProject]);
 
+  // ⚡️ NEW: Focus Effect for Auto-Sync
+  useEffect(() => {
+    const onFocus = async () => {
+      if (!projectId || !user?.token || isRefetchingRef.current) return;
+      
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/meta`,
+          { headers: { Authorization: `Bearer ${user.token}` } }
+        );
+        
+        const serverVersion = res.data.syncVersion;
+        
+        // Only refetch if we have a version, and it doesn't match what we see
+        if (lastSeenSyncVersion !== null && serverVersion !== lastSeenSyncVersion) {
+           console.log(`[Sync] Version mismatch (Local: ${lastSeenSyncVersion}, Server: ${serverVersion}). Refetching...`);
+           fetchProject();
+        }
+      } catch (error) {
+         console.warn("[Sync] Failed to check project version:", error);
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [projectId, user, lastSeenSyncVersion, fetchProject]);
+
+
   // Effect to synchronize the selected file state when the project data updates
   useEffect(() => {
-    if (project && selectedFileId) {
-      const currentFile = project.importedFiles.find(f => f._id === selectedFileId);
-      if (currentFile) {
-        handleSelectFile(currentFile);
+      // ✅ FIX: If the current file is "staged" (unsaved), stop here.
+      if (selectedFileId === 'staged-file') return;
+
+      // Scenario 1: We have a file selected, let's see if it still exists in the new data
+      if (project && selectedFileId) {
+        const currentFile = project.importedFiles.find(f => f._id === selectedFileId);
+        
+        if (currentFile) {
+          // ✅ Case A: File still exists (maybe content changed). Update the view.
+          handleSelectFile(currentFile);
+        } else {
+          // ⚠️ Case B: File was deleted remotely!
+          if (project.importedFiles.length > 0) {
+            handleSelectFile(project.importedFiles[0]); 
+          } else {
+            handleSelectFile(null); // Clear the viewer
+          }
+        }
+      } 
+      // Scenario 2: Nothing selected yet, but we have files. Select the first one.
+      else if (project && project.importedFiles?.length > 0 && !selectedFileId) {
+        handleSelectFile(project.importedFiles[0]);
       }
-    } else if (project && project.importedFiles?.length > 0 && !selectedFileId) {
-      handleSelectFile(project.importedFiles[0]);
-    }
-  }, [project, selectedFileId, handleSelectFile]);
+    }, [project, selectedFileId, handleSelectFile]);
 
   // Effect to scroll to a specific annotation in the viewer when its ID is set
   useEffect(() => {

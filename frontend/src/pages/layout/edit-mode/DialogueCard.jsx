@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 
 /**
@@ -6,19 +6,13 @@ import { FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
  */
 
 /**
- * A card component that displays a single block of a transcript, including the
- * timestamp, speaker, and dialogue. It provides functionality for in-place
- * editing of the speaker's name and dialogue text.
+ * A card component that displays a single block of a transcript.
+ * Wrapped in forwardRef to allow scrolling from parent.
  *
  * @param {object} props - The component props.
- * @param {DialogueBlock} props.block - The dialogue block data to display.
- * @param {number} props.index - The index of this block within the parent transcript array.
- * @param {(index: number, newDialogue: string) => void} props.onDialogueChange - Callback to update the dialogue text.
- * @param {(oldName: string, newName: string, index: number) => void} props.onInitiateRename - Callback to start the speaker rename process.
- * @param {() => void} props.onTimestampClick - Callback for when the card is Ctrl/Cmd+Clicked, typically to seek audio.
- * @returns {JSX.Element} The rendered dialogue card component.
+ * ...
  */
-const DialogueCard = ({ block, index, onDialogueChange, onInitiateRename, onTimestampClick }) => {
+const DialogueCard = forwardRef(({ block, index, onDialogueChange, onInitiateRename, onTimestampClick }, ref) => {
   const [isEditingSpeaker, setIsEditingSpeaker] = useState(false);
   const [tempSpeakerName, setTempSpeakerName] = useState(block.speaker);
   const speakerEditorRef = useRef(null);
@@ -51,10 +45,6 @@ const DialogueCard = ({ block, index, onDialogueChange, onInitiateRename, onTime
     };
   }, [isEditingSpeaker]);
 
-  /**
-   * Saves the temporary speaker name by calling the onInitiateRename prop
-   * if the name has been changed. Exits speaker editing mode.
-   */
   const handleSpeakerSave = () => {
     if (tempSpeakerName.trim() && tempSpeakerName.trim() !== block.speaker) {
       onInitiateRename(block.speaker, tempSpeakerName.trim(), index);
@@ -62,30 +52,16 @@ const DialogueCard = ({ block, index, onDialogueChange, onInitiateRename, onTime
     setIsEditingSpeaker(false);
   };
 
-  /**
-   * Cancels the speaker editing process, reverts the temporary name,
-   * and exits speaker editing mode.
-   */
   const handleSpeakerCancel = () => {
     setTempSpeakerName(block.speaker);
     setIsEditingSpeaker(false);
   };
 
-  /**
-   * Handles keyboard events for the speaker name input field.
-   * 'Enter' saves the change, and 'Escape' cancels it.
-   * @param {React.KeyboardEvent<HTMLInputElement>} e - The keyboard event.
-   */
   const handleSpeakerKeyDown = (e) => {
     if (e.key === 'Enter') handleSpeakerSave();
     if (e.key === 'Escape') handleSpeakerCancel();
   };
 
-  /**
-   * Handles click events on the card to trigger the onTimestampClick callback
-   * when the user holds Ctrl or Command key.
-   * @param {React.MouseEvent<HTMLDivElement>} e - The mouse event.
-   */
   const handleCardClick = (e) => {
     if (!onTimestampClick || isEditingSpeaker) return;
     if (e.ctrlKey || e.metaKey) {
@@ -96,6 +72,7 @@ const DialogueCard = ({ block, index, onDialogueChange, onInitiateRename, onTime
 
   return (
     <div 
+      ref={ref}
       className="mb-4 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800"
       onClick={handleCardClick}
       title="Ctrl+Click (or ⌘+Click) to seek audio"
@@ -136,6 +113,6 @@ const DialogueCard = ({ block, index, onDialogueChange, onInitiateRename, onTime
       </div>
     </div>
   );
-};
+});
 
 export default DialogueCard;

@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { getCharOffset, calculateFloatingPosition } from './projectDOMUtils.js';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { getCharOffset, calculateFloatingPosition, snapRangeToWord } from './projectDOMUtils.js';
 
 /**
  * Viewer selection management hook.
@@ -22,7 +22,8 @@ export const useViewerSelection = ({
   showFloatingMemoInput,
   setShowFloatingMemoInput,
   floatingMemoInputPosition,
-  setFloatingMemoInputPosition
+  setFloatingMemoInputPosition,
+  smartSelectionEnabled = true
 }) => {
   const [currentSelectionInfo, setCurrentSelectionInfo] = useState({
     text: '',
@@ -37,6 +38,23 @@ export const useViewerSelection = ({
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState({ top: 0, left: 0 });
   const [showFloatingAssignCode, setShowFloatingAssignCode] = useState(false);
   const [floatingAssignCodePosition, setFloatingAssignCodePosition] = useState({ top: 0, left: 0 });
+
+  // --- NEW: Track if user is currently selecting/dragging ---
+  const isSelectingRef = useRef(false);
+
+  /**
+   * --- NEW: Handle Mouse Down ---
+   * Sets the selecting flag to true and hides existing floating UIs.
+   * Attach this to onMouseDown in your viewer component.
+   */
+  const handleViewerMouseDown = useCallback(() => {
+    isSelectingRef.current = true;
+    
+    // Optional: clear floating menus immediately when a new click starts
+    setShowFloatingToolbar(false);
+    setShowFloatingAssignCode(false);
+    setShowFloatingMemoInput(false);
+  }, []);
 
   /**
    * Gets information about the current user text selection within the viewer panel.
@@ -156,38 +174,81 @@ export const useViewerSelection = ({
   }, [selectedFileId, getSelectionInfo, eraseHighlights]);
 
   /**
-   * Handles the mouse up event in the viewer, triggering the floating toolbar or an active tool's action.
+   * Handles the mouse up event in the viewer.
+   * Checks for modifier keys to bypass "snappy" selection.
+   * @param {MouseEvent} event - The mouse up event from the viewer
    */
-  const handleViewerMouseUp = useCallback(() => {
-    if (isInEditMode) {
-      return;
-    }
+  const handleViewerMouseUp = useCallback((event) => {
+    // Reset selecting flag
+    setTimeout(() => {
+        isSelectingRef.current = false;
+    }, 0);
+
+    if (isInEditMode) return;
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
-    const range = selection.getRangeAt(0);
-    const selectedText = selection.toString();
+
+    let range = selection.getRangeAt(0);
+    let selectedText = selection.toString();
     
+    // Hide menus initially
     setShowFloatingAssignCode(false);
     setShowFloatingMemoInput(false);
     setShowFloatingToolbar(false);
     
+    // Validation
     if (selectedText.trim().length === 0 || !selectedFileId || !viewerRef.current || 
         !viewerRef.current.contains(selection.anchorNode)) {
       return;
     }
+
+    // --- NEW: MODIFIER KEY CHECK ---
+    // If Ctrl (Windows) or Cmd (Mac) is held, SKIP the snapping logic.
+    const isModifierPressed = event.ctrlKey || event.metaKey;
+
+    // Only snap if enabled AND modifier is NOT pressed
+    if (smartSelectionEnabled && !isModifierPressed) {
+       // --- SNAPPY LOGIC (Default) ---
+       // automatically expand selection to word/sentence boundaries
+       const snappedRange = snapRangeToWord(range);
+       
+       // Update visual selection
+       selection.removeAllRanges();
+       selection.addRange(snappedRange);
+
+       // Update local vars
+       range = snappedRange;
+       selectedText = range.toString(); 
+    } 
+    // ELSE: We just keep the 'range' exactly as the user selected it.
+
     
-    // Trim trailing whitespace
-    const trimmedText = selectedText.trimEnd();
-    const trailingWhitespaceLength = selectedText.length - trimmedText.length;
-    let adjustedRange = range;
-    if (trailingWhitespaceLength > 0) {
-      adjustedRange = range.cloneRange();
-      adjustedRange.setEnd(adjustedRange.endContainer, adjustedRange.endOffset - trailingWhitespaceLength);
+    // --- WHITESPACE TRIMMING ---
+    // We still keep this to prevent creating highlights with just empty spaces
+    const leadingWhitespaceMatch = selectedText.match(/^\s+/);
+    const trailingWhitespaceMatch = selectedText.match(/\s+$/);
+    const leadingWhitespaceLength = leadingWhitespaceMatch ? leadingWhitespaceMatch[0].length : 0;
+    const trailingWhitespaceLength = trailingWhitespaceMatch ? trailingWhitespaceMatch[0].length : 0;
+    
+    if (leadingWhitespaceLength > 0 || trailingWhitespaceLength > 0) {
+      if (leadingWhitespaceLength > 0) {
+        range.setStart(range.startContainer, range.startOffset + leadingWhitespaceLength);
+      }
+      if (trailingWhitespaceLength > 0) {
+        range.setEnd(range.endContainer, range.endOffset - trailingWhitespaceLength);
+      }
+      
+      // Update visual selection again if we trimmed
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
     
-    const selectionInfo = getSelectionInfo(adjustedRange);
+    // Proceed with logic using the finalized 'range'
+    const selectionInfo = getSelectionInfo(); 
     if (!selectionInfo) return;
-    setCurrentSelectionRange(adjustedRange);
+    
+    setCurrentSelectionRange(range);
     
     if (activeTool === 'code') {
       handleCodeSelectionAction(selectionInfo);
@@ -198,7 +259,7 @@ export const useViewerSelection = ({
     } else if (activeTool === 'erase') {
       handleEraseSelectionAction();
     } else {
-      const rects = adjustedRange.getClientRects();
+      const rects = range.getClientRects();
       if (rects.length === 0) return;
       
       const position = calculateFloatingPosition(Array.from(rects), 150, 36);
@@ -206,7 +267,7 @@ export const useViewerSelection = ({
       setShowFloatingToolbar(true);
     }
   }, [activeTool, selectedFileId, isInEditMode, handleCodeSelectionAction, handleMemoSelectionAction, 
-      handleHighlightSelectionAction, handleEraseSelectionAction, getSelectionInfo, viewerRef]);
+      handleHighlightSelectionAction, handleEraseSelectionAction, getSelectionInfo, viewerRef, smartSelectionEnabled]);
 
   // Effect to handle clicks outside of floating UI elements to close them
   useEffect(() => {
@@ -250,6 +311,10 @@ export const useViewerSelection = ({
     handleHighlightSelectionAction,
     handleMemoSelectionAction,
     handleEraseSelectionAction,
+    
+    // Updated exports
     handleViewerMouseUp,
+    handleViewerMouseDown, // Connect to onMouseDown
+    isSelectingRef,        // Use in your hover logic
   };
 };

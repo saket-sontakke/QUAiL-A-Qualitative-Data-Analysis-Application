@@ -2,33 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { FaCircleInfo } from 'react-icons/fa6';
 
-/**
- * A highly configurable and reusable modal component for handling various user
- * confirmation scenarios. It can be adapted for simple confirmations, or for more
- * critical actions requiring additional user input, such as typing a specific
- * phrase or checking a confirmation box.
- *
- * @param {object} props - The component props.
- * @param {boolean} props.show - Determines if the modal is visible.
- * @param {Function} props.onClose - The callback function to execute when the modal is closed or cancelled.
- * @param {Function} props.onConfirm - The callback function to execute when the confirm button is clicked. It receives the checkbox state as an argument.
- * @param {string} props.title - The title text displayed at the top of the modal.
- * @param {string} props.shortMessage - The primary message or question displayed to the user.
- * @param {string} [props.detailedMessage] - Optional secondary text that can be revealed by the user for more context.
- * @param {boolean} [props.showInput=false] - If true, displays a text input field for validation.
- * @param {string} [props.promptText="I understand"] - The exact string the user must type into the input field to enable confirmation.
- * @param {string} [props.confirmText='Confirm'] - The text displayed on the confirmation button.
- * @param {boolean} [props.showCancelButton=true] - If true, displays the "Cancel" button.
- * @param {Array<object>} [props.customButtons=[]] - An array of objects to render additional custom buttons.
- * @param {boolean} [props.showCheckbox=false] - If true, displays a checkbox.
- * @param {string} [props.checkboxLabel='I confirm and agree to proceed.'] - The label for the checkbox.
- * @param {boolean} [props.isCheckboxRequired=false] - If true, the checkbox must be checked to enable confirmation.
- * @returns {JSX.Element|null} The rendered modal component or null if `show` is false.
- */
 const ConfirmationModal = ({
   show,
   onClose,
   onConfirm,
+  onCancel,
   title,
   shortMessage,
   detailedMessage,
@@ -40,6 +18,7 @@ const ConfirmationModal = ({
   showCheckbox = false,
   checkboxLabel = 'I confirm and agree to proceed.',
   isCheckboxRequired = false,
+  isCheckboxDisabled = false,
   showConfirmButton = true,
   defaultChecked = false,
 }) => {
@@ -59,12 +38,21 @@ const ConfirmationModal = ({
     if (typeof onConfirm === 'function') {
       onConfirm(isChecked);
     } else {
-      console.warn(
-        "ConfirmationModal: 'onConfirm' prop is not a function. Falling back to onClose."
-      );
-      if (typeof onClose === 'function') {
-        onClose();
-      }
+      if (typeof onClose === 'function') onClose();
+    }
+  };
+
+  const handleCancel = (e) => {
+    // Safety check: Prevent this button click from triggering anything else
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation(); 
+    }
+
+    if (typeof onCancel === 'function') {
+      onCancel();
+    } else if (typeof onClose === 'function') {
+      onClose();
     }
   };
 
@@ -81,8 +69,14 @@ const ConfirmationModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onClick={onClose}
+          // -----------------------------------------------------------
+          // CRITICAL FIX: Stop MouseDown/PointerDown from bubbling up
+          // This prevents global listeners from thinking you clicked "outside" the memo
+          // -----------------------------------------------------------
+          onMouseDown={(e) => e.stopPropagation()} 
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <motion.div
             initial={{ scale: 0.8, y: -20 }}
@@ -90,13 +84,15 @@ const ConfirmationModal = ({
             exit={{ scale: 0.8, y: -20 }}
             className="w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-xl dark:bg-gray-800"
             onClick={(e) => e.stopPropagation()}
+            // Optional: Double safety on the card itself
+            onMouseDown={(e) => e.stopPropagation()} 
           >
             <h2 className="mb-4 text-xl font-bold text-gray-800 dark:text-white">
               {title}
             </h2>
 
             <div className="mb-6 wrap-break-word whitespace-normal text-sm text-gray-600 dark:text-gray-400">
-              <div className='flex items-center justify-center'>
+               <div className='flex items-center justify-center'>
                 {shortMessage}
                 {detailedMessage && (
                   <button onClick={() => setShowDetails(!showDetails)} className="ml-2 text-gray-400 hover:text-gray-300">
@@ -137,6 +133,7 @@ const ConfirmationModal = ({
                   <input
                     type="checkbox"
                     checked={isChecked}
+                    disabled={isCheckboxDisabled}
                     onChange={() => setIsChecked(!isChecked)}
                     className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                   />
@@ -169,7 +166,7 @@ const ConfirmationModal = ({
               )}
               {showCancelButton && (
                 <button
-                  onClick={onClose}
+                  onClick={handleCancel}
                   className="rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-all duration-200 ease-in-out hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                 >
                   Cancel
@@ -183,14 +180,11 @@ const ConfirmationModal = ({
   );
 };
 
-/**
- * Default props for the ConfirmationModal component. This ensures that the
- * component has fallback values for essential functions, preventing errors
- * if they are not passed by the parent component.
- */
+// Default props
 ConfirmationModal.defaultProps = {
   onClose: () => {},
   onConfirm: () => {},
+  onCancel: null,
   customButtons: [],
   detailedMessage: '',
   showInput: false,
@@ -200,9 +194,9 @@ ConfirmationModal.defaultProps = {
   showCheckbox: false,
   checkboxLabel: 'I confirm and agree to proceed.',
   isCheckboxRequired: false,
+  isCheckboxDisabled: false,
   showConfirmButton: true,
   defaultChecked: false,
 };
-
 
 export default ConfirmationModal;

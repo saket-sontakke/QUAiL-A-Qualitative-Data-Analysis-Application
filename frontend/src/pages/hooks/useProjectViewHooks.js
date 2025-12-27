@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useHistory } from './useHistory.js';
 import { useProjectCore } from './useProjectCore.js';
 import { useFileManager } from './useFileManager.jsx';
@@ -27,7 +27,8 @@ export default function useProjectViewHooks({
   setFileInEditMode, 
   idFromProp = null, 
   isInEditMode, 
-  onRequestApiKey 
+  onRequestApiKey,
+  enterEditMode
 }) {
   const navigate = useNavigate();
 
@@ -192,14 +193,35 @@ export default function useProjectViewHooks({
     setActiveCodedSegmentId,
   });
 
-  const handleSelectFileWrapper = (file, projectOverride = null) => {
-    coreState.handleSelectFile(file, projectOverride);
-    searchSystem.handleClearViewerSearch();
+const handleSelectFileWrapper = (file, projectOverride = null) => {
+    // If file is unlocked (not locked and not staged), open in edit mode directly
+    if (file && !file.isLocked && file._id !== 'staged-file') {
+      enterEditMode(file); // 2. Now this works because we accepted it as an arg
+      return;
+    }
+    
+    // Otherwise, use normal select behavior
+    handleSelectFile(file, projectOverride);
   };
 
   useEffect(() => {
     searchSystem.handleClearViewerSearch();
   }, [selectedFileId]);
+
+  const [smartSelectionEnabled, setSmartSelectionEnabled] = useState(() => {
+    const saved = localStorage.getItem('smartSelectionEnabled');
+    // Default to true if not set
+    return saved !== 'false';
+  });
+
+  // 2. CREATE HANDLER
+  const handleToggleSmartSelection = () => {
+    setSmartSelectionEnabled(prev => {
+        const newValue = !prev;
+        localStorage.setItem('smartSelectionEnabled', newValue);
+        return newValue;
+    });
+  };
 
   // Initialize viewer selection
   const viewerSelection = useViewerSelection({
@@ -220,6 +242,7 @@ export default function useProjectViewHooks({
     setShowFloatingMemoInput: coreState.setShowFloatingMemoInput,
     floatingMemoInputPosition: coreState.floatingMemoInputPosition,
     setFloatingMemoInputPosition: coreState.setFloatingMemoInputPosition,
+    smartSelectionEnabled,
   });
 
   // Update annotation manager's setShowFloatingMemoInput
@@ -339,6 +362,7 @@ export default function useProjectViewHooks({
     handleDefineModalErrorSetter,
     fetchProject,
     createRangeFromOffsets,
+    handleSelectFileCore: handleSelectFile,
     handleSelectFile: handleSelectFileWrapper,
     handleDefineCodeModalClose,
     
@@ -351,6 +375,7 @@ export default function useProjectViewHooks({
     handleRenameFile: fileManager.handleRenameFile,
     handleExportFile: fileManager.handleExportFile,
     handleDeleteFile: fileManager.handleDeleteFile,
+    handleLockFile: fileManager.handleLockFile,
     
     // Code system
     segmentToReassign: codeSystem.segmentToReassign,
@@ -420,11 +445,17 @@ export default function useProjectViewHooks({
     handleMemoSelectionAction: viewerSelection.handleMemoSelectionAction,
     handleEraseSelectionAction: viewerSelection.handleEraseSelectionAction,
     handleViewerMouseUp: viewerSelection.handleViewerMouseUp,
+    // --- UPDATED ITEMS BELOW ---
+    handleViewerMouseDown: viewerSelection.handleViewerMouseDown,
+    isSelectingRef: viewerSelection.isSelectingRef,
     
     // History
     undo,
     redo,
     canUndo,
     canRedo,
+
+    smartSelectionEnabled,
+    handleToggleSmartSelection,
   };
 }

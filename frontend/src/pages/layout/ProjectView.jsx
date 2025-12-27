@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../layout/Navbar.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
 import DefineCodeModal from '../code/DefineCodeModal.jsx';
-import MemoModal from '../memo/MemoModal.jsx';
 import FloatingToolbar from '../layout/FloatingToolbar.jsx';
 import FloatingAssignCode from '../code/FloatingAssignCode.jsx';
 import FloatingMemoInput from '../memo/FloatingMemoInput.jsx';
@@ -22,6 +22,9 @@ import axios from 'axios';
 import FileSaver from 'file-saver';
 import { useAuth } from '../auth/AuthContext.jsx';
 import ApiKeyModal from '../components/ApiKeyModal.jsx';
+import tabManager from './edit-mode/EditModeTabManager.js';
+import { FaLock, FaPen, FaExclamationTriangle } from 'react-icons/fa';
+import TextEditor from './edit-mode/TextEditor.jsx';
 
 /** @constant {number} MIN_WIDTH - The minimum width for the resizable left panel. */
 const MIN_WIDTH = 200;
@@ -34,19 +37,13 @@ const COLLAPSED_WIDTH = 40;
 /** @constant {number} COLLAPSE_THRESHOLD - The width threshold below which the panel automatically collapses. */
 const COLLAPSE_THRESHOLD = 120;
 
-/**
- * The main component for viewing and interacting with a single project.
- * It serves as the primary workspace, orchestrating the state and interactions
- * between various sub-components like the file list, document viewer, code definitions,
- * memos, and various modals. It manages file editing, content analysis (coding, memos),
- * and UI layout.
- * @returns {JSX.Element} The rendered project view component.
- */
 const ProjectView = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [fileInEditMode, setFileInEditMode] = useState(null);
   const [editedContent, setEditedContent] = useState('');
+  const [committedFileId, setCommittedFileId] = useState(null);
+
   const isEditing = !!fileInEditMode;
   const [showFormattingTip, setShowFormattingTip] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -72,7 +69,7 @@ const ProjectView = () => {
     projectName, project, fetchProject, projectId, error, loading, transcriptionStatus,
     handleAudioImport, handleTextImport, handleCommitNewFile, handleUpdateFileContent, selectedContent,
     selectedFileId, selectedFileAudioUrl, showImportedFiles, setShowImportedFiles,
-    handleFileChange, handleSelectFile, handleDeleteFile, handleRenameFile, handlePinFile,
+    handleFileChange, handleSelectFile, handleSelectFileCore, handleDeleteFile, handleRenameFile, handlePinFile,
     pinnedFiles, handleExportFile, codeDefinitions, showCodeDefinitions, setShowCodeDefinitions,
     showDefineCodeModal, setShowDefineCodeModal, codeDefinitionToEdit, setCodeDefinitionToEdit,
     handleSaveCodeDefinition, handleDefineCodeModalClose, handleDeleteCodeDefinition,
@@ -81,7 +78,7 @@ const ProjectView = () => {
     setShowCodedSegmentsTableModal, activeCodedSegmentId, setActiveCodedSegmentId,
     handleAssignCode, handleReassignCodeClick, setSegmentToReassign, handleDeleteCodedSegment,
     handleExportFileCodedSegments, handleExportOverlaps, memos, groupedMemos, showMemosPanel,
-    setShowMemosPanel, showMemoModal, setShowMemoModal, memoToEdit, setMemoToEdit,
+    setShowMemosPanel, memoToEdit, setMemoToEdit,
     currentMemoSelectionInfo, activeMemoId, setActiveMemoId, handleSaveMemo,
     handleDeleteMemo, handleExportMemos, viewerRef, viewerSearchQuery,
     viewerSearchInputRef, viewerSearchMatches, currentMatchIndex, handleViewerSearchChange,
@@ -97,10 +94,13 @@ const ProjectView = () => {
     setShowCodeDropdown, showConfirmModal, setShowConfirmModal, confirmModalData,
     setConfirmModalData, searchQuery, setSearchQuery, searchInputRef, handleMergeCodes,
     handleSplitCodes, undo, redo, canUndo, canRedo, handleCreateMemoForSegment,
+    handleLockFile, handleViewerMouseDown, isSelectingRef, smartSelectionEnabled, handleToggleSmartSelection,
+    setFloatingMemoInputPosition
   } = useProjectViewHooks({ 
     onImportSuccess: enterEditMode, 
     setFileInEditMode: setFileInEditMode, 
-    isInEditMode: isEditing, 
+    isInEditMode: isEditing,
+    enterEditMode: enterEditMode,
     onRequestApiKey: () => {
         setShowImportOptionsModal(false);
         setShowApiKeyModal(true);
@@ -112,6 +112,7 @@ const ProjectView = () => {
   });
 
   const [showImportOptionsModal, setShowImportOptionsModal] = useState(false);
+  const [importModalStep, setImportModalStep] = useState('initial');
   const [showProjectOverviewModal, setShowProjectOverviewModal] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [codeDefinitionToView, setCodeDefinitionToView] = useState(null);
@@ -124,11 +125,71 @@ const ProjectView = () => {
   const audioPlayerRef = useRef(null);
   const textareaRef = useRef(null);
 
-  /**
-   * Updates the content of the document being edited and manages the local undo/redo history.
-   * Pushes the previous content state to the undo stack and clears the redo stack.
-   * @param {string} newContent - The new text content from the editor textarea.
-   */
+  // Helper to get the actual file object based on the selected ID
+  const currentFile = project?.importedFiles?.find(f => f._id === selectedFileId);
+  const activeFile = fileInEditMode || currentFile;
+  const isCurrentFileLocked = activeFile?.isLocked === true;
+
+  const handleSidebarFileClick = (file) => {
+    if (isEditing && editedContent !== fileInEditMode?.content) {
+      setConfirmModalData({
+        title: 'Discard Changes?',
+        shortMessage: 'You are in Edit Mode. Unsaved changes will be lost. Are you sure you want to switch files?',
+        confirmText: 'Yes, Switch File',
+        showCancelButton: true,
+        onConfirm: () => {
+          setShowConfirmModal(false);
+          switchFileAndReset(file);
+        }
+      });
+      setShowConfirmModal(true);
+      return;
+    }
+    switchFileAndReset(file);
+  };
+
+  const switchFileAndReset = (file) => {
+    handleSelectFileCore(file); 
+    setFileInEditMode(null);    
+    setCommittedFileId(null);   
+    setHistory({ undoStack: [], redoStack: [] }); 
+  };
+
+  useEffect(() => {
+    if (project?.importedFiles?.length > 0 && !selectedFileId) {
+      const firstLockedFile = project.importedFiles.find(f => f.isLocked);
+      if (firstLockedFile) {
+        handleSelectFileCore(firstLockedFile);
+      }
+    }
+  }, [project, selectedFileId, handleSelectFileCore]);
+
+  useEffect(() => {
+    tabManager.initialize((conflictFileId) => {
+      setConfirmModalData({
+        title: 'File Already Open',
+        shortMessage: 'This file is already open in edit mode in another tab. You cannot edit the same file in multiple tabs simultaneously.',
+        confirmText: 'OK',
+        showCancelButton: false,
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+
+      if (fileInEditMode && fileInEditMode._id === conflictFileId) {
+        setFileInEditMode(null);
+        setLeftPanelWidth(DEFAULT_WIDTH);
+      }
+    });
+
+    if (fileInEditMode && fileInEditMode._id && fileInEditMode._id !== 'staged-file') {
+      tabManager.claimFile(fileInEditMode._id);
+    }
+
+    return () => {
+      tabManager.destroy();
+    };
+  }, [fileInEditMode?._id]);
+
   const handleContentUpdate = (newContent) => {
     if (newContent === editedContent) return;
     setHistory(prev => ({
@@ -138,21 +199,11 @@ const ProjectView = () => {
     setEditedContent(newContent);
   };
 
-  /**
-   * Escapes special characters in a string for use in a regular expression.
-   * @param {string} string - The input string to escape.
-   * @returns {string} The escaped string, safe for RegExp construction.
-   */
   const escapeRegExp = (string) => {
     if (!string) return '';
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   };
 
-  /**
-   * Effect to find all matches for the current find query within the edited content.
-   * It runs whenever the find query, content, or find/replace visibility changes.
-   * It builds a regular expression and stores the indices of all matches.
-   */
   useEffect(() => {
     const currentToolActive = showFind || showFindReplace;
     if (!isEditing || !currentToolActive || !findQuery) {
@@ -176,31 +227,30 @@ const ProjectView = () => {
     }
   }, [findQuery, editedContent, showFind, showFindReplace, isEditing]);
 
-  /**
-   * Effect to highlight the current find match in the editor's textarea and scroll it into view.
-   * It runs when the current match index or the list of matches changes.
-   */
   useEffect(() => {
     const currentToolActive = showFind || showFindReplace;
     if (!isEditing || !currentToolActive || findMatches.length === 0 || currentFindIndex < 0) return;
     const match = findMatches[currentFindIndex];
     const textarea = textareaRef?.current;
-    if (!textarea || !match) return;
-    if (document.activeElement.tagName !== 'INPUT') {
-        textarea.focus();
+    
+    if (textarea) {
+        if (document.activeElement.tagName !== 'INPUT') {
+            textarea.focus();
+        }
+        textarea.setSelectionRange(match.startIndex, match.endIndex);
+        const textBefore = textarea.value.substring(0, match.startIndex);
+        const lines = textBefore.split('\n').length;
+        const avgLineHeight = textarea.scrollHeight / textarea.value.split('\n').length;
+        const newScrollTop = (lines * avgLineHeight) - (textarea.clientHeight / 2);
+        textarea.scrollTop = Math.max(0, newScrollTop);
     }
-    textarea.setSelectionRange(match.startIndex, match.endIndex);
-    const textBefore = textarea.value.substring(0, match.startIndex);
-    const lines = textBefore.split('\n').length;
-    const avgLineHeight = textarea.scrollHeight / textarea.value.split('\n').length;
-    const newScrollTop = (lines * avgLineHeight) - (textarea.clientHeight / 2);
-    textarea.scrollTop = Math.max(0, newScrollTop);
   }, [currentFindIndex, findMatches, isEditing, showFind, showFindReplace]);
 
-  /**
-   * Toggles the visibility of the "Find" interface.
-   * If the "Find & Replace" interface is open, it will be closed.
-   */
+  const handleCloseImportModal = () => {
+    setShowImportOptionsModal(false);
+    setImportModalStep('initial'); // reset ONLY on close
+  };
+
   const handleToggleFind = () => {
     setShowFind(prev => !prev);
     if (showFindReplace) {
@@ -208,10 +258,6 @@ const ProjectView = () => {
     }
   };
 
-  /**
-   * Toggles the visibility of the "Find & Replace" interface.
-   * If the "Find" interface is open, it will be closed.
-   */
   const handleToggleFindReplace = () => {
     setShowFindReplace(prev => !prev);
     if (showFind) {
@@ -219,29 +265,18 @@ const ProjectView = () => {
     }
   };
 
-  /**
-   * Navigates to the next search match in the document.
-   * Wraps around to the first match if the last one is reached.
-   */
   const handleFindNext = () => {
     if (findMatches.length > 0) {
       setCurrentFindIndex(prev => (prev + 1) % findMatches.length);
     }
   };
 
-  /**
-   * Navigates to the previous search match in the document.
-   * Wraps around to the last match if the first one is reached.
-   */
   const handleFindPrev = () => {
     if (findMatches.length > 0) {
       setCurrentFindIndex(prev => (prev - 1 + findMatches.length) % findMatches.length);
     }
   };
 
-  /**
-   * Replaces the currently highlighted search match with the replacement query.
-   */
   const handleReplaceOne = () => {
     if (findMatches.length === 0 || currentFindIndex < 0) return;
     const match = findMatches[currentFindIndex];
@@ -252,9 +287,6 @@ const ProjectView = () => {
     handleContentUpdate(newContent);
   };
 
-  /**
-   * Replaces all occurrences of the find query with the replacement query throughout the document.
-   */
   const handleReplaceAll = () => {
     if (!findQuery || findMatches.length === 0) return;
     const escapedQuery = escapeRegExp(findQuery);
@@ -263,9 +295,6 @@ const ProjectView = () => {
     handleContentUpdate(newContent);
   };
 
-  /**
-   * Performs an undo action within the text editor mode by reverting to the previous content state.
-   */
   const handleEditorUndo = useCallback(() => {
     if (history.undoStack.length === 0) return;
     const lastState = history.undoStack[history.undoStack.length - 1];
@@ -276,9 +305,6 @@ const ProjectView = () => {
     setEditedContent(lastState);
   }, [history.undoStack, editedContent]);
 
-  /**
-   * Performs a redo action within the text editor mode by applying the next content state.
-   */
   const handleEditorRedo = useCallback(() => {
     if (history.redoStack.length === 0) return;
     const nextState = history.redoStack[history.redoStack.length - 1];
@@ -289,22 +315,17 @@ const ProjectView = () => {
     setEditedContent(nextState);
   }, [history.redoStack, editedContent]);
 
-  /**
-   * Executes the logout process and navigates the user to the homepage.
-   */
   const executeLogout = () => {
     logout();
     navigate('/');
   };
 
-  /**
-   * Intercepts navigation attempts (e.g., clicking back button, navigating away).
-   * If in edit mode, it prompts the user to confirm before discarding changes.
-   * @param {string} path - The destination path.
-   * @param {object} options - Options for the navigate function.
-   */
   const handleNavigationAttempt = (path, options) => {
-    if (!isEditing) {
+    const isUnsavedNewFile = fileInEditMode?.isStaged;
+    const hasContentChanges = editedContent !== fileInEditMode?.content;
+
+    // Safe to navigate if: Not editing OR (No text changes AND Not a staged file)
+    if (!isEditing || (!hasContentChanges && !isUnsavedNewFile)) {
       navigate(path, options);
       return;
     }
@@ -321,21 +342,54 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Handles a logout attempt. If in edit mode, it warns the user about unsaved changes.
-   * Otherwise, it shows a standard confirmation modal before logging out.
-   */
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const isUnsavedNewFile = fileInEditMode?.isStaged;
+      const hasContentChanges = editedContent !== fileInEditMode?.content;
+
+      // Trigger if editing AND (content changed OR it's a new staged file)
+      if (isEditing && (hasContentChanges || isUnsavedNewFile)) {
+        window.history.pushState(null, '', window.location.pathname);
+        setConfirmModalData({
+          title: 'Discard Changes?',
+          shortMessage: 'You are in Edit Mode. Unsaved changes will be lost. Are you sure you want to leave?',
+          confirmText: 'Leave',
+          showCancelButton: true,
+          onConfirm: () => {
+            setShowConfirmModal(false);
+            setFileInEditMode(null); 
+            navigate(-1);
+          }
+        });
+        setShowConfirmModal(true);
+      }
+    };
+    if (isEditing) {
+      window.history.pushState(null, '', window.location.pathname);
+      window.addEventListener('popstate', handlePopState);
+    }
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isEditing, editedContent, fileInEditMode]);
+
   const handleLogoutAttempt = () => {
-    const modalConfig = isEditing
-      ? {
-          title: 'Logout with Unsaved Changes?',
-          shortMessage: 'You are in Edit Mode. Unsaved changes will be lost. Are you sure you want to log out?',
-          confirmText: 'Yes, Logout',
+    const isUnsavedNewFile = fileInEditMode?.isStaged;
+    const hasContentChanges = isEditing && (editedContent !== fileInEditMode?.content);
+    
+    // It has unsaved changes if content changed OR it's a new staged file
+    const hasUnsavedChanges = hasContentChanges || isUnsavedNewFile;
+
+    const modalConfig = hasUnsavedChanges
+      ? { 
+          title: 'Logout with Unsaved Changes?', 
+          shortMessage: 'You have a new imported file or unsaved edits. These will be lost. Logout anyway?', 
+          confirmText: 'Yes, Logout' 
         }
-      : {
-          title: 'Confirm Logout',
-          shortMessage: 'Are you sure you want to log out?',
-          confirmText: 'Logout',
+      : { 
+          title: 'Confirm Logout', 
+          shortMessage: 'Are you sure you want to log out?', 
+          confirmText: 'Logout' 
         };
     setConfirmModalData({
       ...modalConfig,
@@ -348,26 +402,24 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Effect to add a 'beforeunload' event listener to the window.
-   * This prevents accidental closing of the tab/browser when in edit mode.
-   */
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (!isEditing) return;
+      // Check if it's a new unsaved file OR if content has changed
+      const isUnsavedNewFile = fileInEditMode?.isStaged;
+      const hasContentChanges = editedContent !== fileInEditMode?.content;
+
+      // IF (not editing) OR (no content changes AND not a new file) -> Safe to close
+      if (!isEditing || (!hasContentChanges && !isUnsavedNewFile)) return;
+
       e.preventDefault();
-      e.returnValue = '';
+      e.returnValue = ''; 
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isEditing]);
+  }, [isEditing, editedContent, fileInEditMode]);
 
-  /**
-   * Effect to prevent browser swipe navigation (e.g., trackpad back/forward gestures)
-   * when in edit mode to avoid accidental data loss.
-   */
   useEffect(() => {
     const preventSwipeNavigation = (e) => {
       if (!isEditing) return;
@@ -381,49 +433,27 @@ const ProjectView = () => {
     };
   }, [isEditing]);
 
-  /**
-   * Effect to set up global keyboard shortcuts for Undo (Ctrl/Cmd+Z) and Redo (Ctrl/Cmd+Y).
-   * It delegates the action to the appropriate handler based on whether the app is in edit mode.
-   */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (showConfirmModal || showDefineCodeModal || showMemoModal || (e.target.tagName === 'INPUT' && isEditing)) {
+      if (showConfirmModal || showDefineCodeModal || (e.target.tagName === 'INPUT' && isEditing)) {
         return;
       }
-      
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-
       if (isCtrlOrMeta && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        if (isEditing) {
-          handleEditorUndo();
-        } else {
-          undo();
-        }
+        if (isEditing) { handleEditorUndo(); } else { undo(); }
       }
-
       if (isCtrlOrMeta && e.key.toLowerCase() === 'y') {
         e.preventDefault();
-        if (isEditing) {
-          handleEditorRedo();
-        } else {
-          redo();
-        }
+        if (isEditing) { handleEditorRedo(); } else { redo(); }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [
-    isEditing, undo, redo, handleEditorUndo, handleEditorRedo, 
-    showConfirmModal, showDefineCodeModal, showMemoModal
-  ]);
+  }, [isEditing, undo, redo, handleEditorUndo, handleEditorRedo, showConfirmModal, showDefineCodeModal]);
 
-  /**
-   * Effect to handle the resizing logic for the left panel.
-   * It adds 'mousemove' and 'mouseup' listeners when resizing is active.
-   */
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing) return;
@@ -447,18 +477,11 @@ const ProjectView = () => {
     };
   }, [isResizing]);
 
-  /**
-   * Initiates the resizing of the left panel on mouse down event on the resizer handle.
-   * @param {React.MouseEvent} e - The mouse event.
-   */
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsResizing(true);
   };
 
-  /**
-   * Toggles the visibility of the code tooltip preference and persists it to localStorage.
-   */
   const handleToggleCodeTooltip = () => {
     setShowCodeTooltip(prev => {
       const newValue = !prev;
@@ -467,61 +490,104 @@ const ProjectView = () => {
     });
   };
 
-  /**
-   * Transitions the application into document edit mode for a specified file.
-   * This function sets up the editor state, collapses the side panel, and displays
-   * an informational modal explaining the edit mode process.
-   * @param {object} file - The file object to be edited. Can be a staged new file or an existing one.
-   */
-  function enterEditMode(file) {
-    const fileForSelection = {
-      ...file,
-      _id: file.isStaged ? 'staged-file' : file._id,
-    };
+  async function enterEditMode(file) {
+    const fileForSelection = { ...file, _id: file.isStaged ? 'staged-file' : file._id };
+    if (file.isLocked && !file.isStaged) {
+      setConfirmModalData({
+        title: 'Cannot Edit Locked File',
+        shortMessage: 'This file has been locked and is ready for annotation only. Locked files cannot be edited.',
+        confirmText: 'OK', showCancelButton: false, onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+      return;
+    }
+    let freshContent = file.content;
+    let freshFileObject = file;
+    if (!file.isStaged && file._id && file._id !== 'staged-file') {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${file._id}`, { headers: { Authorization: `Bearer ${user.token}` } });
+        if (res.data && res.data.content) {
+            freshContent = res.data.content;
+            freshFileObject = { ...file, content: freshContent };
+        }
+      } catch (err) {
+        console.warn("Could not fetch fresh file content, falling back to local state.", err);
+      }
+    }
+    if (!file.isStaged && file._id && file._id !== 'staged-file') {
+      tabManager.claimFile(file._id).then((success) => {
+        if (!success) {
+          setConfirmModalData({
+            title: 'File Already Open',
+            shortMessage: 'This file is already open in edit mode in another tab. Please close the other tab first or switch to it to continue editing.',
+            confirmText: 'OK', showCancelButton: false, onConfirm: () => setShowConfirmModal(false),
+          });
+          setShowConfirmModal(true);
+          return;
+        }
+        proceedWithEditMode(fileForSelection, freshFileObject);
+      });
+    } else {
+      if (file.isStaged) { setCommittedFileId(null); }
+      proceedWithEditMode(fileForSelection, freshFileObject);
+    }
+  }
 
+  function proceedWithEditMode(fileForSelection, file) {
     setFileInEditMode(fileForSelection);
     setEditedContent(file.content);
-    handleSelectFile(fileForSelection); 
+    handleSelectFileCore(fileForSelection);
     setHistory({ undoStack: [], redoStack: [] });
     setLeftPanelWidth(COLLAPSED_WIDTH);
+
+    if (localStorage.getItem('hideEditModeWarning') === 'true') {
+        setShowFormattingTip(true);
+        return;
+    }
+
     setConfirmModalData({
       title: 'Edit Your Document',
       shortMessage: (
         <p className="text-base leading-relaxed">
           Your document is now in <strong>edit mode</strong>. This is your opportunity to refine the text before it's finalized.
           <br /><br />
-          <span className="block text-center font-black uppercase tracking-wide text-gray-800 dark:text-gray-100">
-            PLEASE MAKE ANY CORRECTIONS OR FORMATTING CHANGES NOW.
-          </span>
+          <span className="block text-center font-black uppercase tracking-wide text-gray-800 dark:text-gray-100">PLEASE MAKE ANY CORRECTIONS OR FORMATTING CHANGES NOW.</span>
           <br />
-          After saving, this version will be committed to your project, and its <strong>content will be locked</strong> from further edits.
+          You can save your progress multiple times. When you're completely done, click "Lock" to finalize the document.
         </p>
       ),
-      confirmText: 'Got It!',
-      showCancelButton: false,
-      onConfirm: () => {
-        setShowConfirmModal(false);
-        setShowFormattingTip(true);
+      confirmText: 'Got It!', 
+      showCancelButton: false, 
+      showCheckbox: true, 
+      checkboxLabel: "Don't show this message again",
+      onConfirm: (isChecked) => { 
+          if (isChecked) {
+              localStorage.setItem('hideEditModeWarning', 'true');
+          }
+          setShowConfirmModal(false); 
+          setShowFormattingTip(true); 
       },
     });
     setShowConfirmModal(true);
-
   }
 
-  /**
-   * Handles the action to restore default application settings. It prompts the user
-   * for confirmation before clearing relevant localStorage items and reloading the page.
-   */
   const handleRestoreDefaults = () => {
     setShowPreferencesModal(false);
     setConfirmModalData({
       title: 'Restore Default Settings?',
-      shortMessage: "This will reset all application warnings and restore display settings to their original state. Are you sure you want to continue?",
+      shortMessage: "This will reset all application warnings and restore display settings to their original state.",
       confirmText: 'Yes, Restore Defaults',
       showCancelButton: true,
       onConfirm: () => {
         setShowCodeTooltip(true);
         localStorage.setItem('showCodeTooltip', 'true');
+        
+        // Restore Smart Selection
+        handleToggleSmartSelection(true); // You might need to adjust logic to force true
+        localStorage.setItem('smartSelectionEnabled', 'true');
+
+        localStorage.removeItem('hideEditModeWarning');
+        localStorage.removeItem('hideFormattingTip');
         setShowConfirmModal(false);
         window.location.reload();
       },
@@ -529,12 +595,6 @@ const ProjectView = () => {
     setShowConfirmModal(true);
   };
 
-  /**
-   * Handles the click event on the reassign-code icon next to a coded segment.
-   * It calculates the optimal position for the FloatingAssignCode panel and displays it.
-   * @param {React.MouseEvent} event - The click event.
-   * @param {object} codeAnnotation - The coded segment data to be reassigned.
-   */
   const handleSwapIconClick = (event, codeAnnotation) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const panelWidth = 250;
@@ -553,71 +613,193 @@ const ProjectView = () => {
     setShowFloatingAssignCode(true);
   };
 
-  /**
-   * Initiates the save process from edit mode by showing a confirmation modal.
-   * This modal warns the user that saving will permanently lock the document from further edits.
-   */
-  const handleSaveInitiate = () => {
+  const handleSaveOnly = async () => {
+    if (!fileInEditMode) return;
+    try {
+      const isFirstSave = fileInEditMode.isStaged && !committedFileId;
+      if (isFirstSave) {
+        const fileToCommit = {
+          name: fileInEditMode.name,
+          content: editedContent,
+          sourceType: fileInEditMode.sourceType,
+          audioUrl: fileInEditMode.audioUrl || null,
+          words: fileInEditMode.words || null,
+        };
+        const result = await handleCommitNewFile(fileToCommit);
+        if (result.success && result.file) {
+          const committedFile = result.file; 
+          setCommittedFileId(committedFile._id);
+          setFileInEditMode({ ...committedFile, isStaged: false });
+          await tabManager.claimFile(committedFile._id);
+          setEditedContent(committedFile.content);
+          setHistory({ undoStack: [], redoStack: [] });
+        }
+      } else {
+        const fileIdToUpdate = committedFileId || fileInEditMode._id;
+        const result = await handleUpdateFileContent(fileIdToUpdate, editedContent);
+        if (result.success && result.file) {
+          setFileInEditMode(result.file);
+          setEditedContent(result.file.content); 
+          setHistory({ undoStack: [], redoStack: [] });
+        }
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      setConfirmModalData({
+        title: 'Save Failed', shortMessage: 'An error occurred while saving. Please try again.', confirmText: 'OK', showCancelButton: false, onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+    }
+  };
+
+  const handleLockInitiate = () => {
     setConfirmModalData({
-      title: 'Confirm Save',
-      shortMessage: "This action will finalize the document and permanently lock it from any further edits. Are you sure you want to proceed?",
-      onConfirm: handleSaveConfirm,
+      title: 'Confirm Lock & Delete Audio',
+      shortMessage: (
+        <div className="text-left">
+          <p>Proceeding with this action will:</p>
+          <ul className="list-disc pl-5 my-3 space-y-1">
+            <li>Permanently delete the associated audio recording</li>
+            <li>Lock the document from further editing</li>
+          </ul>
+          <div className="rounded-md bg-red-50 p-3 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+            <p className="flex items-center gap-2 font-bold text-red-600 dark:text-red-400">
+              <FaExclamationTriangle /> WARNING: Audio Deletion
+            </p>
+           <p className="mt-1 text-sm text-red-600 dark:text-red-300 text-justify">
+            If this file has an associated audio, it will be <strong>PERMANENTLY DELETED</strong> from the server to ensure privacy and save storage space.
+          </p>
+          </div>
+          <br />
+          <p className="font-bold text-center">THIS ACTION CANNOT BE UNDONE.</p>
+        </div>
+      ),
+      onConfirm: handleLockConfirm,
       showCheckbox: true,
       isCheckboxRequired: true,
-      checkboxLabel: "I understand and wish to lock this document.",
-      confirmText: 'Save and Lock',
+      checkboxLabel: "I understand that the audio will be deleted and the file locked.",
+      confirmText: 'Lock & Delete Audio',
       showCancelButton: true
     });
     setShowConfirmModal(true);
   };
 
-  /**
-   * Confirms and executes the save action after the user agrees in the modal.
-   * It either commits a new (staged) file or updates the content of an existing file.
-   * After saving, it exits edit mode.
-   */
-  const handleSaveConfirm = async () => {
-  if (!fileInEditMode) return;
+  const handleLockConfirm = async () => {
+    if (!fileInEditMode) return;
+    try {
+      let fileIdToLock = null;
 
-  if (fileInEditMode.isStaged) {
-    const fileToCommit = {
-      name: fileInEditMode.name,
-      content: editedContent,
-      sourceType: fileInEditMode.sourceType,
-      audioUrl: fileInEditMode.audioUrl || null,
-      words: fileInEditMode.words || null,
-    };
-    await handleCommitNewFile(fileToCommit);
-  } else {
-    await handleUpdateFileContent(fileInEditMode._id, editedContent);
-  }
+      if (fileInEditMode.isStaged) {
+        // CASE 1: File is Staged (New)
+        if (committedFileId) {
+          // It was staged, but we already saved it once during this session
+          if (editedContent !== fileInEditMode.content) {
+            await handleUpdateFileContent(committedFileId, editedContent);
+          }
+          fileIdToLock = committedFileId;
+        } else {
+          // It is staged and this is the FIRST save/commit
+          const fileToCommit = {
+            name: fileInEditMode.name,
+            content: editedContent,
+            sourceType: fileInEditMode.sourceType,
+            audioUrl: fileInEditMode.audioUrl || null,
+            words: fileInEditMode.words || null,
+          };
 
-  setFileInEditMode(null);
-  setLeftPanelWidth(DEFAULT_WIDTH);
-  setShowConfirmModal(false);
-  setHistory({ undoStack: [], redoStack: [] });
-  setShowFormattingTip(false); 
-};
+          // 1. Perform the commit
+          const result = await handleCommitNewFile(fileToCommit);
+          
+          if (!result.success) {
+            throw new Error('Failed to commit file before locking');
+          }
 
-  /**
-   * Initiates the code splitting process. It shows a confirmation modal to the user,
-   * warning them that the action is irreversible. If confirmed, it prepares the data
-   * for the SplitReviewModal.
-   * @param {string} sourceCodeId - The ID of the code definition to be split.
-   * @param {Array<object>} newCodes - An array of new code definition objects.
-   */
+          // --- FIX STARTS HERE ---
+          // 2. DO NOT wait for state. DO NOT use setTimeout.
+          // 3. Use the 'file' object returned directly from the API response.
+          const committedFile = result.file; 
+          
+          if (!committedFile || !committedFile._id) {
+             throw new Error('Server did not return a valid file ID');
+          }
+
+          fileIdToLock = committedFile._id;
+          // --- FIX ENDS HERE ---
+        }
+      } else {
+        // CASE 2: File is already existing (not staged)
+        if (editedContent !== fileInEditMode.content) {
+          await handleUpdateFileContent(fileInEditMode._id, editedContent);
+        }
+        fileIdToLock = fileInEditMode._id;
+      }
+
+      // 4. Perform the lock using the ID we definitely have now
+      const lockResult = await handleLockFile(fileIdToLock);
+      
+      if (lockResult.success) {
+        setFileInEditMode(null);
+        setCommittedFileId(null);
+        setLeftPanelWidth(DEFAULT_WIDTH);
+        setShowConfirmModal(false);
+        setHistory({ undoStack: [], redoStack: [] });
+        setShowFormattingTip(false);
+      } else {
+        throw new Error(lockResult.error || 'Failed to lock file');
+      }
+    } catch (error) {
+      console.error('Lock failed:', error);
+      setConfirmModalData({
+        title: 'Lock Failed',
+        shortMessage: error.message || 'An error occurred while trying to lock the file.',
+        confirmText: 'OK',
+        showCancelButton: false,
+        onConfirm: () => setShowConfirmModal(false),
+      });
+      setShowConfirmModal(true);
+    }
+  };
+
+  const exitEditMode = () => {
+    setFileInEditMode(null);
+    setCommittedFileId(null);
+    setLeftPanelWidth(DEFAULT_WIDTH);
+    setHistory({ undoStack: [], redoStack: [] });
+    setShowFormattingTip(false);
+  };
+
+  const handleCancelEdit = () => {
+    const hasContentChanges = editedContent !== fileInEditMode?.content;
+    const isUnsavedNewFile = fileInEditMode?.isStaged;
+    if (hasContentChanges || isUnsavedNewFile) {
+      const title = isUnsavedNewFile ? 'Discard New File?' : 'Discard Changes?';
+      const message = isUnsavedNewFile 
+        ? 'This file has not been saved yet. Closing edit mode now will permanently lose this file.'
+        : 'You have unsaved changes. Are you sure you want to cancel editing? All progress will be lost.';
+      const confirmText = isUnsavedNewFile ? 'Yes, Delete File' : 'Yes, Discard';
+
+      setConfirmModalData({
+        title: title,
+        shortMessage: message,
+        confirmText: confirmText,
+        showCancelButton: true,
+        onConfirm: () => {
+          setShowConfirmModal(false);
+          exitEditMode();
+        }
+      });
+      setShowConfirmModal(true);
+    } else {
+      exitEditMode();
+    }
+  };
+
   const handleInitiateSplit = (sourceCodeId, newCodes) => {
     setShowSplitMergeModal(false);
     setConfirmModalData({
       title: 'Confirm Code Split',
       shortMessage: (
-        <p>
-          This will delete the original code and require you to re-categorize all of its associated segments.
-          <br /><br />
-          <span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span>
-          <br /><br />
-          Are you sure you want to start the review process?
-        </p>
+        <p>This will delete the original code and require you to re-categorize all of its associated segments.<br /><br /><span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span><br /><br />Are you sure you want to start the review process?</p>
       ),
       onConfirm: () => {
         setShowConfirmModal(false);
@@ -625,94 +807,49 @@ const ProjectView = () => {
         const segmentsToReview = project.codedSegments.filter(s => s.codeDefinition._id.toString() === sourceCodeId);
         setSplitReviewData({ show: true, sourceCode, segmentsToReview, newCodes });
       },
-      showCheckbox: true,
-      isCheckboxRequired: true,
-      checkboxLabel: "I understand this action cannot be undone.",
-      confirmText: "Yes, Start Splitting",
-      showCancelButton: true,
+      showCheckbox: true, isCheckboxRequired: true, checkboxLabel: "I understand this action cannot be undone.", confirmText: "Yes, Start Splitting", showCancelButton: true,
     });
     setShowConfirmModal(true);
   };
 
-  /**
-   * Finalizes the code splitting process by sending the new code assignments to the backend.
-   * Hides the split review modal on success or shows an error modal on failure.
-   * @param {object} assignments - An object mapping original segment IDs to new code definition IDs.
-   */
   const handleCompleteSplit = async (assignments) => {
-    const result = await handleSplitCodes({
-      sourceCodeId: splitReviewData.sourceCode._id,
-      newCodeDefinitions: splitReviewData.newCodes,
-      assignments,
-    });
+    const result = await handleSplitCodes({ sourceCodeId: splitReviewData.sourceCode._id, newCodeDefinitions: splitReviewData.newCodes, assignments });
     if (result.success) {
       setSplitReviewData({ show: false, sourceCode: null, segmentsToReview: [], newCodes: [] });
     } else {
       setConfirmModalData({
-        title: 'Split Failed',
-        shortMessage: result.error || 'An unexpected error occurred while finalizing the split.',
-        onConfirm: () => setShowConfirmModal(false),
-        confirmText: 'OK',
-        showCancelButton: false,
+        title: 'Split Failed', shortMessage: result.error || 'An unexpected error occurred while finalizing the split.', onConfirm: () => setShowConfirmModal(false), confirmText: 'OK', showCancelButton: false,
       });
       setShowConfirmModal(true);
     }
   };
 
-  /**
-   * Handles the code merging process. It shows a confirmation modal to the user,
-   * warning them that the action is irreversible. If confirmed, it calls the backend
-   * to perform the merge and shows an error if it fails.
-   * @param {object} mergeData - Data required for the merge, including source code IDs and the new code definition.
-   */
   const handleMerge = async (mergeData) => {
     setShowSplitMergeModal(false);
     setConfirmModalData({
       title: 'Confirm Code Merge',
       shortMessage: (
-        <p>
-          This will merge the selected codes into a single new code and reassign all associated segments.
-          <br /><br />
-          <span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span>
-          <br /><br />
-          Are you sure you want to proceed?
-        </p>
+        <p>This will merge the selected codes into a single new code and reassign all associated segments.<br /><br /><span className="font-bold text-red-500">THIS ACTION CANNOT BE UNDONE.</span><br /><br />Are you sure you want to proceed?</p>
       ),
       onConfirm: async () => {
         setShowConfirmModal(false);
         const result = await handleMergeCodes(mergeData);
         if (!result.success) {
           setConfirmModalData({
-            title: 'Merge Failed',
-            shortMessage: result.error || 'An unexpected error occurred during the merge.',
-            onConfirm: () => setShowConfirmModal(false),
-            confirmText: 'OK',
-            showCancelButton: false,
+            title: 'Merge Failed', shortMessage: result.error || 'An unexpected error occurred during the merge.', onConfirm: () => setShowConfirmModal(false), confirmText: 'OK', showCancelButton: false,
           });
           setShowConfirmModal(true);
         }
       },
-      showCheckbox: true,
-      isCheckboxRequired: true,
-      checkboxLabel: "I understand this action cannot be undone.",
-      confirmText: "Yes, Merge Codes",
-      showCancelButton: true,
+      showCheckbox: true, isCheckboxRequired: true, checkboxLabel: "I understand this action cannot be undone.", confirmText: "Yes, Merge Codes", showCancelButton: true,
     });
     setShowConfirmModal(true);
   };
 
-  /**
-   * Handles exporting coded segments data to an Excel file.
-   * @param {string} viewType - The type of export view (e.g., 'by_code', 'by_document').
-   */
   const handleExportToExcel = async (viewType) => {
     if (!project || !user) return;
     try {
-      const response = await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-coded-segments?format=${viewType}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-        responseType: 'blob',
-      });
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/export-coded-segments?format=${viewType}`, { headers: { Authorization: `Bearer ${user.token}` }, responseType: 'blob' });
       const fileName = `${project.name}_coded_segments_${viewType}.xlsx`;
       FileSaver.saveAs(response.data, fileName);
     } catch (error) {
@@ -721,15 +858,8 @@ const ProjectView = () => {
     }
   };
 
-  /**
-   * Callback function to handle clicks on timestamps within the document viewer.
-   * It seeks the audio player to the corresponding time.
-   * @param {number} seconds - The time in seconds to seek to.
-   */
   const handleTimestampClick = useCallback((seconds) => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.seekToTime(seconds);
-    }
+    if (audioPlayerRef.current) { audioPlayerRef.current.seekToTime(seconds); }
   }, []);
 
   const isLeftPanelCollapsed = leftPanelWidth === COLLAPSED_WIDTH;
@@ -738,7 +868,6 @@ const ProjectView = () => {
   if (error) return <div className="mt-10 text-center text-red-600">{error}</div>;
 
   return (
-    // <div className="min-h-screen bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white">
     <div className="flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
       <Navbar
         projectName={projectName}
@@ -757,39 +886,27 @@ const ProjectView = () => {
         showTooltip={showCodeTooltip}
         onToggleTooltip={handleToggleCodeTooltip}
         onRestoreDefaults={handleRestoreDefaults}
+        smartSelectionEnabled={smartSelectionEnabled}
+        onToggleSmartSelection={handleToggleSmartSelection}
       />
       <ApiKeyModal
         show={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
-        onSaveSuccess={() => {
-            // Optional: Re-open the import modal so they can try again immediately
-            setShowImportOptionsModal(true);
-        }}
+        onSaveSuccess={() => { setShowImportOptionsModal(true); }}
       />
-
       {transcriptionStatus.isActive && (
         <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black bg-opacity-70">
           <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-xl dark:bg-gray-800">
-            <h3 className="mb-4 text-xl font-bold text-[#1D3C87] dark:text-[#F05623]">
-              {transcriptionStatus.message}
-            </h3>
+            <h3 className="mb-4 text-xl font-bold text-[#1D3C87] dark:text-[#F05623]">{transcriptionStatus.message}</h3>
             <div className="mb-2 h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
-              <div
-                className="flex h-4 items-center justify-center rounded-full bg-[#F05623] transition-all duration-300 ease-linear"
-                style={{ width: `${transcriptionStatus.progress}%` }}
-              >
-                {transcriptionStatus.progress === 100 && (
-                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                )}
+              <div className="flex h-4 items-center justify-center rounded-full bg-[#F05623] transition-all duration-300 ease-linear" style={{ width: `${transcriptionStatus.progress}%` }}>
+                {transcriptionStatus.progress === 100 && ( <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div> )}
               </div>
             </div>
-            <p className="text-lg font-bold text-gray-700 dark:text-gray-200">
-              {transcriptionStatus.progress}%
-            </p>
+            <p className="text-lg font-bold text-gray-700 dark:text-gray-200">{transcriptionStatus.progress}%</p>
           </div>
         </div>
       )}
-
       <div className="h-[calc(100vh-theme(space.5))] px-2 pt-21">
         <div className="flex h-full gap-3">
           <LeftPanel
@@ -806,7 +923,7 @@ const ProjectView = () => {
             project={project}
             setShowImportOptionsModal={setShowImportOptionsModal}
             selectedFileId={selectedFileId}
-            handleSelectFile={handleSelectFile}
+            handleSelectFile={handleSidebarFileClick}
             handleDeleteFile={handleDeleteFile}
             handleRenameFile={handleRenameFile}
             handlePinFile={handlePinFile}
@@ -833,7 +950,6 @@ const ProjectView = () => {
             setAnnotationToScrollToId={setAnnotationToScrollToId}
             setActiveCodedSegmentId={setActiveCodedSegmentId}
             setMemoToEdit={setMemoToEdit}
-            setShowMemoModal={setShowMemoModal}
             setShowCodedSegmentsTableModal={setShowCodedSegmentsTableModal}
             handleExportFileCodedSegments={handleExportFileCodedSegments}
             setCodeDefinitionToView={setCodeDefinitionToView}
@@ -842,11 +958,13 @@ const ProjectView = () => {
             isEditing={isEditing}
             fileInEditMode={fileInEditMode}
           />
-
           <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+            {/* 1. Edit Toolbar */}
             {isEditing && fileInEditMode && (
               <EditToolbar
-                onSave={handleSaveInitiate}
+                onSave={handleSaveOnly}
+                onLock={handleLockInitiate}
+                onCancel={handleCancelEdit}
                 hasUnsavedChanges={editedContent !== fileInEditMode.content}
                 onUndo={handleEditorUndo}
                 onRedo={handleEditorRedo}
@@ -876,67 +994,146 @@ const ProjectView = () => {
                 setShowLineHeightDropdown={setShowLineHeightDropdown}
               />
             )}
-            <DocumentViewer
-              textareaRef={textareaRef}
-              isEditing={isEditing}
-              content={isEditing ? editedContent : selectedContent}
-              onContentChange={handleContentUpdate}
-              selectedContent={selectedContent}
-              codedSegments={codedSegments}
-              inlineHighlights={inlineHighlights}
-              memos={memos}
-              createRangeFromOffsets={createRangeFromOffsets}
-              activeCodedSegmentId={activeCodedSegmentId}
-              setActiveCodedSegmentId={setActiveCodedSegmentId}
-              activeMemoId={activeMemoId}
-              setActiveMemoId={setActiveMemoId}
-              showCodeColors={showCodeColors}
-              viewerSearchMatches={viewerSearchMatches}
-              currentMatchIndex={currentMatchIndex}
-              viewerRef={viewerRef}
-              viewerSearchInputRef={viewerSearchInputRef}
-              viewerSearchQuery={viewerSearchQuery}
-              handleViewerSearchChange={handleViewerSearchChange}
-              goToPrevMatch={goToPrevMatch}
-              goToNextMatch={goToNextMatch}
-              handleClearViewerSearch={handleClearViewerSearch}
-              activeTool={activeTool}
-              setActiveTool={setActiveTool}
-              showHighlightColorDropdown={showHighlightColorDropdown}
-              setShowHighlightColorDropdown={setShowHighlightColorDropdown}
-              highlightColors={highlightColors}
-              selectedHighlightColor={selectedHighlightColor}
-              setSelectedHighlightColor={setSelectedHighlightColor}
-              showCodeDropdown={showCodeDropdown}
-              setShowCodeDropdown={setShowCodeDropdown}
-              setShowCodeColors={setShowCodeColors}
-              setShowFloatingToolbar={setShowFloatingToolbar}
-              setShowMemoModal={setShowMemoModal}
-              setShowFloatingAssignCode={setShowFloatingAssignCode}
-              setShowFloatingMemoInput={setShowFloatingMemoInput}
-              handleViewerMouseUp={handleViewerMouseUp}
-              setMemoToEdit={setMemoToEdit}
-              isLeftPanelCollapsed={isLeftPanelCollapsed}
-              project={project}
-              handleDeleteCodedSegment={handleDeleteCodedSegment}
-              handleReassignCodeClick={handleSwapIconClick}
-              fontSize={fontSize}
-              setFontSize={setFontSize}
-              lineHeight={lineHeight}
-              setLineHeight={setLineHeight}
-              showLineHeightDropdown={showLineHeightDropdown}
-              setShowLineHeightDropdown={setShowLineHeightDropdown}
-              showCodeTooltip={showCodeTooltip}
-              onUndo={undo}
-              onRedo={redo}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              handleCreateMemoForSegment={handleCreateMemoForSegment}
-              hasAudio={!!selectedFileAudioUrl}
-              onTimestampClick={handleTimestampClick}
-            />
+            
+            {/* 2. Main Content Area (Viewer + Overlay) */}
+            <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl shadow-md bg-white dark:bg-gray-800">
 
-            {selectedFileAudioUrl && (
+              {!activeFile && (
+                <div className="flex h-full flex-col items-center justify-center p-8 text-center text-gray-400 dark:text-gray-500">
+                  <div className="mb-6 rounded-full bg-gray-100 p-6 dark:bg-gray-700/50">
+                    <svg 
+                      className="h-16 w-16 text-gray-300 dark:text-gray-600" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-200">
+                    No Files Imported
+                  </h3>
+                  <p className="max-w-sm mb-8 text-sm leading-relaxed">
+                    Import an audio or text file to get started.
+                  </p>
+                  <button
+                    onClick={() => setShowImportOptionsModal(true)}
+                    className="flex items-center justify-center gap-2 transform rounded-lg bg-[#d34715] py-2.5 px-5 font-bold text-white shadow-lg transition duration-300 hover:scale-105 hover:bg-[#F05623]"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Import File
+                  </button>
+                </div>
+              )}
+              
+              {/* THE OVERLAY: Visible only in Draft Mode (Unlocked & Not Editing) */}
+              {(!isEditing && activeFile && !isCurrentFileLocked) && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-10 text-center bg-white/50 dark:bg-black/55 backdrop-blur-xs transition-all duration-300">
+                  <div className="mb-6 flex items-center justify-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-500 shadow-sm">
+                      <FaExclamationTriangle size={28} />
+                    </div>
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">File in Edit Mode</h3>
+                  <p className="max-w-md text-gray-700 dark:text-gray-200 mb-8 font-medium">
+                    This document is currently in draft mode. To ensure content consistency during analysis, you must finalize and lock the text before adding codes or annotation.
+                  </p>
+                  <button 
+                    onClick={() => enterEditMode(currentFile)} 
+                    className="flex items-center gap-2 rounded-lg bg-cyan-900 px-6 py-3 font-semibold text-white transition-all hover:bg-cyan-800 hover:shadow-lg dark:bg-[#F05623] dark:hover:bg-[#d04a1e]"
+                  >
+                    <FaPen /> Enter Edit Mode
+                  </button>
+                </div>
+              )}
+
+
+
+              {/* THE DOCUMENT VIEWER: Always rendered in background */}
+              {activeFile  && (
+                isEditing ? (
+                  <TextEditor
+                    content={editedContent}
+                    onContentChange={handleContentUpdate}
+                    fontSize={fontSize}
+                    lineHeight={lineHeight}
+                    editMatches={findMatches}
+                    currentEditMatchIndex={currentFindIndex}
+                    onTimestampClick={handleTimestampClick}
+                    hasAudio={!!selectedFileAudioUrl}
+                  />
+                ) : (
+                 <DocumentViewer
+                  textareaRef={textareaRef}
+                  isEditing={isEditing}
+                  content={isEditing ? editedContent : selectedContent}
+                  onContentChange={handleContentUpdate}
+                  selectedContent={selectedContent}
+                  codedSegments={codedSegments}
+                  inlineHighlights={inlineHighlights}
+                  memos={memos}
+                  createRangeFromOffsets={createRangeFromOffsets}
+                  activeCodedSegmentId={activeCodedSegmentId}
+                  setActiveCodedSegmentId={setActiveCodedSegmentId}
+                  activeMemoId={activeMemoId}
+                  setActiveMemoId={setActiveMemoId}
+                  showCodeColors={showCodeColors}
+                  viewerSearchMatches={viewerSearchMatches}
+                  currentMatchIndex={currentMatchIndex}
+                  viewerRef={viewerRef}
+                  viewerSearchInputRef={viewerSearchInputRef}
+                  viewerSearchQuery={viewerSearchQuery}
+                  handleViewerSearchChange={handleViewerSearchChange}
+                  goToPrevMatch={goToPrevMatch}
+                  goToNextMatch={goToNextMatch}
+                  handleClearViewerSearch={handleClearViewerSearch}
+                  activeTool={activeTool}
+                  setActiveTool={setActiveTool}
+                  showHighlightColorDropdown={showHighlightColorDropdown}
+                  setShowHighlightColorDropdown={setShowHighlightColorDropdown}
+                  highlightColors={highlightColors}
+                  selectedHighlightColor={selectedHighlightColor}
+                  setSelectedHighlightColor={setSelectedHighlightColor}
+                  showCodeDropdown={showCodeDropdown}
+                  setShowCodeDropdown={setShowCodeDropdown}
+                  setShowCodeColors={setShowCodeColors}
+                  setShowFloatingToolbar={setShowFloatingToolbar}
+                  setShowFloatingAssignCode={setShowFloatingAssignCode}
+                  setShowFloatingMemoInput={setShowFloatingMemoInput}
+                  handleViewerMouseUp={handleViewerMouseUp}
+                  handleViewerMouseDown={handleViewerMouseDown}
+                  isSelectingRef={isSelectingRef}
+                  setMemoToEdit={setMemoToEdit}
+                  isLeftPanelCollapsed={isLeftPanelCollapsed}
+                  project={project}
+                  handleDeleteCodedSegment={handleDeleteCodedSegment}
+                  handleReassignCodeClick={handleSwapIconClick}
+                  fontSize={fontSize}
+                  setFontSize={setFontSize}
+                  lineHeight={lineHeight}
+                  setLineHeight={setLineHeight}
+                  showLineHeightDropdown={showLineHeightDropdown}
+                  setShowLineHeightDropdown={setShowLineHeightDropdown}
+                  showCodeTooltip={showCodeTooltip}
+                  onUndo={undo}
+                  onRedo={redo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  handleCreateMemoForSegment={handleCreateMemoForSegment}
+                  hasAudio={!!selectedFileAudioUrl}
+                  onTimestampClick={handleTimestampClick}
+                  editMatches={findMatches}
+                  currentEditMatchIndex={currentFindIndex}
+                  setFloatingMemoInputPosition={setFloatingMemoInputPosition}
+                />
+                )
+              )}
+            </div>
+
+            {/* 3. Audio Player - Hidden in Draft Mode */}
+            {selectedFileAudioUrl && (isEditing || isCurrentFileLocked) && (
               <AudioPlayer
                 ref={audioPlayerRef}
                 fileId={selectedFileId}
@@ -947,10 +1144,14 @@ const ProjectView = () => {
         </div>
       </div>
 
+      {/* Import Options Modal */}
       {showImportOptionsModal && (
         <ImportOptionsModal
           show={showImportOptionsModal}
-          onClose={() => setShowImportOptionsModal(false)}
+          onClose={handleCloseImportModal}
+          // ✅ lifted state
+          modalStep={importModalStep}
+          setModalStep={setImportModalStep}
           handleAudioImport={handleAudioImport}
           handleTextImport={handleTextImport}
         />
@@ -958,10 +1159,20 @@ const ProjectView = () => {
 
       {showFloatingToolbar && (
         <FloatingToolbar
-          y={floatingToolbarPosition.top} x={floatingToolbarPosition.left}
-          onCode={() => { handleCodeSelectionAction(); setShowFloatingToolbar(false); }}
-          onMemo={() => { handleMemoSelectionAction(); setShowFloatingToolbar(false); }}
-          onHighlight={() => { handleHighlightSelectionAction(); setShowFloatingToolbar(false); }}
+          y={floatingToolbarPosition.top}
+          x={floatingToolbarPosition.left}
+          onCode={() => {
+            handleCodeSelectionAction();
+            setShowFloatingToolbar(false);
+          }}
+          onMemo={() => {
+            handleMemoSelectionAction();
+            setShowFloatingToolbar(false);
+          }}
+          onHighlight={() => {
+            handleHighlightSelectionAction();
+            setShowFloatingToolbar(false);
+          }}
           onCancel={() => setShowFloatingToolbar(false)}
           selectionInfo={getSelectionInfo()}
         />
@@ -969,19 +1180,23 @@ const ProjectView = () => {
 
       {showFloatingAssignCode && (
         <FloatingAssignCode
-          x={floatingAssignCodePosition.left} y={floatingAssignCodePosition.top}
-          onClose={() => { setShowFloatingAssignCode(false); setSegmentToReassign(null); }}
+          x={floatingAssignCodePosition.left}
+          y={floatingAssignCodePosition.top}
+          onClose={() => {
+            setShowFloatingAssignCode(false);
+            setSegmentToReassign(null);
+          }}
           onAssignCode={handleAssignCode}
           codeDefinitions={codeDefinitions}
           onDefineNewCode={() => {
             setShowFloatingAssignCode(false);
             if (!selectedFileId) {
               setConfirmModalData({
-                title: 'Define Code Error',
-                shortMessage: 'Please select a document to define a code.',
+                title: "Define Code Error",
+                shortMessage: "Please select a document to define a code.",
                 onConfirm: () => setShowConfirmModal(false),
-                confirmText: 'OK',
-                showCancelButton: false
+                confirmText: "OK",
+                showCancelButton: false,
               });
               setShowConfirmModal(true);
               return;
@@ -993,15 +1208,26 @@ const ProjectView = () => {
         />
       )}
 
-      {showFloatingMemoInput && (
-        <FloatingMemoInput
-          x={floatingMemoInputPosition.left} y={floatingMemoInputPosition.top}
-          onClose={() => setShowFloatingMemoInput(false)}
-          onSave={handleSaveMemo}
-          selectionInfo={currentMemoSelectionInfo}
-          allMemos={memos}
-        />
-      )}
+      {/* UPDATE: Floating Memo Input now handles Edit Mode too via initialMemo */}
+      <AnimatePresence>
+        {showFloatingMemoInput && (
+          <FloatingMemoInput
+            x={floatingMemoInputPosition.left}
+            y={floatingMemoInputPosition.top}
+            onClose={() => {
+              setShowFloatingMemoInput(false);
+              setMemoToEdit(null); // Clear edit state on close
+            }}
+            onSave={handleSaveMemo}
+            selectionInfo={currentMemoSelectionInfo}
+            allMemos={memos}
+            initialMemo={memoToEdit} // Pass the memo being edited
+            onDelete={handleDeleteMemo} // Pass delete handler
+            setShowConfirmModal={setShowConfirmModal}
+            setConfirmModalData={setConfirmModalData}
+          />
+        )}
+      </AnimatePresence>
 
       <DefineCodeModal
         show={showDefineCodeModal}
@@ -1021,20 +1247,11 @@ const ProjectView = () => {
         currentFileId={selectedFileId}
       />
 
-      <MemoModal
-        show={showMemoModal}
-        onClose={() => { setShowMemoModal(false); setMemoToEdit(null); window.getSelection().removeAllRanges(); }}
-        allMemos={memos}
-        onSave={handleSaveMemo}
-        initialMemo={memoToEdit}
-        selectionInfo={currentMemoSelectionInfo}
-        onDelete={handleDeleteMemo}
-      />
-
       <ConfirmationModal
         show={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={confirmModalData.onConfirm}
+        onCancel={confirmModalData.onCancel}
         title={confirmModalData.title}
         shortMessage={confirmModalData.shortMessage}
         detailedMessage={confirmModalData.detailedMessage}
@@ -1056,7 +1273,9 @@ const ProjectView = () => {
           isProjectOverview={false}
           selectedFileId={selectedFileId}
           project={project}
-          baseNameForDownload={project?.importedFiles.find(f => f._id === selectedFileId)?.name}
+          baseNameForDownload={
+            project?.importedFiles.find((f) => f._id === selectedFileId)?.name
+          }
         />
       )}
 
@@ -1087,14 +1306,16 @@ const ProjectView = () => {
 
       <SplitReviewModal
         show={splitReviewData.show}
-        onClose={() => setSplitReviewData(prev => ({ ...prev, show: false }))}
+        onClose={() =>
+          setSplitReviewData((prev) => ({ ...prev, show: false }))
+        }
         sourceCode={splitReviewData.sourceCode}
         segmentsToReview={splitReviewData.segmentsToReview}
         newCodes={splitReviewData.newCodes}
         onCompleteSplit={handleCompleteSplit}
       />
-    </div>
-  );
+      </div>
+    );
 };
 
 export default ProjectView;

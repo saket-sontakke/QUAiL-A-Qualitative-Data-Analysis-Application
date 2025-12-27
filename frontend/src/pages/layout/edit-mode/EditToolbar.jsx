@@ -1,45 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaSave, FaSearch, FaChevronUp, FaChevronDown, FaUndo, FaRedo, FaInfoCircle, FaTimes, FaLightbulb, FaSearchPlus, FaSearchMinus, FaCheck, FaArrowLeft } from 'react-icons/fa';
+import { FaSave, FaSearch, FaChevronUp, FaChevronDown, FaUndo, FaRedo, FaInfoCircle, FaTimes, FaLightbulb, FaSearchPlus, FaSearchMinus, FaCheck, FaArrowLeft, FaLock } from 'react-icons/fa';
 import { MdFindReplace, MdFormatLineSpacing } from 'react-icons/md';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/**
- * A toolbar for document edit mode. It provides save, find, and find-and-replace
- * functionalities, along with an indicator for unsaved changes and a formatting tip tooltip.
- *
- * @param {object} props - The component props.
- * @param {() => void} props.onSave - Callback for the save button.
- * @param {boolean} props.hasUnsavedChanges - If true, displays an "unsaved changes" indicator.
- * @param {() => void} props.onUndo - Callback to undo the last action.
- * @param {() => void} props.onRedo - Callback to redo the last action.
- * @param {boolean} props.canUndo - Determines if the undo button should be enabled.
- * @param {boolean} props.canRedo - Determines if the redo button should be enabled.
- * @param {boolean} props.showFind - If true, displays the find-only controls.
- * @param {() => void} props.onToggleFind - Callback to toggle the find-only view.
- * @param {boolean} props.showFindReplace - If true, displays the find-and-replace controls.
- * @param {() => void} props.onToggleFindReplace - Callback to toggle the find-and-replace view.
- * @param {string} props.findQuery - The current search term.
- * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onFindChange - Handler for find input changes.
- * @param {string} props.replaceQuery - The current replacement term.
- * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onReplaceChange - Handler for replace input changes.
- * @param {() => void} props.onFindNext - Callback to go to the next match.
- * @param {() => void} props.onFindPrev - Callback to go to the previous match.
- * @param {() => void} props.onReplaceOne - Callback to replace the current match.
- * @param {() => void} props.onReplaceAll - Callback to replace all matches.
- * @param {number} props.matchesCount - The total number of matches found.
- * @param {number} props.currentMatchIndex - The index of the currently highlighted match.
- * @param {boolean} props.initialShowTip - A trigger from the parent to show the tip automatically.
- * @param {() => void} props.onDismissTip - A callback to inform the parent that the tip has been dismissed.
- * @param {number} props.fontSize - The current font size.
- * @param {(size: number) => void} props.setFontSize - Function to set the font size.
- * @param {number} props.lineHeight - The current line height.
- * @param {(height: number) => void} props.setLineHeight - Function to set the line height.
- * @param {boolean} props.showLineHeightDropdown - State for line height dropdown visibility.
- * @param {(visible: boolean) => void} props.setShowLineHeightDropdown - Function to set line height dropdown visibility.
- * @returns {JSX.Element} The rendered toolbar component.
- */
 const EditToolbar = ({
   onSave,
+  onLock,
+  onCancel, // <--- New Prop
   hasUnsavedChanges,
   onUndo,
   onRedo,
@@ -86,8 +53,12 @@ const EditToolbar = ({
     }
   };
 
+  // Logic to handle auto-showing the tip based on LocalStorage preference
   useEffect(() => {
-    if (initialShowTip) {
+    // Check if user has previously opted to hide the tip
+    const shouldHide = localStorage.getItem('hideFormattingTip') === 'true';
+
+    if (initialShowTip && !shouldHide) {
       setIsTipVisible(true);
       const timer = setTimeout(() => {
         setIsTipVisible(false);
@@ -100,6 +71,15 @@ const EditToolbar = ({
   const handleCloseTip = () => {
     setIsTipVisible(false);
     onDismissTip();
+  };
+
+  // Handler for the "Never show again" checkbox
+  const handleNeverShowChange = (e) => {
+    if (e.target.checked) {
+      localStorage.setItem('hideFormattingTip', 'true');
+    } else {
+      localStorage.removeItem('hideFormattingTip');
+    }
   };
 
   useEffect(() => {
@@ -181,6 +161,20 @@ const EditToolbar = ({
                   <pre className="mt-1 rounded-md bg-gray-100 p-2 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                     <code>[00:00:09] Speaker A: The impact of technology on education...</code>
                   </pre>
+                  
+                  {/* NEVER SHOW AGAIN CHECKBOX */}
+                  <div className="mt-3 flex items-center border-t border-gray-100 pt-2 dark:border-gray-700">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 text-cyan-800 focus:ring-cyan-800 dark:border-gray-600 dark:bg-gray-700"
+                        defaultChecked={localStorage.getItem('hideFormattingTip') === 'true'}
+                        onChange={handleNeverShowChange}
+                      />
+                      Don't show again
+                    </label>
+                  </div>
+
                 </motion.div>
               )}
             </AnimatePresence>
@@ -326,13 +320,33 @@ const EditToolbar = ({
             </button>
           </div>
 
+          {/* Cancel Button */}
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            title="Close edit mode and return to viewer"
+          >
+            <FaTimes />
+            <span>Close</span>
+          </button>
+
+          {/* SEPARATE SAVE AND LOCK BUTTONS */}
           <button
             onClick={onSave}
-            className="flex items-center gap-2 rounded-md bg-cyan-800 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-cyan-700 dark:bg-[#d34715] dark:hover:bg-[#F05623]"
-            title="Save"
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 bg-cyan-800 hover:bg-cyan-700"
+            title="Save (keeps file in edit mode)"
           >
             <FaSave />
             <span>Save</span>
+          </button>
+
+          <button
+            onClick={onLock}
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 bg-[#d34715] hover:bg-[#F05623]"
+            title="Lock file (finalizes and exits edit mode)"
+          >
+            <FaLock />
+            <span>Lock</span>
           </button>
         </div>
       </div>
@@ -394,7 +408,8 @@ const EditToolbar = ({
                 onChange={onReplaceChange}
                 className="col-span-1 rounded-md border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:border-cyan-800 focus:ring-cyan-800 dark:border-gray-600 dark:bg-gray-700 dark:focus:border-[#F05623] dark:focus:ring-[#F05623]"
               />
-              <div className="col-span-1 flex items-center gap-2">
+              
+              <div className="col-span-2 flex items-center justify-end gap-2">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {matchesCount > 0 ? `${currentMatchIndex + 1} of ${matchesCount}` : 'No results'}
                 </span>
@@ -404,8 +419,9 @@ const EditToolbar = ({
                 <button onClick={onFindNext} disabled={matchesCount === 0} className="rounded p-1 hover:bg-gray-200 disabled:opacity-50 dark:hover:bg-gray-600">
                   <FaChevronDown size={12} />
                 </button>
-              </div>
-              <div className="col-span-1 flex items-center justify-end gap-2">
+                
+                <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
+
                 <button
                   onClick={onReplaceOne}
                   disabled={matchesCount === 0}

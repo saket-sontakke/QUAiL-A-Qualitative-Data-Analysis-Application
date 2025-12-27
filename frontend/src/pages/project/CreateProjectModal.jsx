@@ -15,19 +15,32 @@ const CreateProjectModal = ({ show, onClose, onConfirm }) => {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Project name cannot be empty.');
       return;
     }
-    onConfirm({ name, description });
+    
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await onConfirm({ name, description }); 
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to create project.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setName('');
     setDescription('');
     setError('');
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -102,9 +115,10 @@ const CreateProjectModal = ({ show, onClose, onConfirm }) => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#d34715] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#F05623]"
+                  disabled={isSubmitting}
+                  className={`rounded-lg bg-[#d34715] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#F05623] ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
                 >
-                  Create Project
+                  {isSubmitting ? 'Creating...' : 'Create Project'}
                 </button>
               </div>
             </form>

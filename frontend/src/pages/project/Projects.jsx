@@ -78,6 +78,18 @@ const Projects = () => {
   const sortMenuRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const [importLimits, setImportLimits] = useState(null);
+
+  useEffect(() => {
+    axios.get('/api/config')
+      .then(res => {
+        if (res.data.limits) {
+          setImportLimits(res.data.limits);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   /**
    * Effect to handle "deep linking" or navigation actions.
    * If the user is redirected here with `openCreateModal` in the location state,
@@ -165,18 +177,20 @@ const Projects = () => {
    * @param {object} newProjectData - The payload from the create form.
    */
   const handleCreateProject = async (newProjectData) => {
-    const token = user?.token;
-    if (!token) return;
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/create`, newProjectData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowCreateModal(false);
-      navigate(`/project/${res.data._id}`);
-    } catch (err) {
-      setError(err.response?.data?.error || "Project creation failed.");
-    }
-  };
+  const token = user?.token;
+  if (!token) return;
+  try {
+    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/projects/create`, newProjectData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // Only close modal on success
+    setShowCreateModal(false);
+    navigate(`/project/${res.data._id}`);
+  } catch (err) {
+    // DO NOT setError() here. Throw it so the Modal can catch it.
+    throw err; 
+  }
+};
 
   /**
    * Updates an existing project's metadata (name/description).
@@ -184,20 +198,21 @@ const Projects = () => {
    * @param {object} updatedData - The modified project data.
    */
   const handleUpdateProject = async (updatedData) => {
-    const token = user?.token;
-    if (!token) return;
-    try {
-      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToEdit._id}`, updatedData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setProjects(projects.map(p => (p._id === projectToEdit._id ? res.data : p)));
-      setShowEditModal(false);
-      setProjectToEdit(null);
-    } catch (err) {
-      setError(err.response?.data?.error || "Failed to update project.");
-      setShowEditModal(false);
-    }
-  };
+  const token = user?.token;
+  if (!token) return;
+  try {
+    const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectToEdit._id}`, updatedData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setProjects(projects.map(p => (p._id === projectToEdit._id ? res.data : p)));
+    // Only close modal on success
+    setShowEditModal(false);
+    setProjectToEdit(null);
+  } catch (err) {
+    // Throw error so the Modal can catch it
+    throw err;
+  }
+};
 
   /**
    * Permanently deletes a project via API and removes it from the local list.
@@ -252,19 +267,32 @@ const Projects = () => {
 
   /**
    * Handles the file selection for importing a project.
-   * Validates the extension (.quail) and sends a multipart/form-data request.
-   * @param {React.ChangeEvent<HTMLInputElement>} event - The file input change event.
+   * Validates extension (.quail) AND file size.
    */
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    event.target.value = null;
 
+    // 1. Validate Extension
     if (!file.name.endsWith('.quail')) {
       setError("Please select a valid .quail file.");
+      event.target.value = null; // Reset input
       return;
     }
 
+    // 2. Validate Size (NEW CODE)
+    // Default to 15MB if API config hasn't loaded yet
+    const limitMB = importLimits?.projectMB; 
+    const maxBytes = limitMB * 1024 * 1024;
+
+    if (file.size > maxBytes) {
+      setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(2)} MB). The maximum allowed size is ${limitMB} MB.`);
+      event.target.value = null; // Reset input so user can try again
+      return;
+    }
+
+    // 3. Proceed with Upload
+    event.target.value = null; // Reset input
     setIsImporting(true);
     const formData = new FormData();
     formData.append('file', file);

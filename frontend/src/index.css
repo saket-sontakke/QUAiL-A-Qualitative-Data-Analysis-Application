@@ -1,18 +1,23 @@
+/**
+ * Tailwind CSS Custom Configurations and Layer Extensions.
+ *
+ * This stylesheet imports the core Tailwind framework and defines custom
+ * variants, component classes, and utility overrides. It specifically handles
+ * cross-browser scrollbar styling, input field normalization (removing spin buttons),
+ * typography definitions, and browser autofill color overrides for both light
+ * and dark modes.
+ */
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer components {
-  /*
-   * Custom Scrollbar Utility
-   * UPDATED: Added vertical margin (my-2) to track to prevent 
-   * overlapping with container's rounded corners.
-   */
+  /* --- Custom Scrollbar Styles --- */
   .custom-scrollbar::-webkit-scrollbar {
-    @apply w-1.5; /* Slightly increased width for better grab usability */
+    @apply w-1.5;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-transparent my-2; /* my-2 prevents the corner cut-off */
+    @apply bg-transparent my-2;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -23,7 +28,7 @@
     @apply bg-gray-500;
   }
 
-  /* Dark Mode Scrollbar Overrides */
+  /* --- Dark Mode Scrollbar Configuration --- */
   .dark .custom-scrollbar::-webkit-scrollbar-track {
     @apply bg-transparent my-2;
   }
@@ -36,20 +41,17 @@
     @apply bg-gray-500;
   }
 
-  /* * Utility to hide native number input arrows 
-   */
+  /* --- Number Input Normalization --- */
   .hide-number-arrows::-webkit-outer-spin-button,
   .hide-number-arrows::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
   .hide-number-arrows {
-    -moz-appearance: textfield; /* For Firefox */
+    -moz-appearance: textfield;
   }
 
-  /*
-   * Font Utility: El Messiri Bold
-   */
+  /* --- Typography Definitions --- */
   .el-messiri-bold {
     font-family: "El Messiri", sans-serif;
     font-optical-sizing: auto;
@@ -57,9 +59,6 @@
     font-style: normal;
   }
 
-  /*
-   * Font Utility: Julius Sans One
-   */
   .julius-sans-one-regular {
     font-family: "Julius Sans One", sans-serif;
     font-weight: 400;
@@ -68,7 +67,7 @@
 }
 
 @layer utilities {
-  /* 1. Light Mode (Default) - Force White Background & Black Text */
+  /* --- Browser Autofill Overrides (Light Mode) --- */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
@@ -79,8 +78,7 @@
     transition: background-color 5000s ease-in-out 0s;
   }
 
-  /* 2. Dark Mode Override - Force Dark Gray Background & White Text */
-  /* This targets inputs only when the parent has the 'dark' class */
+  /* --- Browser Autofill Overrides (Dark Mode) --- */
   .dark input:-webkit-autofill,
   .dark input:-webkit-autofill:hover, 
   .dark input:-webkit-autofill:focus, 

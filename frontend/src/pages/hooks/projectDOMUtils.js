@@ -99,3 +99,54 @@ export const calculateFloatingPosition = (rects, panelWidth, panelHeight, margin
   
   return { top: desiredTop, left: desiredLeft };
 };
+
+/**
+ * Expands a DOM Range to ensure it captures full words at the boundaries.
+ * @param {Range} range - The current user selection range
+ * @returns {Range} - A new range snapped to word boundaries
+ */
+export const snapRangeToWord = (range) => {
+  const newRange = range.cloneRange();
+  
+  // 1. Define what constitutes a word and what constitutes sentence endings
+  const isWordChar = (char) => /[\w'-]/.test(char);
+  // Includes period, question mark, exclamation point. 
+  // You can add others like ';' or ':' here if desired.
+  const isSentenceEnd = (char) => /[.?!]/.test(char);
+
+  // 2. Expand Start Backwards
+  let startNode = newRange.startContainer;
+  let startOffset = newRange.startOffset;
+
+  if (startNode.nodeType === Node.TEXT_NODE) {
+    const text = startNode.textContent;
+    // Walk backwards while we are still inside a word
+    while (startOffset > 0 && isWordChar(text[startOffset - 1])) {
+      startOffset--;
+    }
+    newRange.setStart(startNode, startOffset);
+  }
+
+  // 3. Expand End Forwards
+  let endNode = newRange.endContainer;
+  let endOffset = newRange.endOffset;
+
+  if (endNode.nodeType === Node.TEXT_NODE) {
+    const text = endNode.textContent;
+    
+    // A. Walk forwards through the word characters
+    while (endOffset < text.length && isWordChar(text[endOffset])) {
+      endOffset++;
+    }
+
+    // B. Walk forwards through any trailing sentence-ending punctuation
+    // Using a 'while' loop here catches things like "Wow!!!" or "Really?!" or "..."
+    while (endOffset < text.length && isSentenceEnd(text[endOffset])) {
+      endOffset++;
+    }
+
+    newRange.setEnd(endNode, endOffset);
+  }
+
+  return newRange;
+};

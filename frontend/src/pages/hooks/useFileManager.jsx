@@ -1,9 +1,9 @@
 import axios from 'axios';
 import FileSaver from 'file-saver';
+import tabManager from '../layout/edit-mode/EditModeTabManager';
 
 /**
- * File management hook.
- * Handles file imports, exports, updates, deletions, and related operations.
+ * File management hook with separate save and lock functionality.
  */
 export const useFileManager = ({
   projectId,
@@ -20,9 +20,6 @@ export const useFileManager = ({
 }) => {
   /**
    * Handles the import of a text file, sending it to the backend for processing.
-   * @param {File} file - The text file to import.
-   * @param {string} [splittingOption='sentence'] - The method for splitting the text content.
-   * @param {string|null} [overrideName=null] - An optional name to use for the file.
    */
   const handleTextImport = async (file, splittingOption = 'sentence', overrideName = null) => {
     const token = user?.token;
@@ -49,6 +46,7 @@ export const useFileManager = ({
       if (stagedFile && onImportSuccess) {
         onImportSuccess({ ...stagedFile, isStaged: true });
       }
+      return true;
 
     } catch (err) {
       if (err.response && err.response.status === 409 && err.response.data.promptRequired) {
@@ -74,6 +72,7 @@ export const useFileManager = ({
           checkboxLabel: "I understand the risks and wish to proceed."
         });
         setShowConfirmModal(true);
+        throw err;
       } else {
         setConfirmModalData({
           title: 'Import Failed',
@@ -87,8 +86,7 @@ export const useFileManager = ({
   };
 
   /**
-   * Commits a staged file to the project, making it permanent.
-   * @param {object} fileData - The data of the staged file to be committed.
+   * Commits a staged file to the project (unlocked by default).
    */
   const handleCommitNewFile = async (fileData) => {
     const token = user?.token;
@@ -101,19 +99,62 @@ export const useFileManager = ({
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      // 1. Update global project state with fresh data from backend
       setProject(res.data.project);
       
+      // 2. Identify the newly created file (assumed to be the last one in the list)
       const newlyCommittedFile = res.data.project.importedFiles.at(-1);
+      
+      // 3. Select the file immediately using the fresh project data
       if (newlyCommittedFile) {
         handleSelectFile(newlyCommittedFile, res.data.project);
       }
 
-      return { success: true };
+      // 4. RETURN the file object explicitly so the UI can use it immediately
+      //    This prevents stale state bugs where the UI can't find the new file yet.
+      return { success: true, file: newlyCommittedFile };
+
     } catch (err) {
       const error = err.response?.data?.error || 'Failed to save new file.';
+      
+      // Handle error UI feedback
       setError(error);
       setConfirmModalData({ 
         title: 'Save Failed', 
+        message: error, 
+        onConfirm: () => setShowConfirmModal(false) 
+      });
+      setShowConfirmModal(true);
+      
+      return { success: false, error };
+    }
+  };
+
+  /**
+   * NEW: Locks a file to prevent further edits.
+   */
+  const handleLockFile = async (fileId) => {
+    const token = user?.token;
+    if (!token) return { success: false, error: 'You must be logged in to lock files.' };
+
+    try {
+      const res = await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}/lock`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setProject(res.data.project);
+      
+      // Release tab lock
+      tabManager.releaseFile();
+      
+      return { success: true };
+    } catch (err) {
+      const error = err.response?.data?.error || 'Failed to lock file.';
+      setError(error);
+      setConfirmModalData({ 
+        title: 'Lock Failed', 
         message: error, 
         onConfirm: () => setShowConfirmModal(false) 
       });
@@ -124,9 +165,6 @@ export const useFileManager = ({
 
   /**
    * Handles the import and transcription of an audio file.
-   * @param {File} file - The audio file to import.
-   * @param {string} [splittingOption='turn'] - The method for splitting the resulting transcript.
-   * @param {string|null} [overrideName=null] - An optional name to use for the transcript file.
    */
   const handleAudioImport = async (file, splittingOption = 'turn', overrideName = null) => {
     setTranscriptionStatus({ isActive: true, message: 'Uploading audio...', progress: 0 });
@@ -134,7 +172,7 @@ export const useFileManager = ({
     const token = user?.token;
     if (!token) {
       setTranscriptionStatus({ isActive: false, message: 'Authentication Error.', progress: 0 });
-      return;
+      return true;
     }
 
     const formData = new FormData();
@@ -219,9 +257,11 @@ export const useFileManager = ({
             handleAudioImport(file, splittingOption, suggestedName);
           },
           showCheckbox: true,
+          isCheckboxRequired: true,
           checkboxLabel: "I understand the risks and wish to proceed."
         });
         setShowConfirmModal(true);
+        throw err;
       } 
       // Generic Error
       else {
@@ -238,38 +278,54 @@ export const useFileManager = ({
   };
 
   /**
-   * Updates the content of an existing file on the backend.
-   * @param {string} fileId - The ID of the file to update.
-   * @param {string} content - The new content for the file.
+   * Updates the content of an existing file on the backend (only if unlocked).
    */
   const handleUpdateFileContent = async (fileId, content) => {
-    const token = user?.token;
-    if (!token) return setError('You must be logged in to save changes.');
-    try {
-      const res = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`, 
-        { content }, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setProject(res.data.project);
-      const updatedFile = res.data.project.importedFiles.find(f => f._id === fileId);
-      if (updatedFile) {
-        handleSelectFile(updatedFile, res.data.project);
-      }
-    } catch (err) {
+  const token = user?.token;
+  if (!token) return setError('You must be logged in to save changes.');
+
+  try {
+    const res = await axios.put(
+      `${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}/files/${fileId}`,
+      { content },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setProject(res.data.project);
+
+    const updatedFile = res.data.project.importedFiles.find(f => f._id === fileId);
+
+    if (updatedFile) {
+      handleSelectFile(updatedFile, res.data.project);
+    }
+
+    // Updated return: includes the fresh file object
+    return { success: true, file: updatedFile };
+
+  } catch (err) {
+    if (err.response?.status === 403) {
+      setError('Cannot edit a locked file.');
+      setConfirmModalData({
+        title: 'File is Locked',
+        message: 'This file has been finalized and cannot be edited. It is now ready for annotation only.',
+        onConfirm: () => setShowConfirmModal(false)
+      });
+      setShowConfirmModal(true);
+    } else {
       setError(err.response?.data?.error || 'Failed to save document.');
-      setConfirmModalData({ 
-        title: 'Save Failed', 
-        message: err.response?.data?.error || 'Could not save the document content.', 
-        onConfirm: () => setShowConfirmModal(false) 
+      setConfirmModalData({
+        title: 'Save Failed',
+        message: err.response?.data?.error || 'Could not save the document content.',
+        onConfirm: () => setShowConfirmModal(false)
       });
       setShowConfirmModal(true);
     }
-  };
+    return { success: false, error: err.response?.data?.error };
+  }
+};
 
   /**
-   * Handles the file input change event, determining whether to process a text or audio file.
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event.
+   * Handles the file input change event.
    */
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -322,13 +378,13 @@ export const useFileManager = ({
       return { success: true };
     } catch (err) {
       const error = err.response?.data?.error || 'Failed to rename file.';
-      setError(error);
+      // setError(error);
       return { success: false, error };
     }
   };
 
   /**
-   * Handles the direct export of a file in the specified format.
+   * Handles the direct export of a file.
    */
   const handleExportFile = async (file, format) => {
     try {
@@ -371,8 +427,6 @@ export const useFileManager = ({
 
   /**
    * Prompts the user and then permanently deletes an imported file.
-   * @param {string} fileId - The ID of the file to delete.
-   * @param {string} fileName - The name of the file, used in the confirmation prompt.
    */
   const handleDeleteFile = (fileId, fileName) => {
     setConfirmModalData({
@@ -395,6 +449,7 @@ export const useFileManager = ({
             { headers: { Authorization: `Bearer ${token}` } }
           );
           if (setFileInEditMode) setFileInEditMode(null);
+          tabManager.releaseFile();
           setProject(res.data.project);
           const remainingFiles = res.data.project.importedFiles;
           if (remainingFiles.length > 0) {
@@ -405,6 +460,7 @@ export const useFileManager = ({
           setShowConfirmModal(false);
         } catch (err) {
           if (setFileInEditMode) setFileInEditMode(null);
+          tabManager.releaseFile();
           setError(err.response?.data?.error || 'Failed to delete file');
           setShowConfirmModal(false);
         }
@@ -419,6 +475,7 @@ export const useFileManager = ({
   return {
     handleTextImport,
     handleCommitNewFile,
+    handleLockFile,
     handleAudioImport,
     handleUpdateFileContent,
     handleFileChange,

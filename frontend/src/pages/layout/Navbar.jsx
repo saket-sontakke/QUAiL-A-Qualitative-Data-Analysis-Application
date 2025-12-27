@@ -11,7 +11,10 @@ import {
   FaCommentAlt, 
   FaDownload, 
   FaFileImport,
-  FaKey 
+  FaKey,
+  FaTrash,
+  FaTimes,
+  FaExclamationTriangle
 } from 'react-icons/fa'; 
 import axios from 'axios'; 
 import FileSaver from 'file-saver'; 
@@ -36,9 +39,17 @@ const Navbar = ({
   setConfirmModalData
 }) => {
   const { isAuthenticated, user, logout } = useAuth();
+  
+  // -- State --
   const [showProfile, setShowProfile] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false); 
   const [showApiModal, setShowApiModal] = useState(false);
+  
+  // -- Delete Account State --
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState('');
+  const [liabilityChecked, setLiabilityChecked] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,12 +79,14 @@ const Navbar = ({
     }
   };
 
+  // --- LOGOUT LOGIC ---
   const handleLogout = () => {
     if (typeof onLogoutAttempt === 'function') {
       onLogoutAttempt();
       return;
     }
 
+    // Use generic modal for simple logout
     if (typeof setConfirmModalData === 'function' && typeof setShowConfirmModal === 'function') {
       const executeLogout = () => {
           logout();
@@ -94,6 +107,34 @@ const Navbar = ({
     } else {
       logout();
       navigate('/');
+    }
+  };
+
+  // --- DELETE ACCOUNT LOGIC ---
+  const handleDeleteClick = () => {
+    setShowProfile(false);
+    setDeleteConfirmationEmail(''); // Reset input
+    setLiabilityChecked(false); // Reset checkbox
+    setShowDeleteModal(true); // Open custom modal
+  };
+
+  const executeAccountDeletion = async () => {
+    if (deleteConfirmationEmail !== user?.email || !liabilityChecked) return;
+
+    setIsDeleting(true);
+    try {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/auth/delete-account`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      
+      setShowDeleteModal(false);
+      logout();
+      navigate('/');
+    } catch (err) {
+      console.error("Delete account failed:", err);
+      alert("Failed to delete account. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -118,6 +159,7 @@ const Navbar = ({
       FileSaver.saveAs(res.data, `${projectName || 'project'}.quail`);
     } catch (err) {
       console.error("Backup failed", err);
+      // Fallback simple alert if modal props missing
       if (setConfirmModalData && setShowConfirmModal) {
         setConfirmModalData({
           title: 'Backup Failed',
@@ -163,7 +205,6 @@ const Navbar = ({
                     {projectName}
                   </span>
                   
-                  {/* --- IMPORTED BADGE --- */}
                   {isImported && (
                     <span 
                       title="This project was imported" 
@@ -195,7 +236,6 @@ const Navbar = ({
                   <FaFolderOpen className="text-xl" />
                 </button>
 
-                {/* BACKUP BUTTON */}
                 <button
                   onClick={handleBackup}
                   className="text-gray-800 dark:text-white transition-colors duration-200 hover:text-[#F05623] dark:hover:text-[#F05623] disabled:cursor-not-allowed disabled:opacity-50"
@@ -237,7 +277,7 @@ const Navbar = ({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 z-50 mt-2 w-56 rounded-lg bg-white p-4 shadow-xl dark:bg-gray-700 ring-1 ring-black ring-opacity-5"
+                    className="absolute right-0 z-50 mt-2 w-58 rounded-lg bg-white p-4 shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
                   >
                     {user?.name && (
                       <p className="mb-1 text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -297,9 +337,21 @@ const Navbar = ({
                       <span>Give Feedback</span>
                     </a>
 
+                    <div className="my-2 border-t border-gray-200 dark:border-gray-600"></div>
+
+                    {/* DELETE ACCOUNT - Text Link Style */}
+                    <button
+                      onClick={handleDeleteClick}
+                      className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <FaTrash />
+                      <span>Delete Account</span>
+                    </button>
+
+                    {/* LOGOUT - Solid Red Button (Restored) */}
                     <button
                       onClick={handleLogout}
-                      className="mt-2 w-full rounded-md bg-red-500 py-1.5 font-semibold text-white transition duration-200 hover:bg-red-600"
+                      className="w-full rounded-md bg-red-600 py-2 font-bold text-white shadow transition-all duration-200 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
                     >
                       Logout
                     </button>
@@ -317,6 +369,94 @@ const Navbar = ({
         onClose={() => setShowApiModal(false)}
         onSaveSuccess={() => {}}
       />
+
+      {/* --- CUSTOM DELETE ACCOUNT MODAL --- */}
+      {showDeleteModal && (
+         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+             {/* Header */}
+             <div className="px-6 py-4 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/30 flex items-center gap-3">
+               <div className="p-2 bg-red-100 dark:bg-red-800 rounded-full text-red-600 dark:text-red-200">
+                 <FaExclamationTriangle className="text-lg" />
+               </div>
+               <h3 className="text-lg font-bold text-red-700 dark:text-red-400">Delete Account</h3>
+               <button 
+                 onClick={() => setShowDeleteModal(false)}
+                 className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+               >
+                 <FaTimes />
+               </button>
+             </div>
+
+             {/* Body */}
+             <div className="p-6 space-y-5">
+               
+               {/* Step 1: Email Confirmation */}
+               <div className="space-y-2">
+                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                   To confirm, type your email below:
+                 </label>
+                 <div className="p-2 bg-gray-100 dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 text-center font-mono text-sm select-all">
+                   {user?.email}
+                 </div>
+                 <input
+                   type="text"
+                   name="delete_confirmation_random_id" 
+                   autoComplete="off"
+                   data-lpignore="true"
+                   placeholder="Type your email here"
+                   value={deleteConfirmationEmail}
+                   onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
+                   className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                   autoFocus
+                 />
+               </div>
+
+               {/* Step 2: Liability Checkbox */}
+               <div 
+                 onClick={() => setLiabilityChecked(!liabilityChecked)}
+                 className="flex items-start gap-3 p-3 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+               >
+                 <div className="pt-0.5">
+                   <input 
+                     type="checkbox" 
+                     checked={liabilityChecked}
+                     onChange={() => {}} // Handled by parent div
+                     className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
+                   />
+                 </div>
+                 <p className="text-sm text-gray-700 dark:text-gray-300 select-none">
+                   I understand that all my projects, files, and data will be permanently wiped from QUAiL servers and <span className="font-bold text-red-600 dark:text-red-400">cannot be recovered</span>.
+                 </p>
+               </div>
+
+             </div>
+
+             {/* Footer */}
+             <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+               <button
+                 onClick={() => setShowDeleteModal(false)}
+                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={executeAccountDeletion}
+                 disabled={!liabilityChecked || deleteConfirmationEmail !== user?.email || isDeleting}
+                 className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+               >
+                 {isDeleting ? (
+                   <>Processing...</>
+                 ) : (
+                   <>
+                     <FaTrash className="text-xs" /> Yes, Delete Everything
+                   </>
+                 )}
+               </button>
+             </div>
+           </div>
+         </div>
+      )}
     </>
   );
 };

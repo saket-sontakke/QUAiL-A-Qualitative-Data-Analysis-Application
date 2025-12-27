@@ -3,26 +3,35 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
 
+// --- Router Initialization ---
 const router = express.Router();
-const resolveMx = promisify(dns.resolveMx); 
-// @route   POST /api/contact
-// @desc    Send a contact form email to the admin
-// @access  Public
+const resolveMx = promisify(dns.resolveMx);
+
+/**
+ * Handles incoming POST requests for the contact form.
+ * Validates the user input and email domain validity before sending an email
+ * to the administrator via SMTP.
+ *
+ * @param {express.Request} req - The Express request object containing name, email, and message in the body.
+ * @param {express.Response} res - The Express response object used to return status and JSON data.
+ * @returns {Promise<void>} Returns a JSON response indicating success or failure.
+ */
 router.post('/', async (req, res) => {
+  // --- Input Extraction ---
   const { name, email, message } = req.body;
 
-  // 1. Basic Field Validation
+  // --- Input Presence Validation ---
   if (!name || !email || !message) {
     return res.status(400).json({ error: 'Please fill in all fields' });
   }
 
-  // 2. Strict Email Regex Validation (Syntax)
+  // --- Email Syntax Validation ---
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'Please enter a valid email address format.' });
   }
 
-  // 3. DNS/MX Record Validation (Existence)
+  // --- Domain MX Record Verification ---
   const domain = email.split('@')[1];
   try {
     const addresses = await resolveMx(domain);
@@ -30,26 +39,26 @@ router.post('/', async (req, res) => {
         throw new Error('No MX records');
     }
   } catch (error) {
-    // This catches domains that don't exist (like tert.com might fail if it has no mail server)
     return res.status(400).json({ error: `The domain "@${domain}" does not appear to accept emails.` });
   }
 
   try {
-    // 4. Configure the transporter
+    // --- SMTP Transporter Configuration ---
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
     });
 
-    // 5. Define email options
+    // --- Message Payload Construction ---
     const mailOptions = {
       from: `"QUAiL Contact Form" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
+      cc: [process.env.CC_EMAIL, process.env.CC_EMAIL_2],
       replyTo: email,
       subject: `QUAiL Inquiry: ${name}`,
       text: `
@@ -69,10 +78,12 @@ router.post('/', async (req, res) => {
       `,
     };
 
+    // --- Transmission ---
     await transporter.sendMail(mailOptions);
 
     res.status(200).json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
+    // --- Error Handling ---
     console.error('Contact Form Error:', error);
     res.status(500).json({ error: 'Failed to send email. Please try again later.' });
   }

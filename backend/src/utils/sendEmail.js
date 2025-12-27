@@ -3,28 +3,33 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 /**
- * Sends an email with both HTML and Text versions and appends the embedded logo at the bottom.
- * @param {string} to - Recipient email.
- * @param {string} subject - Subject line.
- * @param {string} htmlContent - Main HTML content of the email.
+ * Configures the SMTP transporter and sends an email with an embedded logo attachment.
+ * Handles ES module path resolution, appends a company logo via CID, and generates
+ * a plain-text fallback for the HTML content.
+ *
+ * @param {string|Array<string>} to - The recipient's email address or list of addresses.
+ * @param {string} subject - The subject line of the email.
+ * @param {string} htmlContent - The raw HTML string to be included in the email body.
+ * @returns {Promise<void>} A promise that resolves when the email is successfully handed off to the SMTP server.
+ * @throws {Error} If the SMTP connection fails, authentication is invalid, or attachment files are missing.
  */
 const sendEmail = async (to, subject, htmlContent) => {
-  // Fix __dirname for ES modules
+  // --- Path Resolution ---
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  // Configure SMTP transporter
+  // --- SMTP Configuration ---
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 
-  // Append logo image at the bottom using CID
+  // --- Content Formatting ---
   const htmlWithLogo = `
     ${htmlContent}
     <br>
@@ -35,7 +40,6 @@ const sendEmail = async (to, subject, htmlContent) => {
     </div>
   `;
 
-  // Plain-text fallback
   const textContent = htmlContent
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
@@ -43,6 +47,7 @@ const sendEmail = async (to, subject, htmlContent) => {
     .trim()
     + '\n\n[QUAiL Logo Embedded Below]';
 
+  // --- Mail Construction ---
   const mailOptions = {
     from: `"QUAiL Authentication" <${process.env.EMAIL_USER}>`,
     to,
@@ -50,16 +55,16 @@ const sendEmail = async (to, subject, htmlContent) => {
     html: htmlWithLogo,
     text: textContent,
 
-    // Attach embedded image using cid:q_logo
     attachments: [
       {
         filename: 'QUAiL.png',
         path: path.join(__dirname, 'QUAiL.png'),
-        cid: 'q_logo', // MUST match the <img src="cid:q_logo">
+        cid: 'q_logo',
       },
     ],
   };
 
+  // --- Transmission ---
   await transporter.sendMail(mailOptions);
 };
 

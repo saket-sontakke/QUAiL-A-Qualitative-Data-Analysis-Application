@@ -15,20 +15,33 @@ const EditProjectModal = ({ show, onClose, onConfirm, project }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (project) {
       setName(project.name);
       setError('');
+      setIsSubmitting(false);
     }
   }, [project]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Project name cannot be empty.');
       return;
     }
-    onConfirm({ name });
+
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await onConfirm({ name });
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update project.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -92,9 +105,10 @@ const EditProjectModal = ({ show, onClose, onConfirm, project }) => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#d34715] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#F05623]"
+                  disabled={isSubmitting}
+                  className={`rounded-lg bg-[#d34715] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#F05623] ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
                 >
-                  Update Project
+                  {isSubmitting ? 'Updating...' : 'Update Project'}
                 </button>
               </div>
             </form>

@@ -2,15 +2,16 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * A styled tooltip component that appears in a fixed position (bottom-right)
- * to display information about one or more code definitions. It shows a list
- * of codes, each with a name and a corresponding color swatch.
- *
- * @param {object} props - The component props.
- * @param {Array<object>} props.codes - An array of code objects to display in the tooltip. Each object should contain a `codeDefinition` property.
- * @param {boolean} props.visible - A boolean that controls the visibility and enter/exit animations of the tooltip.
- * @returns {JSX.Element|null} The rendered tooltip component or null if it should not be visible.
+ * Helper to truncate text to show start and end.
  */
+const formatExtent = (text, maxLength = 40) => {
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  
+  const keepLength = Math.floor((maxLength - 3) / 2);
+  return `${text.substring(0, keepLength)}...${text.substring(text.length - keepLength)}`;
+};
+
 const CodeTooltip = ({ codes, visible }) => {
   if (!visible || !codes || codes.length === 0) {
     return null;
@@ -26,27 +27,47 @@ const CodeTooltip = ({ codes, visible }) => {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 10 }}
           transition={{ duration: 0.15 }}
-          className="pointer-events-none fixed bottom-5 right-5 z-100 max-w-xs rounded-lg border border-gray-300 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
+          className="pointer-events-none fixed bottom-5 right-5 z-[100] max-w-xs rounded-lg border border-gray-300 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
         >
-          <h4 className="mb-2 text-sm font-bold text-cyan-900 dark:text-[#F05623]">{title}</h4>
-          <ul className="space-y-1.5">
-            {codes.map((ann) => (
-              <li key={ann._id} className="flex items-center text-xs">
-                <span
-                  className="mr-2 h-3 w-3 shrink-0 rounded-full border border-gray-400 dark:border-gray-500"
-                  style={{ backgroundColor: ann.codeDefinition?.color || '#ccc' }}
-                ></span>
-                <span className="text-gray-800 dark:text-gray-200">
-                  {ann.codeDefinition?.name || 'Unnamed Code'}
-                </span>
-              </li>
-            ))}
+          <h4 className="mb-3 text-sm font-bold text-cyan-900 dark:text-[#F05623]">
+            {title}
+          </h4>
+          
+          {/* Loop through ALL codes */}
+          <ul className="space-y-3">
+            {codes.map((ann) => {
+              const color = ann.codeDefinition?.color || '#ccc';
+              const name = ann.codeDefinition?.name || 'Unnamed Code';
+              // Handle potential differences in property names
+              const textContent = ann.text || ann.selectedText || ""; 
+
+              return (
+                <li key={ann._id} className="flex flex-col">
+                  {/* Header: Dot + Name */}
+                  <div className="flex items-center text-xs">
+                    <span
+                      className="mr-2 h-3 w-3 shrink-0 rounded-full border border-gray-400 dark:border-gray-500"
+                      style={{ backgroundColor: color }}
+                    ></span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                      {name}
+                    </span>
+                  </div>
+
+                  {/* Snippet: Colored Text */}
+                  {textContent && (
+                    <p 
+                      className="mt-1 ml-5 text-[12px] italic opacity-90"
+                      // 1. Applies specific code color
+                      style={{ color: color }} 
+                    >
+                      "{formatExtent(textContent)}"
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-          <div className="mt-2 border-t border-gray-200 pt-1.5 dark:border-gray-700">
-            <p className="text-[11px] italic text-gray-500 dark:text-gray-400">
-              You can disable this in Preferences.
-            </p>
-          </div>
         </motion.div>
       )}
     </AnimatePresence>

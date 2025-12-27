@@ -16,7 +16,8 @@ import {
   FaFileAlt, 
   FaTools, 
   FaExternalLinkAlt, 
-  FaUniversity
+  FaUniversity,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { TbTargetArrow } from "react-icons/tb";
 import { RiUploadCloud2Fill } from "react-icons/ri";
@@ -129,18 +130,32 @@ const FooterBottomBar = () => {
 };
 
 /* --- Helper for Footer Links --- */
-const FooterLink = ({ href, icon: Icon, text, external = true }) => (
-  <a
-    href={href}
-    target={external ? "_blank" : "_self"}
-    rel={external ? "noopener noreferrer" : ""}
-    className="group flex items-center gap-2 text-gray-700 dark:text-gray-400 hover:text-[#1D3C87] dark:hover:text-blue-400 transition-colors py-1"
-  >
-    {Icon && <Icon className="text-gray-400 group-hover:text-[#F05623] transition-colors" size={14} />}
-    <span className="text-sm font-medium">{text}</span>
-    {external && <FaExternalLinkAlt className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px]" />}
-  </a>
-);
+const FooterLink = ({ href, icon: Icon, text, external = true }) => {
+  const commonClasses = "group flex items-center gap-2 text-gray-700 dark:text-gray-400 hover:text-[#1D3C87] dark:hover:text-blue-400 transition-colors py-1";
+  
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={commonClasses}
+      >
+        {Icon && <Icon className="text-gray-400 group-hover:text-[#F05623] transition-colors" size={14} />}
+        <span className="text-sm font-medium">{text}</span>
+        <FaExternalLinkAlt className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px]" />
+      </a>
+    );
+  }
+
+  // Internal Link using React Router
+  return (
+    <Link to={href} className={commonClasses}>
+      {Icon && <Icon className="text-gray-400 group-hover:text-[#F05623] transition-colors" size={14} />}
+      <span className="text-sm font-medium">{text}</span>
+    </Link>
+  );
+};
 
 /* --- Updated Footer Component --- */
 const Footer = () => {
@@ -155,9 +170,9 @@ const Footer = () => {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} 
               className="flex items-center gap-3 cursor-pointer -mb-4"
             >
-              <Logo className="h-20 w-20 md:h-32 md:w-32 text-[#132142] dark:text-gray-200 -translate-x-3 -translate-y-11" />
+              <Logo className="h-35 w-35 md:h-32 md:w-32 text-[#132142] dark:text-gray-200 -translate-x-3 -translate-y-11" />
                 <div className="flex flex-col items-start">
-                    <h1 className="el-messiri-bold text-5xl md:text-6xl font-extrabold text-[#132142] dark:text-gray-200 leading-none -ml-12 -mt-10">
+                    <h1 className="el-messiri-bold text-6xl md:text-6xl font-extrabold text-[#132142] dark:text-gray-200 leading-none -ml-12 -mt-10">
                         QUAiL
                     </h1>
                     <span className="el-messiri-bold md:text-1xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-10 block min-h-[1.2em]">
@@ -201,14 +216,21 @@ const Footer = () => {
             </h4>
             <div className="flex flex-col gap-3">
               <FooterLink 
-                href="https://archive.org/details/w-05-02-quai-l-a-web-based-qualitative-analysis-tool-for-textual-data-icce-2025/mode/2up" 
+                href="/icce-2025-paper" 
                 text="ICCE 2025 Paper" 
                 icon={FaFileAlt}
+                external={true}
               />
               <FooterLink 
                 href="https://github.com/EDART-Labs/QUAiL" 
                 text="Documentation" 
                 icon={FaGithub}
+              />
+              <FooterLink 
+                href="/privacy-policy" 
+                text="Privacy Policy" 
+                icon={FaShieldAlt}
+                external={true}
               />
             </div>
           </div>
@@ -556,24 +578,28 @@ const Home = () => {
       {/* Hero Section */}
       <div 
         ref={heroRef} 
-        className="relative min-h-dvh w-full flex items-center pt-4 pb-12 bg-transparent dark:bg-linear-to-b dark:from-gray-950 dark:via-gray-900 dark:to-gray-900"
+        className="relative min-h-fit w-full flex items-center pt-10 lg:pt-1 pb-12 bg-transparent dark:bg-linear-to-b dark:from-gray-950 dark:via-gray-900 dark:to-gray-900"
       >
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 px-6 lg:px-8 items-start">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 px-6 lg:px-8 items-start">
           
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-left order-2 lg:order-1">
+          {/* Left Column (Logo, Title, Tagline) */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             
             <motion.div 
                 initial={{ opacity: 0, y: -20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ duration: 0.6 }}
-                className="flex flex-row items-center gap-4 md:gap-6 mb-4 -translate-x-35"
+                className="flex flex-row justify-center lg:justify-start items-center gap-3 md:gap-6 mb-4 lg:-translate-x-35 w-full"
             >
-                <Logo className="h-20 w-20 md:h-70 md:w-70 text-[#132142] dark:text-gray-200 translate-x-18 -translate-y-7" />
-                <div className="flex flex-col items-start">
-                    <h1 className="el-messiri-bold text-5xl md:text-9xl font-extrabold text-[#132142] dark:text-gray-200 leading-none">
+                {/* Logo */}
+                <Logo className="h-40 w-40 md:h-70 md:w-70 text-[#132142] dark:text-gray-200 translate-x-11 -translate-y-6 lg:translate-x-18 lg:-translate-y-7 shrink-0" />
+                
+                <div className="flex flex-col items-start text-left">
+                    <h1 className="el-messiri-bold text-6xl md:text-9xl font-extrabold text-[#132142] dark:text-gray-200 leading-none mt-0 mr-23">
                         QUAiL
                     </h1>
-                    <span className="el-messiri-bold md:text-3xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-52 block min-h-[1.2em]">
+                    {/* Version Number */}
+                    <span className="el-messiri-bold text-sm md:text-3xl font-medium text-gray-500 dark:text-gray-400 tracking-wider ml-27 lg:ml-52 block min-h-[1.2em]">
                         {CURRENT_VERSION && CURRENT_VERSION.trim() !== "" ? CURRENT_VERSION : "\u00A0"}
                     </span>
                 </div>
@@ -583,11 +609,18 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ duration: 0.6, delay: 0.2 }} 
-                className="mb-6 w-full max-w-2xl lg:translate-x-10 min-h-[225px] flex flex-col justify-center lg:justify-start"
+                //Kept the responsive alignment fixes from the previous step
+                className="mb-6 w-full max-w-2xl flex flex-col justify-center items-center text-center lg:items-start lg:text-left lg:ml-12 min-h-[100px] lg:min-h-[225px]"
             >
               <h2 className="text-3xl md:text-5xl lg:text-6xl julius-sans-one-regular font-extrabold leading-tight">
-                <span className="flex flex-row items-start gap-3"> 
-                  <i className="bx bxs-quote-left text-4xl md:text-6xl text-[#F05623] opacity-80 leading-none -translate-y-5" />
+                <span className="flex flex-row items-start justify-center lg:justify-start gap-2 md:gap-3"> 
+                  
+                  {/* FIX APPLIED HERE: 
+                     Removed 'mt-1 md:mt-0'.
+                     Added '-translate-y-1 md:-translate-y-2' to nudge it upwards visually.
+                  */}
+                  <i className="bx bxs-quote-left text-2xl md:text-5xl lg:text-6xl text-[#F05623] opacity-80 leading-none -translate-y-1 md:-translate-y-2" />
+                  
                   <span className="bg-linear-to-br from-[#1D3C87] to-[#F05623] bg-clip-text text-transparent dark:from-[#3b82f6] dark:via-[#FF7E39] dark:to-[#F05623]">
                     <TextType 
                         as="span" 
@@ -595,7 +628,7 @@ const Home = () => {
                         loop={false} 
                         typingSpeed={90} 
                         pauseDuration={120} 
-                        className="font-extrabold inline-block" 
+                        className="font-extrabold inline-block text-left" 
                         cursorClassName="bg-[#F05623]" 
                         onComplete={() => setTypingDone(true)} 
                     />
@@ -604,16 +637,17 @@ const Home = () => {
               </h2>
             </motion.div>
           </div>
-
-          <div className="flex flex-col items-center justify-center w-full order-1 lg:order-2 lg:mt-15">
+          
+          <div className="flex flex-col items-center justify-center w-full lg:mt-15">
             <motion.div 
-                className="w-full max-w-md lg:max-w-xl lg:-translate-x-12 mt-8" 
+                className="w-full max-w-[90vw] sm:max-w-md lg:max-w-xl lg:-translate-x-12 mt-0 lg:mt-8 px-4 sm:px-0" 
                 initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }} 
                 transition={{ duration: 0.8, delay: 0.3 }}
             >
               <HomePageAnimation />
             </motion.div>
+
 
             <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
@@ -633,11 +667,13 @@ const Home = () => {
               </Link>
             </motion.div>
           </div>
+
         </div>
       </div>
 
       {/* Features Section */}
-      <section ref={featuresRef} className="py-18 bg-transparent dark:bg-gray-900">
+      {/* <section ref={featuresRef} className="py-18 bg-transparent dark:bg-gray-900"> */}
+      <section ref={featuresRef} className="py-8 lg:py-18 bg-transparent dark:bg-gray-900">
         <div className="w-full max-w-7xl mx-auto px-6 lg:px-8">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import DialogueCard from './DialogueCard.jsx';
 import ConfirmationModal from '../../components/ConfirmationModal.jsx';
 
@@ -19,11 +19,23 @@ import ConfirmationModal from '../../components/ConfirmationModal.jsx';
  * @param {(newContent: string) => void} props.onContentChange - Callback function triggered when the transcript content is modified.
  * @param {number} props.fontSize - The font size for the transcript text in pixels.
  * @param {number} props.lineHeight - The line height for the transcript text.
- * @param {(timeInSeconds: number) => void} props.onTimestampClick - Callback function triggered when a timestamp is clicked, passing the time in seconds.
+ * @param {(timeInSeconds: number) => void} props.onTimestampClick - Callback function triggered when a timestamp is clicked.
+ * @param {Array<object>} props.editMatches - Global search matches from the raw content string.
+ * @param {number} props.currentEditMatchIndex - The index of the currently active search match.
  * @returns {JSX.Element} The rendered transcript editor component.
  */
-const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTimestampClick }) => {
+const TranscriptEditor = ({ 
+  content, 
+  onContentChange, 
+  fontSize, 
+  lineHeight, 
+  onTimestampClick,
+  editMatches = [],
+  currentEditMatchIndex = -1 
+}) => {
   const [dialogueBlocks, setDialogueBlocks] = useState([]);
+  const blockRefs = useRef([]); // To store refs for scrolling
+  
   const [renameModalState, setRenameModalState] = useState({
     show: false,
     oldName: '',
@@ -32,17 +44,7 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     affectedBlocks: [],
   });
 
-  /**
-   * Effect to parse the raw transcript `content` string into an array of structured
-   * `DialogueBlock` objects whenever the `content` prop changes.
-   */
   useEffect(() => {
-    /**
-     * Parses a raw text string into an array of DialogueBlock objects.
-     * Each block corresponds to a speaker's line or a note.
-     * @param {string} text - The raw transcript content.
-     * @returns {DialogueBlock[]} An array of parsed dialogue blocks.
-     */
     const parseContent = (text) => {
       if (!text) return [];
       const lines = text.split('\n');
@@ -81,12 +83,141 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     setDialogueBlocks(parseContent(content));
   }, [content]);
 
-  /**
-   * Reconstructs the raw transcript string from the array of dialogue blocks
-   * and calls the onContentChange callback to update the parent component's state.
-   * Wrapped in useCallback for optimization.
-   * @param {DialogueBlock[]} blocks - The array of dialogue blocks to reconstruct from.
-   */
+  // Calculate global start/end indices for each block to map search results
+  const blockRanges = useMemo(() => {
+    let runningOffset = 0;
+    return dialogueBlocks.map(block => {
+      // Reconstruct how this block appears in the raw string (approx logic from ProjectView match)
+      // Note: Reconstruct logic matches what is sent to backend/parse
+      let blockStr = '';
+      if (block.timestamp && block.speaker) {
+        blockStr = `${block.timestamp} ${block.speaker}: ${block.dialogue}`;
+      } else {
+        blockStr = block.dialogue;
+      }
+      
+      const start = runningOffset;
+      const end = runningOffset + blockStr.length;
+      runningOffset = end + 1; // +1 for newline character
+      
+      // Calculate header length for offset mapping
+      const headerLength = (block.timestamp && block.speaker) 
+        ? (block.timestamp.length + 1 + block.speaker.length + 2) // "[ts] spk: "
+        : 0;
+
+      return { id: block.id, start, end, headerLength };
+    });
+  }, [dialogueBlocks]);
+
+  // Handle Scrolling and Highlighting when match index changes
+  useEffect(() => {
+    if (currentEditMatchIndex === -1 || !editMatches[currentEditMatchIndex]) return;
+
+    const match = editMatches[currentEditMatchIndex];
+    const targetBlockIndex = blockRanges.findIndex(range => 
+      range.start <= match.startIndex && range.end > match.startIndex
+    );
+    
+    if (targetBlockIndex !== -1) {
+      const cardRef = blockRefs.current[targetBlockIndex];
+      if (cardRef) {
+        // Scroll to the card
+        cardRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Find and highlight the matched text within the contentEditable div
+        const range = blockRanges[targetBlockIndex];
+        const localStart = match.startIndex - range.start;
+        const isInDialogue = localStart >= range.headerLength;
+
+        if (isInDialogue) {
+          const dialogueOffset = localStart - range.headerLength;
+          const matchLength = match.endIndex - match.startIndex;
+          
+          const editableDiv = cardRef.querySelector('[contenteditable="true"]');
+          if (editableDiv) {
+            // Remove any existing highlights first
+            const existingHighlights = cardRef.querySelectorAll('.search-highlight');
+            existingHighlights.forEach(el => {
+              const parent = el.parentNode;
+              parent.replaceChild(document.createTextNode(el.textContent), el);
+              parent.normalize();
+            });
+
+            try {
+              let charCount = 0;
+              let targetNode = null;
+              let startInNode = 0;
+
+              const traverse = (node) => {
+                if (targetNode) return;
+                if (node.nodeType === 3) {
+                  const nextCharCount = charCount + node.length;
+                  if (!targetNode && dialogueOffset >= charCount && dialogueOffset < nextCharCount) {
+                    targetNode = node;
+                    startInNode = dialogueOffset - charCount;
+                  }
+                  charCount = nextCharCount;
+                } else {
+                  node.childNodes.forEach(traverse);
+                }
+              };
+              traverse(editableDiv);
+
+              if (targetNode) {
+                const endInNode = Math.min(startInNode + matchLength, targetNode.length);
+                
+                // Split the text node and wrap the match in a highlight span
+                const beforeText = targetNode.textContent.substring(0, startInNode);
+                const matchText = targetNode.textContent.substring(startInNode, endInNode);
+                const afterText = targetNode.textContent.substring(endInNode);
+
+                const fragment = document.createDocumentFragment();
+                if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
+                
+                const highlight = document.createElement('span');
+                highlight.className = 'search-highlight';
+                highlight.style.backgroundColor = '#FFFF00';
+                highlight.style.padding = '2px 0';
+                highlight.textContent = matchText;
+                fragment.appendChild(highlight);
+                
+                if (afterText) fragment.appendChild(document.createTextNode(afterText));
+
+                targetNode.parentNode.replaceChild(fragment, targetNode);
+              }
+            } catch (e) {
+              console.warn("Could not highlight text range", e);
+            }
+          }
+        } else {
+          // Match is in the header - flash the whole card
+          cardRef.style.transition = 'background-color 0.2s';
+          cardRef.style.backgroundColor = '#fff3cd';
+          setTimeout(() => {
+            cardRef.style.backgroundColor = '';
+          }, 1000);
+        }
+      }
+    }
+
+    // Cleanup function to remove highlights when match changes
+    return () => {
+      blockRefs.current.forEach(cardRef => {
+        if (cardRef) {
+          const existingHighlights = cardRef.querySelectorAll('.search-highlight');
+          existingHighlights.forEach(el => {
+            const parent = el.parentNode;
+            if (parent) {
+              parent.replaceChild(document.createTextNode(el.textContent), el);
+              parent.normalize();
+            }
+          });
+        }
+      });
+    };
+  }, [currentEditMatchIndex, editMatches, blockRanges]);
+
+
   const reconstructContent = useCallback((blocks) => {
     const newContent = blocks.map(block => {
       if (block.timestamp && block.speaker) {
@@ -98,11 +229,6 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     onContentChange(newContent);
   }, [onContentChange]);
 
-  /**
-   * Handles changes to the dialogue text of a specific block.
-   * @param {number} index - The index of the dialogue block being updated.
-   * @param {string} newDialogue - The new dialogue text.
-   */
   const handleDialogueChange = (index, newDialogue) => {
     const updatedBlocks = [...dialogueBlocks];
     updatedBlocks[index].dialogue = newDialogue;
@@ -110,12 +236,6 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     reconstructContent(updatedBlocks);
   };
   
-  /**
-   * Initiates the speaker renaming process by opening a confirmation modal.
-   * @param {string} oldName - The current speaker name.
-   * @param {string} newName - The proposed new speaker name.
-   * @param {number} index - The index of the block where the rename was initiated.
-   */
   const handleInitiateRename = (oldName, newName, index) => {
     const affectedBlocks = dialogueBlocks.filter(b => b.speaker === oldName);
     setRenameModalState({
@@ -127,11 +247,6 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     });
   };
 
-  /**
-   * Confirms and applies the speaker rename operation based on user choice in the modal.
-   * It can rename either a single instance or all instances of a speaker's name.
-   * @param {boolean} isRenameAll - True if all instances should be renamed, false otherwise.
-   */
   const handleConfirmRename = (isRenameAll) => {
     const { oldName, newName, index } = renameModalState;
   
@@ -153,18 +268,10 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     setRenameModalState({ show: false, oldName: '', newName: '', index: -1, affectedBlocks: [] });
   };
 
-  /**
-   * Cancels the rename operation and closes the confirmation modal.
-   */
   const handleCancelRename = () => {
     setRenameModalState({ show: false, oldName: '', newName: '', index: -1, affectedBlocks: [] });
   };
 
-  /**
-   * Parses a timestamp string (e.g., "[HH:MM:SS]") into a total number of seconds.
-   * @param {string} timestampStr - The timestamp string to parse.
-   * @returns {number|null} The total time in seconds, or null if parsing fails.
-   */
   const parseTimestamp = (timestampStr) => {
     if (!timestampStr) return null;
     const match = timestampStr.match(/(\d{2}):(\d{2}):(\d{2})/);
@@ -174,10 +281,6 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
     return hours * 3600 + minutes * 60 + seconds;
   };
 
-  /**
-   * Renders the preview content for the rename confirmation modal.
-   * @returns {JSX.Element} The JSX to be displayed inside the modal.
-   */
   const renderRenamePreview = () => {
     const { oldName, newName, affectedBlocks } = renameModalState;
 
@@ -198,6 +301,7 @@ const TranscriptEditor = ({ content, onContentChange, fontSize, lineHeight, onTi
       {dialogueBlocks.map((block, index) => (
         <DialogueCard
           key={block.id || index}
+          ref={el => blockRefs.current[index] = el} // Store Ref
           block={block}
           index={index}
           onDialogueChange={handleDialogueChange}

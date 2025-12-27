@@ -1,43 +1,41 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaFileUpload, FaMicrophoneAlt, FaTimes, FaParagraph, FaListUl, FaArrowLeft } from 'react-icons/fa';
+import { FaFileUpload, FaMicrophoneAlt, FaTimes, FaParagraph, FaListUl, FaArrowLeft, FaSpinner } from 'react-icons/fa';
+import ConfirmationModal from "../components/ConfirmationModal.jsx";
+import { ProjectContext } from '../ProjectContext.jsx';
 
-/**
- * A multi-step modal for importing files into a project. It guides the user
- * to first select the file type (audio or text) and then choose a content
- * splitting option (e.g., by speaker turn or by sentence) before prompting
- * for the file upload. Includes client-side file size validation.
- *
- * @param {object} props - The component props.
- * @param {boolean} props.show - Controls the visibility of the modal.
- * @param {Function} props.onClose - The callback function to close the modal.
- * @param {(file: File, splitOption: string) => void} props.handleAudioImport - The handler for audio file imports.
- * @param {(file: File, splitOption: string) => void} props.handleTextImport - The handler for text file imports.
- * @param {(show: boolean) => void} [props.setRequestApiKeyModal] - Setter to open the API Key Modal.
- * @param {boolean} [props.hasApiKey] - Flag indicating if the user has a valid API key configured.
- * @returns {JSX.Element|null} The rendered modal component or null if not shown.
- */
 const ImportOptionsModal = ({
   show,
   onClose,
+  modalStep,
+  setModalStep,
   handleAudioImport,
   handleTextImport,
   setRequestApiKeyModal,
   hasApiKey
 }) => {
-  const [modalStep, setModalStep] = useState('initial');
+  // const [modalStep, setModalStep] = useState('initial');
+  // New state to track if a file is currently being processed
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const { fileLimits } = useContext(ProjectContext);
+  
+  const [errorModal, setErrorModal] = useState({
+    show: false,
+    title: '',
+    message: ''
+  });
+
   const audioInputRef = useRef(null);
   const textInputRef = useRef(null);
   const splitOptionRef = useRef('turn');
 
-  const MAX_TEXT_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
-  const MAX_AUDIO_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
+  const textFormats = '.txt, .docx, .pdf, .rtf'; 
+  const audioFormats = 'mp3, mpeg, wav, ogg, m4a, mp4, aac, webm, flac';
 
-  const MAX_TEXT_SIZE_MB = MAX_TEXT_SIZE_BYTES / 1024 / 1024;
-  const MAX_AUDIO_SIZE_MB = MAX_AUDIO_SIZE_BYTES / 1024 / 1024;
-
-  const textFormats = '.txt, .docx, .pdf'; 
-  const audioFormats = '.mp3, .wav, .ogg, .m4a, .aac';
+  const closeErrorModal = () => {
+    setErrorModal({ show: false, title: '', message: '' });
+  };
 
   const handleAudioOptionClick = (option) => {
     if (hasApiKey === false) {
@@ -45,7 +43,6 @@ const ImportOptionsModal = ({
         if (setRequestApiKeyModal) setRequestApiKeyModal(true);
         return;
     }
-
     splitOptionRef.current = option;
     audioInputRef.current?.click();
   };
@@ -55,40 +52,92 @@ const ImportOptionsModal = ({
     textInputRef.current?.click();
   };
 
-  const handleTextFileChange = (e) => {
+  // Made Async to wait for import
+  const handleTextFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > MAX_TEXT_SIZE_BYTES) {
-      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). The maximum size for text files is ${MAX_TEXT_SIZE_MB}MB.`);
-      e.target.value = '';
+    // Clear input so same file can be selected again if needed
+    e.target.value = null; 
+
+    if (!fileLimits) return;
+
+    const maxBytes = fileLimits.textMB * 1024 * 1024;
+
+    if (file.size > maxBytes) {
+      setErrorModal({
+        show: true,
+        title: 'File Too Large',
+        message: `The file "${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB. The maximum size for text files is ${fileLimits.textMB}MB.`
+      });
       return;
     }
 
-    handleTextImport(file, splitOptionRef.current);
-    onClose();
+    // Start Spinner
+    setIsProcessing(true);
+    
+    try {
+      // Await the import process
+      await handleTextImport(file, splitOptionRef.current);
+    } catch (error) {
+      console.error("Import error caught in modal:", error);
+    } finally {
+      // Stop Spinner and Close Modal regardless of success/fail
+      // (If failed, useFileManager likely triggered an Error Modal which should now be visible)
+      setIsProcessing(false);
+      onClose();
+    }
   };
 
-  const handleAudioFileChange = (e) => {
+  // Made Async to wait for import
+  const handleAudioFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > MAX_AUDIO_SIZE_BYTES) {
-      alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). The maximum size for audio files is ${MAX_AUDIO_SIZE_MB}MB.`);
-      e.target.value = '';
+    e.target.value = null; 
+
+    if (!fileLimits) return;
+
+    const maxBytes = fileLimits.audioMB * 1024 * 1024;
+
+    if (file.size > maxBytes) {
+      setErrorModal({
+        show: true,
+        title: 'File Too Large',
+        message: `The file "${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB. The maximum size for audio files is ${fileLimits.audioMB}MB.`
+      });
       return;
     }
 
-    handleAudioImport(file, splitOptionRef.current);
-    onClose();
+    setIsProcessing(true);
+
+    try {
+      await handleAudioImport(file, splitOptionRef.current);
+    } catch (error) {
+      console.error("Audio import error caught in modal:", error);
+    } finally {
+      setIsProcessing(false);
+      onClose();
+    }
   };
 
   const resetModal = () => {
-    setModalStep('initial');
-    onClose();
+    if (!isProcessing) {
+      setModalStep('initial');
+      onClose();
+    }
   };
 
   if (!show) return null;
+
+  // New Render Step for Loading
+  const renderProcessingStep = () => (
+    <div className="flex flex-col items-center justify-center p-8">
+      <FaSpinner className="animate-spin text-5xl text-[#F05623] mb-4" />
+      <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Importing File...</h3>
+      <p className="text-gray-500 dark:text-gray-400">Please wait while we process your document.</p>
+    </div>
+  );
 
   const renderInitialStep = () => (
     <>
@@ -96,6 +145,7 @@ const ImportOptionsModal = ({
       <p className="mb-6 text-gray-600 dark:text-gray-300">
         Choose how to add a document to your project.
       </p>
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <button
           onClick={() => setModalStep('audioOptions')}
@@ -104,7 +154,7 @@ const ImportOptionsModal = ({
           <FaMicrophoneAlt className="mb-3 text-4xl text-[#F05623]" />
           <span className="font-semibold text-gray-800 dark:text-white">Import Audio</span>
           <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">{audioFormats}</span>
-          <span className="mt-1 text-xs font-semibold text-red-500 dark:text-red-400">{`*Max ${MAX_AUDIO_SIZE_MB} MB`}</span>
+          <span className="mt-1 text-xs font-semibold text-red-500 dark:text-red-400">{`*Max ${fileLimits.audioMB} MB`}</span>
         </button>
         <button
           onClick={() => setModalStep('textOptions')}
@@ -113,7 +163,7 @@ const ImportOptionsModal = ({
           <FaFileUpload className="mb-3 text-4xl text-[#1D3C87] dark:text-blue-400" />
           <span className="font-semibold text-gray-800 dark:text-white">Import Text</span>
           <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">{textFormats}</span>
-          <span className="mt-1 text-xs font-semibold text-red-500 dark:text-red-400">{`*Max ${MAX_TEXT_SIZE_MB} MB`}</span>
+          <span className="mt-1 text-xs font-semibold text-red-500 dark:text-red-400">{`*Max ${fileLimits.textMB} MB`}</span>
         </button>
       </div>
     </>
@@ -178,47 +228,64 @@ const ImportOptionsModal = ({
   );
 
   return (
-    <AnimatePresence>
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-        onClick={resetModal}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -30 }}
-          className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl dark:bg-gray-800"
-          onClick={(e) => e.stopPropagation()}
+    <>
+      <AnimatePresence>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={resetModal}
         >
-          <button
-            onClick={resetModal}
-            className="absolute top-3 right-3 text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-            title="Close"
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl dark:bg-gray-800"
+            onClick={(e) => e.stopPropagation()}
           >
-            <FaTimes size={20} />
-          </button>
+            {/* Close button only visible if NOT processing */}
+            {!isProcessing && (
+              <button
+                onClick={resetModal}
+                className="absolute top-3 right-3 text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                title="Close"
+              >
+                <FaTimes size={20} />
+              </button>
+            )}
 
-          {modalStep !== 'initial' && (
-            <button
-              onClick={() => setModalStep('initial')}
-              className="absolute top-3 left-3 text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-              title="Back"
-            >
-              <FaArrowLeft size={20} />
-            </button>
-          )}
+            {/* Back button only visible if NOT processing and not initial step */}
+            {!isProcessing && modalStep !== 'initial' && (
+              <button
+                onClick={() => setModalStep('initial')}
+                className="absolute top-3 left-3 text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                title="Back"
+              >
+                <FaArrowLeft size={20} />
+              </button>
+            )}
 
-          <div className="p-8 text-center">
-            {modalStep === 'initial' && renderInitialStep()}
-            {modalStep === 'textOptions' && renderTextOptions()}
-            {modalStep === 'audioOptions' && renderAudioOptions()}
-          </div>
+            <div className="p-8 text-center">
+              {isProcessing && renderProcessingStep()}
+              {!isProcessing && modalStep === 'initial' && renderInitialStep()}
+              {!isProcessing && modalStep === 'textOptions' && renderTextOptions()}
+              {!isProcessing && modalStep === 'audioOptions' && renderAudioOptions()}
+            </div>
 
-          <input type="file" ref={textInputRef} onChange={handleTextFileChange} accept={textFormats} className="hidden" />
-          <input type="file" ref={audioInputRef} onChange={handleAudioFileChange} accept={audioFormats} className="hidden" />
-        </motion.div>
-      </div>
-    </AnimatePresence>
+            <input type="file" ref={textInputRef} onChange={handleTextFileChange} accept={textFormats} className="hidden" />
+            <input type="file" ref={audioInputRef} onChange={handleAudioFileChange} accept={audioFormats} className="hidden" />
+          </motion.div>
+        </div>
+      </AnimatePresence>
+
+      <ConfirmationModal
+        show={errorModal.show}
+        onClose={closeErrorModal}
+        onConfirm={closeErrorModal}
+        title={errorModal.title}
+        shortMessage={errorModal.message}
+        confirmText="Close"
+        showCancelButton={false}
+      />
+    </>
   );
 };
 

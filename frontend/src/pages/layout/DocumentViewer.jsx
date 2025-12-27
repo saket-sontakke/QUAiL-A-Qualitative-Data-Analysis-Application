@@ -5,70 +5,10 @@ import { RiStickyNoteAddFill } from "react-icons/ri";
 import { MdOutlineSwapHoriz } from "react-icons/md";
 import DocumentToolbar from './DocumentToolbar.jsx';
 import TranscriptEditor from './edit-mode/TranscriptEditor.jsx';
+import TextEditor from './edit-mode/TextEditor.jsx';
 
 /**
  * The primary component for displaying and interacting with document content.
- * It features a sophisticated rendering engine that overlays multiple layers of
- * annotations (codes, highlights, memos, search results) onto the text. It can
- * switch between a rich view mode and a plain text editing mode, and is
- * designed to handle both standard text and structured interview transcripts.
- *
- * @param {object} props - The component props.
- * @param {boolean} props.isLeftPanelCollapsed - Flag indicating if the main side panel is collapsed.
- * @param {string|null} props.activeTool - The currently active tool in the toolbar.
- * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveTool - Function to set the active tool.
- * @param {boolean} props.showCodeColors - State indicating if coded segments should be colored.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowCodeColors - Function to toggle code color visibility.
- * @param {boolean} props.showCodeDropdown - State controlling the visibility of the code tool's dropdown.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowCodeDropdown - Function to toggle the code dropdown.
- * @param {boolean} props.showHighlightColorDropdown - State controlling the visibility of the highlight color picker.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowHighlightColorDropdown - Function to toggle the highlight color picker.
- * @param {string} props.selectedHighlightColor - The currently selected color for highlighting.
- * @param {React.Dispatch<React.SetStateAction<string>>} props.setSelectedHighlightColor - Function to set the highlight color.
- * @param {number} props.fontSize - The current font size of the document text.
- * @param {React.Dispatch<React.SetStateAction<number>>} props.setFontSize - Function to set the font size.
- * @param {number} props.lineHeight - The current line height of the document text.
- * @param {React.Dispatch<React.SetStateAction<number>>} props.setLineHeight - Function to set the line height.
- * @param {boolean} props.showLineHeightDropdown - State controlling the visibility of the line height dropdown.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowLineHeightDropdown - Function to toggle the line height dropdown.
- * @param {React.RefObject<HTMLInputElement>} props.viewerSearchInputRef - Ref for the search input field.
- * @param {string} props.viewerSearchQuery - The current search query.
- * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.handleViewerSearchChange - Handler for search input changes.
- * @param {Array<object>} props.viewerSearchMatches - Array of current search matches.
- * @param {number} props.currentMatchIndex - The index of the active search match.
- * @param {() => void} props.goToPrevMatch - Function to navigate to the previous search match.
- * @param {() => void} props.goToNextMatch - Function to navigate to the next search match.
- * @param {() => void} props.handleClearViewerSearch - Function to clear the search.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingToolbar - Function to toggle the selection toolbar.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowMemoModal - Function to toggle the memo modal.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingAssignCode - Function to toggle the code assignment popover.
- * @param {React.Dispatch<React.SetStateAction<boolean>>} props.setShowFloatingMemoInput - Function to toggle the memo input popover.
- * @param {string} props.selectedContent - The raw string content of the document to be displayed.
- * @param {Array<object>} props.codedSegments - Array of all coded segment objects for the document.
- * @param {Array<object>} props.inlineHighlights - Array of all highlight objects for the document.
- * @param {Array<object>} props.memos - Array of all memo objects for the document.
- * @param {string|null} props.activeCodedSegmentId - The ID of the currently active (clicked) coded segment.
- * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveCodedSegmentId - Function to set the active coded segment.
- * @param {(segmentId: string, segmentName: string) => void} props.handleDeleteCodedSegment - Function to handle the deletion of a coded segment.
- * @param {string|null} props.activeMemoId - The ID of the currently active memo.
- * @param {React.Dispatch<React.SetStateAction<string|null>>} props.setActiveMemoId - Function to set the active memo.
- * @param {React.Dispatch<React.SetStateAction<object|null>>} props.setMemoToEdit - Function to set the memo object that will be edited.
- * @param {(e: React.MouseEvent, segment: object) => void} props.handleReassignCodeClick - Function to initiate the code reassignment process.
- * @param {React.RefObject<HTMLDivElement>} props.viewerRef - Ref attached to the main viewer container.
- * @param {() => void} props.handleViewerMouseUp - Mouse up event handler on the viewer to process text selections.
- * @param {boolean} props.isEditing - Flag indicating if the viewer is in text-editing mode.
- * @param {string} props.content - The content being edited in the textarea.
- * @param {(newContent: string) => void} props.onContentChange - Handler for changes to the textarea content.
- * @param {() => void} props.onUndo - Callback for the undo action.
- * @param {() => void} props.onRedo - Callback for the redo action.
- * @param {boolean} props.canUndo - Flag indicating if an undo action is available.
- * @param {boolean} props.canRedo - Flag indicating if a redo action is available.
- * @param {boolean} props.showCodeTooltip - Preference state for showing the code tooltip on hover.
- * @returns {JSX.Element} The rendered Document Viewer component.
- * @param {boolean} props.hasAudio - Flag indicating if the current document has an associated audio file.
- * @param {(seconds: number) => void} props.onTimestampClick - Callback function to seek audio when a timestamped line is clicked.
- * @param {boolean} props.showCodeTooltip - Preference state for showing the code tooltip on hover.
- * @returns {JSX.Element} The rendered Document Viewer component.
  */
 const DocumentViewer = ({
   isLeftPanelCollapsed,
@@ -112,7 +52,6 @@ const DocumentViewer = ({
   setMemoToEdit,
   handleReassignCodeClick,
   viewerRef,
-  handleViewerMouseUp,
   isEditing,
   content,
   onContentChange,
@@ -125,6 +64,13 @@ const DocumentViewer = ({
   hasAudio,
   onTimestampClick,
   textareaRef,
+  editMatches,
+  currentEditMatchIndex,
+  handleViewerMouseUp,
+  handleViewerMouseDown, 
+  isSelectingRef,
+  // New Prop to reuse existing positioning logic from ProjectView/Hooks
+  setFloatingMemoInputPosition 
 }) => {
   const [hoveredCodeId, setHoveredCodeId] = useState(null);
   const hoverTimeoutRef = useRef(null);
@@ -133,6 +79,7 @@ const DocumentViewer = ({
   const transcriptLineRegex = /^(\[.+?\]\s*.+?:)/;
 
   const handleCodeMouseEnter = (codes) => {
+    if (isSelectingRef && isSelectingRef.current) return;
     if (!showCodeTooltip) return;
     if (codes && codes.length > 0) {
       setTooltipData({ visible: true, codes: codes });
@@ -143,17 +90,33 @@ const DocumentViewer = ({
     setTooltipData({ visible: false, codes: [] });
   };
 
-  /**
-   * The core rendering engine for the document. It takes a text fragment and an
-   * array of all annotations, then breaks the text into the smallest possible
-   * sub-fragments based on annotation boundaries. Each sub-fragment is then
-   * wrapped in styled `<span>` elements corresponding to the annotations that
-   * cover it, effectively layering codes, highlights, and search results.
-   * @param {string} text - The text content of the fragment to render.
-   * @param {number} fragmentStartOffset - The starting character offset of this fragment within the entire document.
-   * @param {Array<object>} allAnnotations - A combined array of all annotation types (codes, highlights, etc.).
-   * @returns {Array<JSX.Element>} An array of React fragments and styled spans representing the annotated text.
-   */
+  // Helper to calculate smart position for floating window
+  const calculateFloatingPosition = (targetElement) => {
+    const rect = targetElement.getBoundingClientRect();
+    const panelWidth = 320; // Approx width of FloatingMemoInput
+    const panelHeight = 350; // Approx height
+    const margin = 10;
+    
+    let left = rect.left + window.scrollX;
+    let top = rect.bottom + window.scrollY + margin;
+
+    // Boundary checks
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // If it goes off right edge, shift left
+    if (left + panelWidth > viewportWidth) {
+        left = viewportWidth - panelWidth - margin;
+    }
+
+    // If it goes off bottom edge, flip to top
+    if (rect.bottom + panelHeight > viewportHeight) {
+        top = rect.top + window.scrollY - panelHeight - margin;
+    }
+    
+    return { top, left };
+  };
+
   const renderAnnotatedFragment = (text, fragmentStartOffset, allAnnotations) => {
     const fragmentEndOffset = fragmentStartOffset + text.length;
     const relevantAnnotations = allAnnotations.filter(ann =>
@@ -266,7 +229,7 @@ const DocumentViewer = ({
               onMouseLeave={() => {
                 hoverTimeoutRef.current = setTimeout(() => {
                   setHoveredCodeId(prev => (prev === ann._id ? null : prev));
-                }, 100);
+                }, 200);
               }}
               className="relative ml-0.5 mr-0.5 cursor-pointer select-none rounded-full px-1 py-0.5 text-xs font-bold"
               style={{ backgroundColor: ann.codeDefinition?.color || '#ccc', color: '#FFF' }}
@@ -275,7 +238,7 @@ const DocumentViewer = ({
               <div
                 onMouseEnter={() => { clearTimeout(hoverTimeoutRef.current); }}
                 onMouseLeave={() => { hoverTimeoutRef.current = setTimeout(() => { setHoveredCodeId(prev => (prev === ann._id ? null : prev)); }, 100); }}
-                className={`absolute bottom-full left-1/2 mb-0.5 flex -translate-x-1/2 transform items-center whitespace-nowrap transition-opacity z-10 ${hoveredCodeId === ann._id ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+                className={`absolute bottom-full left-1/2 pb-1 flex -translate-x-1/2 transform items-center whitespace-nowrap transition-opacity z-10 ${hoveredCodeId === ann._id ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
               >
                 <button
                   onClick={(e) => {
@@ -318,9 +281,16 @@ const DocumentViewer = ({
               data-memo-id={ann._id}
               onClick={e => {
                 e.stopPropagation();
+                // --- CHANGED LOGIC START ---
+                // Instead of modal, calculate position and open floating input
+                const pos = calculateFloatingPosition(e.currentTarget);
                 setActiveMemoId(prev => prev === ann._id ? null : ann._id);
                 setMemoToEdit(ann);
-                setShowMemoModal(true);
+                if (setFloatingMemoInputPosition) {
+                    setFloatingMemoInputPosition(pos);
+                }
+                setShowFloatingMemoInput(true);
+                // --- CHANGED LOGIC END ---
               }}
               className="ml-0.1 mr-0.1 cursor-pointer select-none align-super"
               title={`Memo: ${ann.title || 'No Title'}`}
@@ -344,31 +314,15 @@ const DocumentViewer = ({
     });
   };
 
-  /**
-   * Parses a timestamp string (e.g., "[00:12:34]") into total seconds.
-   * @param {string} timestampStr - The timestamp string from the document.
-   * @returns {number|null} The total time in seconds, or null if invalid.
-   */
   const parseTimestamp = (timestampStr) => {
     if (!timestampStr) return null;
     const match = timestampStr.match(/(\d{2}):(\d{2}):(\d{2})/);
     if (!match) return null;
-
-    const hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const seconds = parseInt(match[3], 10);
-    
+    const hours = parseInt(match[1], 10), minutes = parseInt(match[2], 10), seconds = parseInt(match[3], 10);
     if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return null;
-
     return hours * 3600 + minutes * 60 + seconds;
   };
 
-  /**
-   * The main content renderer. It determines if the document is a transcript
-   * and applies a special block-based layout for speaker turns, or renders it
-   * as a single block for standard text.
-   * @returns {JSX.Element|Array<JSX.Element>} The fully rendered document content.
-   */
   const renderContent = () => {
     if (typeof selectedContent !== 'string' || selectedContent.length === 0) {
       return <div className="text-gray-500">Select a document to view its contents.</div>;
@@ -413,7 +367,6 @@ const DocumentViewer = ({
       
       const handleBlockClick = (e) => {
         if (!e.ctrlKey && !e.metaKey) return;
-        
         e.preventDefault();
         if (!hasAudio || !onTimestampClick) return;
         const timeInSeconds = parseTimestamp(header);
@@ -442,43 +395,12 @@ const DocumentViewer = ({
     });
   };
 
-  /**
-   * Handles Ctrl+Click (or ⌘+Click) in the textarea during edit mode to seek audio.
-   * @param {React.MouseEvent<HTMLTextAreaElement>} e - The mouse click event.
-   */
-  const handleTextareaClick = (e) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    
-    e.preventDefault();
-    if (!hasAudio || !onTimestampClick) return;
-
-    const textarea = e.currentTarget;
-    const cursorPosition = textarea.selectionStart;
-    const text = textarea.value;
-
-    const lineStartIndex = text.lastIndexOf('\n', cursorPosition - 1) + 1;
-    let lineEndIndex = text.indexOf('\n', cursorPosition);
-    if (lineEndIndex === -1) {
-      lineEndIndex = text.length;
-    }
-
-    const currentLine = text.substring(lineStartIndex, lineEndIndex);
-    const match = currentLine.match(transcriptLineRegex);
-
-    if (match) {
-      const header = match[1];
-      const timeInSeconds = parseTimestamp(header);
-      if (timeInSeconds !== null) {
-        onTimestampClick(timeInSeconds);
-      }
-    }
-  };
-
   return (
     <div className={`flex flex-1 flex-col overflow-hidden rounded-xl shadow-md`}>
       <CodeTooltip
         visible={tooltipData.visible}
         codes={tooltipData.codes}
+        isSelectingRef={isSelectingRef}
       />
       {!isEditing && (
         <DocumentToolbar
@@ -520,7 +442,12 @@ const DocumentViewer = ({
       )}
       <div
         ref={viewerRef}
-        onMouseUp={isEditing && hasAudio ? null : handleViewerMouseUp}
+        // --- UPDATED: Pass 'e' explicitly and handle logic ---
+        onMouseUp={(e) => {
+            if (isEditing && hasAudio) return;
+            handleViewerMouseUp(e);
+        }}
+        onMouseDown={handleViewerMouseDown}
         className="flex-1 overflow-y-auto bg-white p-6 pt-7 custom-scrollbar dark:bg-gray-800"
       >
         {isEditing ? (
@@ -531,17 +458,19 @@ const DocumentViewer = ({
               fontSize={fontSize}
               lineHeight={lineHeight}
               onTimestampClick={onTimestampClick}
+              editMatches={editMatches}
+              currentEditMatchIndex={currentEditMatchIndex}
             />
           ) : (
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => onContentChange(e.target.value)}
-              onClick={handleTextareaClick}
-              className="h-full w-full resize-none bg-transparent p-0 m-0 text-black focus:outline-none custom-scrollbar dark:text-gray-200"
-              style={{ fontSize: `${fontSize}px`, lineHeight: lineHeight }}
-              placeholder="You can edit the document here..."
-              title={hasAudio ? "Ctrl+Click (or ⌘+Click) on a line to seek audio" : ""}
+            <TextEditor
+              content={content}
+              onContentChange={onContentChange}
+              fontSize={fontSize}
+              lineHeight={lineHeight}
+              onTimestampClick={onTimestampClick}
+              hasAudio={hasAudio}
+              editMatches={editMatches}
+              currentEditMatchIndex={currentEditMatchIndex}
             />
           )
         ) : (
