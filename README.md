@@ -47,11 +47,6 @@
 
 <br>
 
-> [!NOTE]
-> The source code for all iterations/versions is publicly available in this repository: https://github.com/saket-sontakke/QUAiL-A-Qualitative-Data-Analysis-Application
-
-<br>
-
 > [!TIP] 
 > Project Tracker: https://docs.google.com/spreadsheets/d/1FCrq5P15ZDCVAF6wH5ES_Y3n6cKEVQqvYcgsagkZHtc/edit?usp=sharing 
 
