@@ -2,6 +2,8 @@
 
 [![Website](https://img.shields.io/badge/Website-quail.edarts.online-blue)](https://quail.edarts.online)
 
+Paper - https://library.apsce.net/index.php/ICCE/article/view/6049
+
 ## Iterative Model Overview
 
 - No need to define a complete SRS (Software Requirements Specification) upfront  
